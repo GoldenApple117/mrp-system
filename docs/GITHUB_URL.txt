@@ -1,1 +1,10 @@
+金崧的 GitHub 仓库地址
+====================
+
+任务管理系统（轻量版）：
+https://github.com/GoldenApple117/task-manager
+
+功能：任务管理 | AI辅助撰写 | AI审核 | 文件收集 | 统计图表 | 飞书群推送
+
+mdr物料管理系统：
 https://github.com/GoldenApple117/mrp-system
