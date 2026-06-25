@@ -1,8 +1,0 @@
-[phases.setup]
-nixPkgs = ["python311Full", "nodejs"]
-
-[phases.install]
-commands = [
-  "cd frontend && npm install && npm run build",
-  "python3.11 -m pip install -r backend/requirements.txt"
-]
