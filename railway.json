@@ -1,8 +1,5 @@
 {
   "$schema": "https://railway.app/railway.schema.json",
-  "build": {
-    "buildCommand": "cd frontend && npm install && npm run build && cd ../backend && python -m pip install -r requirements.txt"
-  },
   "deploy": {
     "numReplicas": 1,
     "startCommand": "cd backend && python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT",
