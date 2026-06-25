@@ -64,6 +64,7 @@ def inventory_summary(db: Session = Depends(get_db)):
         MaterialMaster.id,
         MaterialMaster.material_code,
         MaterialMaster.material_name,
+        MaterialMaster.material_type,
         MaterialMaster.unit,
         MaterialMaster.safety_stock,
         func.sum(InventoryRecord.on_hand_qty).label("total_on_hand"),
@@ -77,7 +78,8 @@ def inventory_summary(db: Session = Depends(get_db)):
         "items": [
             {
                 "item_id": r.id, "material_code": r.material_code,
-                "material_name": r.material_name, "unit": r.unit,
+                "material_name": r.material_name, "material_type": r.material_type,
+                "unit": r.unit,
                 "safety_stock": r.safety_stock,
                 "on_hand": float(r.total_on_hand or 0),
                 "allocated": float(r.total_allocated or 0),
