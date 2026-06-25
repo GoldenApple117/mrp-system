@@ -1,11 +1,5 @@
 #!/bin/bash
-# Railway 启动脚本：构建前端 + 启动后端
-
-echo "=== Building frontend ==="
-cd frontend
-npm install
-npm run build
-cd ..
+# Railway 启动脚本：启动后端（前端在构建阶段已编译）
 
 echo "=== Starting backend ==="
 cd backend
