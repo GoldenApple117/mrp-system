@@ -80,7 +80,7 @@ async function fetchLowStock() {
 /* ---- 工单状态分布 ---- */
 async function fetchWoData() {
   try {
-    const res = await api.get('/production/orders', { params: { page_size: 999 } })
+    const res = await api.get('/production/orders', { params: { page_size: 100 } })
     const orders = res.items || []
     const statusMap = {}
     for (const o of orders) {
@@ -109,8 +109,8 @@ async function fetchInvData() {
 async function fetchOtdData() {
   try {
     const [poRes, woRes] = await Promise.all([
-      api.get('/purchase/orders', { params: { page_size: 500 } }),
-      api.get('/production/orders', { params: { page_size: 500 } }),
+      api.get('/purchase/orders', { params: { page_size: 100 } }),
+      api.get('/production/orders', { params: { page_size: 100 } }),
     ])
     const all = [...(poRes.items || []), ...(woRes.items || [])]
     const weekMap = {}
