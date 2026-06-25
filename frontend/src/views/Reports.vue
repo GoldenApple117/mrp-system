@@ -5,16 +5,21 @@
       <!-- 订单准时率 -->
       <el-col :span="12" style="margin-bottom:16px">
         <el-card>
-          <template #header><span style="font-weight:500">订单准时交付率 (OTD)</span></template>
+          <template #header>
+            <span style="font-weight:500">订单准时交付率 (OTD)</span>
+            <el-tag size="small" type="info" style="margin-left:8px">{{ otdRate }}%</el-tag>
+          </template>
           <div ref="otdChart" style="height:300px"></div>
+          <div v-if="!otdData.length" style="text-align:center;color:#999;padding:40px 0">暂无订单数据</div>
         </el-card>
       </el-col>
 
-      <!-- 库存周转 -->
+      <!-- 库存概览 -->
       <el-col :span="12" style="margin-bottom:16px">
         <el-card>
-          <template #header><span style="font-weight:500">库存概览</span></template>
+          <template #header><span style="font-weight:500">库存概览（按物料类型）</span></template>
           <div ref="inventoryChart" style="height:300px"></div>
+          <div v-if="!invData.length" style="text-align:center;color:#999;padding:40px 0">暂无库存数据</div>
         </el-card>
       </el-col>
 
@@ -34,6 +39,7 @@
               </template>
             </el-table-column>
           </el-table>
+          <el-empty v-if="!lowStockItems.length" description="暂无低库存物料" />
         </el-card>
       </el-col>
 
@@ -42,6 +48,7 @@
         <el-card>
           <template #header><span style="font-weight:500">工单状态分布</span></template>
           <div ref="woChart" style="height:300px"></div>
+          <div v-if="!woData.length" style="text-align:center;color:#999;padding:40px 0">暂无工单数据</div>
         </el-card>
       </el-col>
     </el-row>
@@ -57,76 +64,131 @@ const otdChart = ref(null)
 const inventoryChart = ref(null)
 const woChart = ref(null)
 const lowStockItems = ref([])
+const otdData = ref([])
+const invData = ref([])
+const woData = ref([])
+const otdRate = ref(0)
 
-function initOtdChart() {
-  if (!otdChart.value) return
-  const chart = echarts.init(otdChart.value)
-  chart.setOption({
-    tooltip: { trigger: 'axis' },
-    legend: { data: ['按时完成', '逾期完成', '未完成'] },
-    xAxis: { type: 'category', data: ['第1周','第2周','第3周','第4周','第5周','第6周'] },
-    yAxis: { type: 'value' },
-    series: [
-      { name: '按时完成', type: 'bar', stack: 'total', data: [45,52,38,60,55,48], color: '#67c23a' },
-      { name: '逾期完成', type: 'bar', stack: 'total', data: [5,3,8,2,4,6], color: '#e6a23c' },
-      { name: '未完成', type: 'bar', stack: 'total', data: [3,2,5,1,2,3], color: '#f56c6c' },
-    ],
-  })
-}
-
-function initInventoryChart() {
-  if (!inventoryChart.value) return
-  const chart = echarts.init(inventoryChart.value)
-  chart.setOption({
-    tooltip: { trigger: 'item' },
-    series: [{
-      type: 'pie',
-      radius: ['40%', '70%'],
-      data: [
-        { value: 35, name: '原材料', itemStyle: { color: '#409eff' } },
-        { value: 25, name: '半成品', itemStyle: { color: '#e6a23c' } },
-        { value: 20, name: '零件', itemStyle: { color: '#67c23a' } },
-        { value: 15, name: '成品', itemStyle: { color: '#f56c6c' } },
-        { value: 5, name: '呆滞/过期', itemStyle: { color: '#909399' } },
-      ],
-      label: { formatter: '{b}\n{d}%' },
-    }],
-  })
-}
-
-function initWoChart() {
-  if (!woChart.value) return
-  const chart = echarts.init(woChart.value)
-  chart.setOption({
-    tooltip: { trigger: 'axis' },
-    xAxis: { type: 'category', data: ['待下达','已下达','进行中','已完成','已关闭'] },
-    yAxis: { type: 'value' },
-    series: [{
-      type: 'bar',
-      data: [
-        { value: 8, itemStyle: { color: '#909399' } },
-        { value: 12, itemStyle: { color: '#e6a23c' } },
-        { value: 15, itemStyle: { color: '#409eff' } },
-        { value: 30, itemStyle: { color: '#67c23a' } },
-        { value: 3, itemStyle: { color: '#f56c6c' } },
-      ],
-    }],
-  })
-}
-
+/* ---- 缺料/低库存 ---- */
 async function fetchLowStock() {
   try {
     const res = await api.get('/inventory/summary')
     lowStockItems.value = (res.items || []).filter(i => i.is_low).slice(0, 20)
-  } catch {}
+  } catch { lowStockItems.value = [] }
+}
+
+/* ---- 工单状态分布 ---- */
+async function fetchWoData() {
+  try {
+    const res = await api.get('/production/orders', { params: { page_size: 999 } })
+    const orders = res.items || []
+    const statusMap = {}
+    for (const o of orders) {
+      statusMap[o.status] = (statusMap[o.status] || 0) + 1
+    }
+    const statusOrder = ['待下达','已下达','进行中','已完成','已关闭']
+    woData.value = statusOrder.map(s => ({ status: s, count: statusMap[s] || 0 })).filter(d => d.count > 0)
+  } catch { woData.value = [] }
+}
+
+/* ---- 库存概览（按类型） ---- */
+async function fetchInvData() {
+  try {
+    const res = await api.get('/inventory/summary', { params: { page_size: 999 } })
+    const items = res.items || []
+    const typeMap = {}
+    for (const i of items) {
+      const t = i.material_type || '其他'
+      typeMap[t] = (typeMap[t] || 0) + (i.on_hand || 0)
+    }
+    invData.value = Object.entries(typeMap).map(([k, v]) => ({ name: k, value: v }))
+  } catch { invData.value = [] }
+}
+
+/* ---- OTD 准时率 ---- */
+async function fetchOtdData() {
+  try {
+    const [poRes, woRes] = await Promise.all([
+      api.get('/purchase/orders', { params: { page_size: 500 } }),
+      api.get('/production/orders', { params: { page_size: 500 } }),
+    ])
+    const all = [...(poRes.items || []), ...(woRes.items || [])]
+    const weekMap = {}
+    for (const o of all) {
+      const due = o.due_date || o.end_date || ''
+      if (!due) continue
+      const d = new Date(due)
+      const weekStart = new Date(d)
+      weekStart.setDate(d.getDate() - d.getDay())
+      const key = weekStart.toISOString().slice(0, 10)
+      if (!weekMap[key]) weekMap[key] = { total: 0, onTime: 0 }
+      weekMap[key].total++
+      if (o.status === '已完成') weekMap[key].onTime++
+    }
+    otdData.value = Object.entries(weekMap)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-8)
+      .map(([week, v]) => ({
+        week: week.slice(5),
+        total: v.total,
+        onTime: v.onTime,
+        overdue: v.total - v.onTime,
+        rate: v.total > 0 ? Math.round(v.onTime / v.total * 100) : 0,
+      }))
+    const total = otdData.value.reduce((s, d) => s + d.total, 0)
+    const onTime = otdData.value.reduce((s, d) => s + d.onTime, 0)
+    otdRate.value = total > 0 ? Math.round(onTime / total * 100) : 0
+  } catch { otdData.value = []; otdRate.value = 0 }
+}
+
+/* ---- 图表渲染 ---- */
+function renderCharts() {
+  if (otdData.value.length && otdChart.value) {
+    const c = echarts.init(otdChart.value)
+    c.setOption({
+      tooltip: { trigger: 'axis' },
+      legend: { data: ['按时完成', '逾期'] },
+      xAxis: { type: 'category', data: otdData.value.map(d => d.week) },
+      yAxis: { type: 'value' },
+      series: [
+        { name: '按时完成', type: 'bar', stack: 'total', data: otdData.value.map(d => d.onTime), color: '#67c23a' },
+        { name: '逾期', type: 'bar', stack: 'total', data: otdData.value.map(d => d.overdue), color: '#f56c6c' },
+      ],
+    })
+  }
+
+  if (invData.value.length && inventoryChart.value) {
+    const c = echarts.init(inventoryChart.value)
+    const colors = { '原材料': '#409eff', '半成品': '#e6a23c', '零件': '#67c23a', '成品': '#f56c6c', '其他': '#909399' }
+    c.setOption({
+      tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+      series: [{
+        type: 'pie', radius: ['40%', '70%'],
+        data: invData.value.map(d => ({ value: d.value, name: d.name, itemStyle: { color: colors[d.name] || '#909399' } })),
+        label: { formatter: '{b}\n{d}%' },
+      }],
+    })
+  }
+
+  if (woData.value.length && woChart.value) {
+    const c = echarts.init(woChart.value)
+    const colors = { '待下达': '#909399', '已下达': '#e6a23c', '进行中': '#409eff', '已完成': '#67c23a', '已关闭': '#f56c6c' }
+    c.setOption({
+      tooltip: { trigger: 'axis' },
+      xAxis: { type: 'category', data: woData.value.map(d => d.status) },
+      yAxis: { type: 'value' },
+      series: [{
+        type: 'bar',
+        data: woData.value.map(d => ({ value: d.count, itemStyle: { color: colors[d.status] || '#909399' } })),
+      }],
+    })
+  }
 }
 
 onMounted(async () => {
-  await fetchLowStock()
+  await Promise.all([fetchLowStock(), fetchWoData(), fetchInvData(), fetchOtdData()])
   await nextTick()
-  initOtdChart()
-  initInventoryChart()
-  initWoChart()
+  renderCharts()
 })
 </script>
 
