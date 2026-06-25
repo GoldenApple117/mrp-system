@@ -24,5 +24,9 @@ RUN pip install --no-cache-dir -r backend/requirements.txt
 # 健康检查
 EXPOSE 8000
 
+# 复制启动脚本
+COPY start.sh /app/start.sh
+RUN chmod +x /app/start.sh
+
 # 启动
-CMD cd backend && python -m uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}
+CMD ["bash", "/app/start.sh"]
