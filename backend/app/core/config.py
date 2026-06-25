@@ -3,7 +3,10 @@ import os
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# MySQL 数据库连接（默认）  /  SQLite 备用
+# Railway MySQL 注入的完整连接字符串（优先级最高）
+RAILWAY_MYSQL_URL = os.getenv("DATABASE_URL", "")
+
+# MySQL 数据库连接（默认） / SQLite 备用
 MYSQL_CONFIG = {
     "user": os.getenv("MYSQL_USER", "root"),
     "password": os.getenv("MYSQL_PASSWORD", "root"),
@@ -19,11 +22,17 @@ SQLITE_PATH = os.path.join(BASE_DIR, "mrp_system_data.db")
 DB_BACKEND = os.getenv("DB_BACKEND", "mysql")
 
 if DB_BACKEND == "mysql":
-    DATABASE_URL = (
-        f"mysql+pymysql://{MYSQL_CONFIG['user']}:{MYSQL_CONFIG['password']}"
-        f"@{MYSQL_CONFIG['host']}:{MYSQL_CONFIG['port']}/{MYSQL_CONFIG['database']}"
-        f"?charset={MYSQL_CONFIG['charset']}"
-    )
+    if RAILWAY_MYSQL_URL and RAILWAY_MYSQL_URL.startswith("mysql://"):
+        # Railway MySQL 模式：DATABASE_URL => mysql://user:pass@host:port/db
+        # 转为 pymysql 驱动的格式
+        DATABASE_URL = RAILWAY_MYSQL_URL.replace("mysql://", "mysql+pymysql://", 1) + "?charset=utf8mb4"
+    else:
+        # 本地 MySQL 模式
+        DATABASE_URL = (
+            f"mysql+pymysql://{MYSQL_CONFIG['user']}:{MYSQL_CONFIG['password']}"
+            f"@{MYSQL_CONFIG['host']}:{MYSQL_CONFIG['port']}/{MYSQL_CONFIG['database']}"
+            f"?charset={MYSQL_CONFIG['charset']}"
+        )
 else:
     DATABASE_URL = f"sqlite:///{SQLITE_PATH}"
 
