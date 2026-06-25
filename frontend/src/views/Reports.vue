@@ -106,6 +106,9 @@ async function fetchInvData() {
 }
 
 /* ---- OTD 准时率 ---- */
+const today = new Date()
+today.setHours(0, 0, 0, 0)
+
 async function fetchOtdData() {
   try {
     const [poRes, woRes] = await Promise.all([
@@ -121,9 +124,13 @@ async function fetchOtdData() {
       const weekStart = new Date(d)
       weekStart.setDate(d.getDate() - d.getDay())
       const key = weekStart.toISOString().slice(0, 10)
-      if (!weekMap[key]) weekMap[key] = { total: 0, onTime: 0 }
+      if (!weekMap[key]) weekMap[key] = { total: 0, onTime: 0, overdue: 0 }
       weekMap[key].total++
-      if (o.status === '已完成') weekMap[key].onTime++
+      if (o.status === '已完成') {
+        weekMap[key].onTime++
+      } else if (d < today) {
+        weekMap[key].overdue++
+      }
     }
     otdData.value = Object.entries(weekMap)
       .sort(([a], [b]) => a.localeCompare(b))
@@ -132,7 +139,8 @@ async function fetchOtdData() {
         week: week.slice(5),
         total: v.total,
         onTime: v.onTime,
-        overdue: v.total - v.onTime,
+        overdue: v.overdue,
+        incomplete: v.total - v.onTime - v.overdue,
         rate: v.total > 0 ? Math.round(v.onTime / v.total * 100) : 0,
       }))
     const total = otdData.value.reduce((s, d) => s + d.total, 0)
@@ -147,12 +155,13 @@ function renderCharts() {
     const c = echarts.init(otdChart.value)
     c.setOption({
       tooltip: { trigger: 'axis' },
-      legend: { data: ['按时完成', '逾期'] },
+      legend: { data: ['按时完成', '逾期', '未完成'] },
       xAxis: { type: 'category', data: otdData.value.map(d => d.week) },
       yAxis: { type: 'value' },
       series: [
         { name: '按时完成', type: 'bar', stack: 'total', data: otdData.value.map(d => d.onTime), color: '#67c23a' },
         { name: '逾期', type: 'bar', stack: 'total', data: otdData.value.map(d => d.overdue), color: '#f56c6c' },
+        { name: '未完成', type: 'bar', stack: 'total', data: otdData.value.map(d => d.incomplete), color: '#909399' },
       ],
     })
   }
