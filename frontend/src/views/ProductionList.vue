@@ -42,8 +42,6 @@
           <el-button link type="primary" size="small" @click="updateStatus(row)">更新状态</el-button>
           <el-button link type="danger" size="small" @click="deleteItem(row)">删除</el-button>
         </template>
-      </el-table-column>          <el-button link type="danger" size="small" @click="deleteItem(row)" v-if="row.status==='待下达'">删除</el-button>
-        </template>
       </el-table-column>
     </el-table>
 
