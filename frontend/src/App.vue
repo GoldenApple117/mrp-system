@@ -121,9 +121,6 @@ const handleSeedDemo = () => {
   }).catch(() => {})
 }
 
-const route = useRoute()
-const isCollapse = ref(false)
-
 const activeMenu = computed(() => route.path)
 
 const pageTitle = computed(() => {
@@ -137,8 +134,6 @@ const pageTitle = computed(() => {
     '/production': '生产车间管理',
     '/routings': '工艺路线管理',
     '/reports': '报表与分析',
-    '/crp': 'CRP产能需求计划',
-    '/inspection': '检验与盘点管理',
     '/crp': 'CRP产能需求计划',
     '/inspection': '检验与盘点管理',
   }
