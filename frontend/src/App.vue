@@ -43,6 +43,10 @@
             <el-icon><SetUp /></el-icon>
             <span>生产管理</span>
           </el-menu-item>
+          <el-menu-item index="/routings">
+            <el-icon><Connection /></el-icon>
+            <span>工艺路线</span>
+          </el-menu-item>
           <el-menu-item index="/reports">
             <el-icon><DataAnalysis /></el-icon>
             <span>报表分析</span>

@@ -40,7 +40,9 @@
       <el-table-column label="操作" width="200" fixed="right">
         <template #default="{row}">
           <el-button link type="primary" size="small" @click="updateStatus(row)">更新状态</el-button>
-          <el-button link type="danger" size="small" @click="deleteItem(row)" v-if="row.status==='待下达'">删除</el-button>
+          <el-button link type="danger" size="small" @click="deleteItem(row)">删除</el-button>
+        </template>
+      </el-table-column>          <el-button link type="danger" size="small" @click="deleteItem(row)" v-if="row.status==='待下达'">删除</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -66,8 +68,13 @@
           <el-date-picker v-model="form.end_date" type="date" value-format="YYYY-MM-DD" style="width:100%" />
         </el-form-item>
         <el-form-item label="工作中心">
-          <el-select v-model="form.work_center_id" clearable placeholder="可选">
+          <el-select v-model="form.work_center_id" clearable placeholder="可选" style="width:100%">
             <el-option v-for="w in workCenters" :key="w.id" :label="w.center_name" :value="w.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="工艺路线">
+          <el-select v-model="form.routing_id" clearable placeholder="可选" style="width:100%">
+            <el-option v-for="r in routingOptions" :key="r.id" :label="`${r.routing_code} (${r.material_name})`" :value="r.id" />
           </el-select>
         </el-form-item>
         <el-form-item label="备注">
@@ -120,12 +127,13 @@ const filterStatus = ref('')
 
 const materialOptions = ref([])
 const workCenters = ref([])
+const routingOptions = ref([])
 
 const dialogVisible = ref(false)
 const formRef = ref(null)
 const form = reactive({
   item_id: null, plan_qty: 1, start_date: '', end_date: '',
-  work_center_id: null, remark: '',
+  work_center_id: null, routing_id: null, remark: '',
 })
 const rules = {
   item_id: [{ required: true }],
@@ -156,13 +164,18 @@ async function fetchData() {
 }
 
 async function showDialog(row) {
-  const [matRes, wcRes] = await Promise.all([
+  const [matRes, wcRes, routingRes] = await Promise.all([
     api.get('/materials/all'),
     api.get('/production/work-centers'),
+    api.get('/production/routings'),
   ])
   materialOptions.value = matRes.items
   workCenters.value = wcRes.items
-  Object.assign(form, { item_id: null, plan_qty: 1, start_date: '', end_date: '', work_center_id: null, remark: '' })
+  routingOptions.value = routingRes.items || []
+  Object.assign(form, {
+    item_id: null, plan_qty: 1, start_date: '', end_date: '',
+    work_center_id: null, routing_id: null, remark: '',
+  })
   dialogVisible.value = true
 }
 
@@ -171,7 +184,9 @@ async function submitForm() {
   if (!valid) return
   saving.value = true
   try {
-    await api.post('/production/orders', { ...form })
+    const data = { ...form }
+    if (!data.routing_id) delete data.routing_id
+    await api.post('/production/orders', data)
     ElMessage.success('工单已创建')
     dialogVisible.value = false
     fetchData()

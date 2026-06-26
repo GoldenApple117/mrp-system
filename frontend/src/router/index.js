@@ -38,6 +38,11 @@ const routes = [
     component: () => import('@/views/ProductionList.vue'),
   },
   {
+    path: '/routings',
+    name: 'Routings',
+    component: () => import('@/views/RoutingList.vue'),
+  },
+  {
     path: '/reports',
     name: 'Reports',
     component: () => import('@/views/Reports.vue'),
