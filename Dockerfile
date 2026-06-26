@@ -24,9 +24,9 @@ RUN pip install --no-cache-dir -r backend/requirements.txt
 # 健康检查
 EXPOSE 8000
 
-# 复制启动脚本
-COPY start.sh /app/start.sh
-RUN chmod +x /app/start.sh
+# 复制启动脚本和初始化脚本
+COPY start.sh init_db.py /app/
+RUN sed -i 's/\r$//' /app/start.sh && chmod +x /app/start.sh
 
 # 启动
 CMD ["bash", "/app/start.sh"]
