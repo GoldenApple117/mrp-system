@@ -8,7 +8,7 @@ import os
 
 from app.core.database import init_db
 from app.core.config import UPLOAD_DIR
-from app.api import materials, bom, inventory, mps, mrp, purchase, production, crp, inspection
+from app.api import materials, bom, inventory, mps, mrp, purchase, production, crp, inspection, system as system_api
 
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -48,6 +48,7 @@ app.include_router(purchase.router)
 app.include_router(production.router)
 app.include_router(crp.router)
 app.include_router(inspection.router)
+app.include_router(system_api.router)
 
 # 上传文件静态访问
 os.makedirs(UPLOAD_DIR, exist_ok=True)

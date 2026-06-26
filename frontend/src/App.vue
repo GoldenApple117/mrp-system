@@ -59,6 +59,12 @@
             <el-icon><Stamp /></el-icon>
             <span>检验盘点</span>
           </el-menu-item>
+          <el-divider style="border-color:rgba(255,255,255,0.08);margin:8px 12px;"></el-divider>
+          <div style="padding:8px 12px;">
+            <el-button type="warning" size="small" @click="handleSeedDemo" :loading="seeding" style="width:100%;font-size:12px;">
+              🚀 一键初始化演示数据
+            </el-button>
+          </div>
         </el-menu>
       </el-aside>
 
@@ -83,6 +89,37 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
+import { ElMessage, ElMessageBox } from 'element-plus'
+
+const route = useRoute()
+const isCollapse = ref(false)
+const seeding = ref(false)
+
+const handleSeedDemo = () => {
+  ElMessageBox.confirm(
+    '此操作将清空所有现有数据并重建完整的演示数据（16个物料 + 7个BOM + 5个工作中心 + 3条工艺路线 + 库存 + MPS计划）。确定继续？',
+    '⚠️ 确认初始化',
+    { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' }
+  ).then(() => {
+    seeding.value = true
+    fetch('/api/system/seed-demo', { method: 'POST' })
+      .then(r => r.json())
+      .then(data => {
+        seeding.value = false
+        if (data.success) {
+          ElMessage.success(data.message || '初始化完成！')
+          // 刷新当前页面
+          setTimeout(() => location.reload(), 1000)
+        } else {
+          ElMessage.error(data.message || '初始化失败')
+        }
+      })
+      .catch(e => {
+        seeding.value = false
+        ElMessage.error('请求失败: ' + e.message)
+      })
+  }).catch(() => {})
+}
 
 const route = useRoute()
 const isCollapse = ref(false)
@@ -100,6 +137,8 @@ const pageTitle = computed(() => {
     '/production': '生产车间管理',
     '/routings': '工艺路线管理',
     '/reports': '报表与分析',
+    '/crp': 'CRP产能需求计划',
+    '/inspection': '检验与盘点管理',
     '/crp': 'CRP产能需求计划',
     '/inspection': '检验与盘点管理',
   }
