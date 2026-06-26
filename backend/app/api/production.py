@@ -92,6 +92,34 @@ def create_work_order(data: dict, db: Session = Depends(get_db)):
     return {"success": True, "data": {"id": wo.id, "wo_number": wo.wo_number}}
 
 
+@router.put("/orders/{order_id}")
+def update_work_order(order_id: int, data: dict, db: Session = Depends(get_db)):
+    """更新工单（含路由/工作中心/数量等）"""
+    wo = db.query(WorkOrder).filter(WorkOrder.id == order_id).first()
+    if not wo:
+        raise HTTPException(status_code=404, detail="工单不存在")
+    if wo.status not in ("待下达", "已下达"):
+        raise HTTPException(status_code=400, detail=f"当前状态({wo.status})不允许修改")
+
+    if "routing_id" in data:
+        wo.routing_id = data["routing_id"]
+    if "work_center_id" in data:
+        wo.work_center_id = data["work_center_id"]
+    if "plan_qty" in data and data["plan_qty"] is not None:
+        wo.plan_qty = data["plan_qty"]
+    if "start_date" in data:
+        wo.start_date = date.fromisoformat(data["start_date"]) if isinstance(data["start_date"], str) else data["start_date"]
+    if "end_date" in data:
+        wo.end_date = date.fromisoformat(data["end_date"]) if isinstance(data["end_date"], str) else data["end_date"]
+    if "priority" in data:
+        wo.priority = data["priority"]
+    if "remark" in data:
+        wo.remark = data["remark"]
+
+    db.commit()
+    return {"success": True, "message": "工单已更新"}
+
+
 @router.put("/orders/{order_id}/status")
 def update_wo_status(order_id: int, data: dict, db: Session = Depends(get_db)):
     """更新工单状态"""
