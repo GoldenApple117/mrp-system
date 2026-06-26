@@ -4,7 +4,8 @@ import os
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Railway MySQL 注入的完整连接字符串（优先级最高）
-RAILWAY_MYSQL_URL = os.getenv("DATABASE_URL", "")
+# Railway MySQL 插件导出的是 MYSQL_URL，DATABASE_URL 是备用
+RAILWAY_MYSQL_URL = os.getenv("MYSQL_URL", "") or os.getenv("DATABASE_URL", "")
 
 # MySQL 数据库连接（默认） / SQLite 备用
 MYSQL_CONFIG = {
