@@ -6,10 +6,12 @@ from datetime import date, timedelta, datetime
 from app.core.database import init_db, SessionLocal
 from app.models.material import MaterialMaster
 from app.models.bom import BomHeader, BomLine
-from app.models.inventory import Warehouse, InventoryRecord
+from app.models.inventory import Warehouse, InventoryRecord, InventoryTransaction
 from app.models.mps import MpsEntry
+from app.models.order import PurchaseOrder, WorkOrder
 from app.models.supplier import Supplier
 from app.models.routing import WorkCenter, RoutingHeader, RoutingOperation
+from app.models.inspection import InspectionRecord, StockCount
 
 
 def seed_demo_data():
@@ -17,7 +19,12 @@ def seed_demo_data():
     init_db()
     db = SessionLocal()
 
-    # 清空旧数据（按外键依赖倒序）
+    # 清空旧数据（按外键依赖倒序：先删有外键引用的子表）
+    db.query(StockCount).delete()
+    db.query(InspectionRecord).delete()
+    db.query(InventoryTransaction).delete()
+    db.query(PurchaseOrder).delete()
+    db.query(WorkOrder).delete()
     db.query(RoutingOperation).delete()
     db.query(RoutingHeader).delete()
     db.query(BomLine).delete()
