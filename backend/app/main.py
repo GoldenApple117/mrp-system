@@ -53,13 +53,19 @@ app.include_router(inspection.router)
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
+# 健康检查 — 必须在 /{full_path:path} 之前注册，否则被 catch-all 截获
+@app.get("/api/health")
+def health():
+    return {"status": "ok"}
+
+
 # 生产环境：托管前端静态文件
 if os.path.exists(FRONTEND_DIST):
     app.mount("/assets", StaticFiles(directory=os.path.join(FRONTEND_DIST, "assets")), name="assets")
 
     @app.get("/{full_path:path}")
     async def serve_frontend(full_path: str):
-        # 排除 API 路径
+        # 排除 API 路径和文档路径
         if full_path.startswith("api/") or full_path.startswith("docs") or full_path.startswith("openapi"):
             return {"name": "MRP II 系统", "version": "1.2.0", "docs": "/docs", "status": "running"}
         file_path = os.path.join(FRONTEND_DIST, full_path)
@@ -69,11 +75,6 @@ if os.path.exists(FRONTEND_DIST):
         if os.path.isfile(index_path):
             return FileResponse(index_path, media_type="text/html")
         return {"name": "MRP II 系统", "version": "1.2.0", "docs": "/docs", "status": "running"}
-
-
-@app.get("/api/health")
-def health():
-    return {"status": "ok"}
 
 
 if __name__ == "__main__":
