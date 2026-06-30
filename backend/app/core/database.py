@@ -1,5 +1,5 @@
 """数据库连接与会话管理"""
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import sessionmaker, declarative_base
 from app.core.config import DATABASE_URL, DB_BACKEND
 
@@ -41,6 +41,14 @@ def init_db():
     Base.metadata.create_all(bind=engine)
 
     # 迁移：补齐新增的列（不破坏已有数据）
-    engine.execute("ALTER TABLE material_master ADD COLUMN classification_code VARCHAR(100) DEFAULT ''")
-    engine.execute("ALTER TABLE material_master ADD COLUMN level_type VARCHAR(20) DEFAULT '零件'")
+    with engine.connect() as conn:
+        for stmt in [
+            "ALTER TABLE material_master ADD COLUMN classification_code VARCHAR(100) DEFAULT ''",
+            "ALTER TABLE material_master ADD COLUMN level_type VARCHAR(20) DEFAULT '零件'",
+        ]:
+            try:
+                conn.execute(text(stmt))
+                conn.commit()
+            except Exception:
+                conn.rollback()  # 列已存在时忽略
 
