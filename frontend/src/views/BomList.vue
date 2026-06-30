@@ -306,9 +306,10 @@ function buildTree(nodes) {
   const roots = []
   nodes.forEach(n => { map[n.item_id] = { ...n, children: [] } })
   nodes.forEach(n => {
+    // 父节点存在于节点列表中 → 挂为子节点；否则 → 作为根节点
     if (n.parent_item_id && map[n.parent_item_id]) {
       map[n.parent_item_id].children.push(map[n.item_id])
-    } else if (!n.parent_item_id) {
+    } else {
       roots.push(map[n.item_id])
     }
   })
