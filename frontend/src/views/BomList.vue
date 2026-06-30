@@ -201,12 +201,43 @@
             placeholder="FG-001,SA-001,1,A1&#10;FG-001,SA-002,1,A2&#10;SA-001,RM-001,1,"
           />
         </el-tab-pane>
+
+        <!-- Tab 4: 导入采购BOM（固定模板） -->
+        <el-tab-pane label="导入采购BOM" name="procurement">
+          <div style="color:#666;font-size:13px;margin-bottom:12px;line-height:1.6;">
+            上传采购BOM Excel文件，系统将自动识别结构并创建：
+            <strong style="color:#333;">产品 → 模块 → 零件</strong> 三层级BOM。
+            <div style="background:#f0f9ff;border-radius:6px;padding:8px 12px;margin-top:8px;font-size:12px;">
+              ✅ 自动识别工作表（外购件/机加件/电气/视觉/量具）<br>
+              ✅ 自动创建产品和模块<br>
+              ✅ 自动匹配列名（型号/名称规格/单台数量）
+            </div>
+          </div>
+          <el-upload
+            ref="procurementUploadRef"
+            :auto-upload="false"
+            :limit="1"
+            accept=".xlsx,.xls"
+            :on-change="onProcurementFileChange"
+            drag
+          >
+            <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
+            <div style="margin:8px 0">将采购BOM文件拖到此处，或<em>点击选择</em></div>
+          </el-upload>
+          <div v-if="procurementResult" style="margin-top:12px;border-radius:8px;padding:12px;background:#f6ffed;border:1px solid #b7eb8f;font-size:13px;white-space:pre-wrap;">{{ procurementResult }}</div>
+          <div v-if="procurementErrors && procurementErrors.length" style="margin-top:8px;max-height:120px;overflow-y:auto;">
+            <p v-for="(e,i) in procurementErrors" :key="i" style="color:#e6a23c;font-size:12px;margin:2px 0;">⚠️ {{ e }}</p>
+          </div>
+        </el-tab-pane>
       </el-tabs>
 
       <template #footer>
         <el-button @click="importDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitImport" :loading="importLoading">
+        <el-button v-if="importTab !== 'procurement'" type="primary" @click="submitImport" :loading="importLoading">
           {{ importTab === 'paste' ? '开始导入' : '开始导入' }}
+        </el-button>
+        <el-button v-else type="primary" @click="submitImportProcurement" :loading="importLoading">
+          开始导入采购BOM
         </el-button>
       </template>
     </el-dialog>
@@ -316,6 +347,9 @@ function showImportDialog() {
 
 function resetImport() {
   importFile.value = null
+  procurementFile.value = null
+  procurementResult.value = ''
+  procurementErrors.value = []
   cloudLink.value = ''
   pasteData.value = ''
   identified.platform = ''
@@ -372,6 +406,55 @@ function identifyLink() {
       '查找「导出」或「下载」功能，导出为 Excel (.xlsx) 格式',
       '将下载的 .xlsx 文件拖入下方区域',
     ]
+  }
+}
+
+// ====== 采购BOM导入（固定模板）======
+const procurementUploadRef = ref(null)
+const procurementFile = ref(null)
+const procurementResult = ref('')
+const procurementErrors = ref([])
+
+function onProcurementFileChange(uploadFile) {
+  procurementFile.value = uploadFile.raw
+  procurementResult.value = ''
+  procurementErrors.value = []
+  return false
+}
+
+async function submitImportProcurement() {
+  if (!procurementFile.value) {
+    ElMessage.warning('请先选择采购BOM文件')
+    return
+  }
+  importLoading.value = true
+  procurementResult.value = ''
+  procurementErrors.value = []
+  try {
+    const formData = new FormData()
+    formData.append('file', procurementFile.value)
+    const res = await api.post('/bom/import/procurement', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    if (res.success) {
+      procurementResult.value = '✅ ' + (res.message || '导入成功')
+      if (res.stats) {
+        procurementResult.value += `\n📊 产品: ${res.stats.product || 0} | 模块: ${res.stats.modules || 0} | 零件: ${res.stats.parts || 0} | BOM行: ${res.stats.bom_lines || 0}`
+      }
+      if (res.errors && res.errors.length) {
+        procurementErrors.value = res.errors.slice(0, 10)
+      }
+      fetchData()
+    } else {
+      procurementResult.value = '❌ ' + (res.message || '导入失败')
+      if (res.errors && res.errors.length) {
+        procurementErrors.value = res.errors.slice(0, 10)
+      }
+    }
+  } catch (e) {
+    procurementResult.value = '❌ 导入失败: ' + (e.message || e)
+  } finally {
+    importLoading.value = false
   }
 }
 

@@ -1,5 +1,5 @@
 """BOM管理 API — 层级BOM + Excel导入 + 版本管理 + ECN"""
-import os
+import os, uuid
 from datetime import date, datetime
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from sqlalchemy.orm import Session
@@ -591,3 +591,28 @@ def approve_ecn(ecn_id: int, data: dict, db: Session = Depends(get_db)):
 
     db.commit()
     return {"success": True, "message": f"ECN {ecn.ecn_number} 已{action}"}
+
+
+@router.post("/import/procurement")
+async def import_procurement_bom(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+):
+    """导入采购BOM（固定模板：产品→模块→零件三层结构）"""
+    if not file.filename.endswith(('.xlsx', '.xls')):
+        raise HTTPException(status_code=400, detail="仅支持 .xlsx / .xls 文件")
+
+    file_path = os.path.join(UPLOAD_DIR, f"procurement_{uuid.uuid4().hex}.xlsx")
+    with open(file_path, "wb") as f:
+        content = await file.read()
+        f.write(content)
+
+    try:
+        from app.services.procurement_importer import import_procurement_bom as run_import
+        result = run_import(file_path, db)
+        return result
+    except Exception as e:
+        return {"success": False, "message": f"导入失败: {str(e)}", "errors": []}
+    finally:
+        if os.path.exists(file_path):
+            os.remove(file_path)
