@@ -225,74 +225,57 @@ def import_procurement_bom(file_path: str, db: Session) -> dict:
                 db.flush()
                 stats["parts"] += 1
 
-            # 创建BOM行：模块→零件
+            # 创建BOM行：模块→零件（全部放在产品BOM头下，以便递归展开）
             part_qty = float(qty_val) if qty_val and str(qty_val).replace('.', '', 1).isdigit() else 1
 
-            # 检查BOM行是否已存在
-            existing_line = db.query(BomLine).join(
-                BomHeader, BomLine.bom_header_id == BomHeader.id
-            ).filter(
-                BomHeader.product_id == mod.id,
+            # 检查BOM行是否已存在（用产品BOM头作为统一容器）
+            existing_line = db.query(BomLine).filter(
+                BomLine.bom_header_id == prod_bom.id,
+                BomLine.parent_item_id == mod.id,
                 BomLine.item_id == part.id,
             ).first()
             if not existing_line:
-                # 查找或创建模块的BOM头
-                mod_bom = db.query(BomHeader).filter(
-                    BomHeader.product_id == mod.id,
-                ).first()
-                if not mod_bom:
-                    mod_bom = BomHeader(
-                        bom_code=f"BOM-{module_name}",
-                        product_id=mod.id,
-                        version="A",
-                        status="生效",
-                    )
-                    db.add(mod_bom)
-                    db.flush()
-
-                bom_line = BomLine(
-                    bom_header_id=mod_bom.id,
+                stats["bom_lines"] += 1
+                db.add(BomLine(
+                    bom_header_id=prod_bom.id,
                     parent_item_id=mod.id,
                     item_id=part.id,
                     quantity=part_qty,
                     level=2,
-                    sort_order=stats["bom_lines"] + 1,
-                )
-                db.add(bom_line)
-                stats["bom_lines"] += 1
+                    sort_order=stats["bom_lines"],
+                ))
 
-    # Step 4: 创建产品→模块的BOM
+    # Step 4: 创建产品→模块的BOM行
+    sort_order = 0
+    prod_bom = db.query(BomHeader).filter(
+        BomHeader.product_id == product.id,
+    ).first()
+    if not prod_bom:
+        prod_bom = BomHeader(
+            bom_code=f"BOM-{product_name}",
+            product_id=product.id,
+            version="A",
+            status="生效",
+        )
+        db.add(prod_bom)
+        db.flush()
+
     for module_name, mod in module_map.items():
-        existing = db.query(BomLine).join(
-            BomHeader, BomLine.bom_header_id == BomHeader.id
-        ).filter(
-            BomHeader.product_id == product.id,
+        sort_order += 1
+        existing = db.query(BomLine).filter(
+            BomLine.bom_header_id == prod_bom.id,
+            BomLine.parent_item_id == product.id,
             BomLine.item_id == mod.id,
         ).first()
         if not existing:
-            prod_bom = db.query(BomHeader).filter(
-                BomHeader.product_id == product.id,
-            ).first()
-            if not prod_bom:
-                prod_bom = BomHeader(
-                    bom_code=f"BOM-{product_name}",
-                    product_id=product.id,
-                    version="A",
-                    status="生效",
-                )
-                db.add(prod_bom)
-                db.flush()
-
-            bom_line = BomLine(
+            db.add(BomLine(
                 bom_header_id=prod_bom.id,
                 parent_item_id=product.id,
                 item_id=mod.id,
                 quantity=1,
                 level=1,
-                sort_order=list(module_map.keys()).index(module_name) + 1,
-            )
-            db.add(bom_line)
-            stats["bom_lines"] += 1
+                sort_order=sort_order,
+            ))
 
     db.commit()
     wb.close()
