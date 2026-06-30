@@ -113,6 +113,9 @@ def seed_demo_data():
                        level_type="零件", lead_time=12, safety_stock=50, lot_size_rule="FOQ", lot_size_qty=80, is_purchased=True),
     ]
     print(f"  物料: {len(materials)} 个（含{len([m for m in materials if m.level_type=='产品'])}个产品, {len([m for m in materials if m.level_type=='模块'])}个模块, {len([m for m in materials if m.level_type=='零件'])}个零件）")
+    db.add_all(materials)
+    db.flush()
+    mid = {m.material_code: m.id for m in materials}
 
     # ===== 5. BOM（7 个） =====
     # FG-001 智能温控器

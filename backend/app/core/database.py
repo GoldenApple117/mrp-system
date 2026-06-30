@@ -37,5 +37,10 @@ def get_db():
 
 
 def init_db():
-    """初始化数据库表"""
+    """初始化数据库表（含迁移：新增列自动补齐）"""
     Base.metadata.create_all(bind=engine)
+
+    # 迁移：补齐新增的列（不破坏已有数据）
+    engine.execute("ALTER TABLE material_master ADD COLUMN classification_code VARCHAR(100) DEFAULT ''")
+    engine.execute("ALTER TABLE material_master ADD COLUMN level_type VARCHAR(20) DEFAULT '零件'")
+
