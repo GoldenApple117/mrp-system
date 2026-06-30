@@ -36,16 +36,31 @@ def _gen_code(db: Session) -> str:
     return f"{pre}{n:05d}"
 
 
-def _parse_csv(content: str) -> list[dict]:
-    """解析CSV内容，返回 [{"code":...,"name":...,"qty":...,"unit":...}]"""
+def _parse_csv(content: str) -> tuple[list[dict], str]:
+    """解析CSV，返回 (rows, error_msg)。
+    当 error_msg 非空时表示无法解析；rows 为已解析的数据。
+    """
     reader = csv.reader(io.StringIO(content))
-    rows = list(reader)
-    if not rows or len(rows) < 2:
-        return []
+    raw_rows = list(reader)
+    if not raw_rows or len(raw_rows) < 2:
+        return [], "文件为空或只有表头"
 
-    header = [h.strip() if h else "" for h in rows[0]]
+    # 跳过第一行如果它是标题行（如"外购件BOM 采购明细"）
+    start = 0
+    for i, row in enumerate(raw_rows):
+        if not row or not any(str(c).strip() for c in row):
+            continue  # 空行
+        # 判断是否为数据表头（含"序号"或"物料"等）
+        row_text = " ".join(str(c) for c in row[:8])
+        if any(kw in row_text for kw in ["序号", "物料编码", "物料名称", "名称", "型号", "零件"]):
+            start = i
+            break
+    else:
+        # 没找到表头，尝试用第一行为表头
+        start = 0
 
-    # 找各列的索引
+    header = [str(h).strip().replace("\ufeff", "").replace("\n", "").replace("\r", "") for h in raw_rows[start]]
+
     def find_col(*aliases):
         for a in aliases:
             for i, h in enumerate(header):
@@ -53,31 +68,42 @@ def _parse_csv(content: str) -> list[dict]:
                     return i
         return -1
 
-    code_col = find_col("型号", "物料编码", "编码")
-    name_col = find_col("名称规格", "名称", "物料名称", "零件名称")
-    qty_col = find_col("单台数量", "用量", "数量", "每台数量")
+    code_col = find_col("型号", "物料编码", "编码", "图号")
+    name_col = find_col("名称规格", "名称", "物料名称", "零件名称", "规格")
+    qty_col = find_col("单台数量", "用量", "数量", "每台数量", "n台数量")
     unit_col = find_col("单位")
 
+    # 如果没有找到名称列，尝试找任何看起来像名称的列（第二个非空文本列）
+    if name_col < 0 and len(header) >= 3:
+        for i in range(1, len(header)):
+            if header[i] and "编号" not in header[i] and "序号" not in header[i]:
+                name_col = i
+                break
+
     if name_col < 0:
-        return []
+        return [], f"未找到物料名称列，表头: [{','.join(header[:8])}]"
 
     results = []
-    for row in rows[1:]:
+    for row in raw_rows[start + 1:]:
         if len(row) <= name_col:
             continue
-        name = row[name_col].strip() if name_col < len(row) else ""
-        if not name or "合计" in name or "总计" in name:
+        name = str(row[name_col]).strip() if name_col < len(row) else ""
+        if not name or name == "nan" or "合计" in name or "总计" in name:
             continue
-        code = row[code_col].strip() if code_col >= 0 and code_col < len(row) else ""
+        code = str(row[code_col]).strip() if code_col >= 0 and code_col < len(row) else ""
+        if code == "nan":
+            code = ""
         qty = 1
         if qty_col >= 0 and qty_col < len(row):
             try:
-                qty = max(1, float(row[qty_col].strip() or 1))
+                qty = max(1, float(str(row[qty_col]).strip() or 1))
             except (ValueError, TypeError):
                 pass
-        unit = row[unit_col].strip() if unit_col >= 0 and unit_col < len(row) else "个"
+        unit = str(row[unit_col]).strip() if unit_col >= 0 and unit_col < len(row) else "个"
+        if unit == "nan":
+            unit = "个"
         results.append({"code": code, "name": name, "qty": qty, "unit": unit})
-    return results
+    return results, ""
 
 
 def run_multi(files: list[tuple[str, str]], product_name: str, db: Session) -> dict:
@@ -119,9 +145,12 @@ def run_multi(files: list[tuple[str, str]], product_name: str, db: Session) -> d
             warnings.append(f"跳过: {os.path.basename(fname)}（未识别模块类型）")
             continue
 
-        rows = _parse_csv(content)
+        rows, parse_err = _parse_csv(content)
+        if parse_err:
+            warnings.append(f"{os.path.basename(fname)}: {parse_err}")
+            continue
         if not rows:
-            warnings.append(f"{os.path.basename(fname)}: 未解析到数据，请确认表头包含'名称规格'或'名称'列")
+            warnings.append(f"{os.path.basename(fname)}: 未解析到有效数据行")
             continue
 
         # 模块
