@@ -608,8 +608,8 @@ async def import_procurement_bom(
         f.write(content)
 
     try:
-        from app.services.procurement_importer import import_procurement_bom as run_import
-        result = run_import(file_path, db)
+        from app.services.procurement_importer import run as run_import
+        result = run_import(file_path, db, original_name=file.filename)
         return result
     except Exception as e:
         return {"success": False, "message": f"导入失败: {str(e)}", "errors": []}
