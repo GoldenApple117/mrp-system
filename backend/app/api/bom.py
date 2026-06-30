@@ -595,24 +595,46 @@ def approve_ecn(ecn_id: int, data: dict, db: Session = Depends(get_db)):
 
 @router.post("/import/procurement")
 async def import_procurement_bom(
-    file: UploadFile = File(...),
+    files: list[UploadFile] = File(...),
+    product_name: str = "",
     db: Session = Depends(get_db),
 ):
-    """导入采购BOM（固定模板：产品→模块→零件三层结构）"""
-    if not file.filename.endswith(('.xlsx', '.xls')):
-        raise HTTPException(status_code=400, detail="仅支持 .xlsx / .xls 文件")
+    """导入采购BOM（支持多CSV文件一次性导入）"""
+    if not files:
+        raise HTTPException(status_code=400, detail="请至少选择一个文件")
 
-    file_path = os.path.join(UPLOAD_DIR, f"procurement_{uuid.uuid4().hex}.xlsx")
-    with open(file_path, "wb") as f:
-        content = await file.read()
-        f.write(content)
+    # 验证文件类型
+    for f in files:
+        if not f.filename.endswith(('.csv', '.xlsx', '.xls')):
+            raise HTTPException(status_code=400, detail=f"不支持的文件格式: {f.filename}")
+
+    # 如果没有提供产品名，从第一个文件名推断
+    if not product_name:
+        base = os.path.splitext(os.path.basename(files[0].filename))[0]
+        # 尝试去掉模块后缀
+        for suffix in ['BOM表', 'BOM', '表']:
+            base = base.rstrip(suffix)
+        product_name = base.strip()
+        if not product_name:
+            product_name = "未命名产品"
+
+    # 读取所有文件内容
+    file_data = []
+    for f in files:
+        content = await f.read()
+        # 尝试解码
+        try:
+            text = content.decode("utf-8")
+        except UnicodeDecodeError:
+            try:
+                text = content.decode("gbk")
+            except UnicodeDecodeError:
+                text = content.decode("utf-8", errors="replace")
+        file_data.append((f.filename, text))
 
     try:
-        from app.services.procurement_importer import run as run_import
-        result = run_import(file_path, db, original_name=file.filename)
+        from app.services.procurement_importer import run_multi
+        result = run_multi(file_data, product_name, db)
         return result
     except Exception as e:
-        return {"success": False, "message": f"导入失败: {str(e)}", "errors": []}
-    finally:
-        if os.path.exists(file_path):
-            os.remove(file_path)
+        return {"success": False, "message": f"导入失败: {str(e)}", "errors": [], "stats": {}}

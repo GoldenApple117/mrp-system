@@ -205,28 +205,35 @@
         <!-- Tab 4: 导入采购BOM（固定模板） -->
         <el-tab-pane label="导入采购BOM" name="procurement">
           <div style="color:#666;font-size:13px;margin-bottom:12px;line-height:1.6;">
-            上传采购BOM Excel文件，系统将自动识别结构并创建：
+            上传多个CSV文件，系统将按文件名自动识别模块并创建
             <strong style="color:#333;">产品 → 模块 → 零件</strong> 三层级BOM。
             <div style="background:#f0f9ff;border-radius:6px;padding:8px 12px;margin-top:8px;font-size:12px;">
-              ✅ 自动识别工作表（外购件/机加件/电气/视觉/量具）<br>
-              ✅ 自动创建产品和模块<br>
-              ✅ 自动匹配列名（型号/名称规格/单台数量）
+              ✅ 从金山文档逐表导出CSV，全选后一次性上传<br>
+              ✅ 文件名包含「外购件/电气/量具」等即自动匹配模块<br>
+              ✅ 支持 .csv / .xlsx 混传
             </div>
           </div>
+          <el-input v-model="procurementProductName" placeholder="输入产品名称（如：三工位-15台）" style="margin-bottom:12px" />
           <el-upload
             ref="procurementUploadRef"
             :auto-upload="false"
-            :limit="1"
-            accept=".xlsx,.xls"
+            multiple
+            accept=".csv,.xlsx,.xls"
             :on-change="onProcurementFileChange"
             drag
           >
             <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
-            <div style="margin:8px 0">将采购BOM文件拖到此处，或<em>点击选择</em></div>
+            <div style="margin:8px 0">将CSV文件拖到此处（可多选），或<em>点击选择</em></div>
           </el-upload>
+          <div v-if="procurementFiles.length" style="margin:8px 0;">
+            <el-tag v-for="f in procurementFiles" :key="f.name" size="small" style="margin-right:6px;margin-bottom:4px;">{{ f.name }}</el-tag>
+          </div>
           <div v-if="procurementResult" style="margin-top:12px;border-radius:8px;padding:12px;background:#f6ffed;border:1px solid #b7eb8f;font-size:13px;white-space:pre-wrap;">{{ procurementResult }}</div>
           <div v-if="procurementErrors && procurementErrors.length" style="margin-top:8px;max-height:120px;overflow-y:auto;">
             <p v-for="(e,i) in procurementErrors" :key="i" style="color:#e6a23c;font-size:12px;margin:2px 0;">⚠️ {{ e }}</p>
+          </div>
+          <div v-if="procurementWarnings && procurementWarnings.length" style="margin-top:4px;max-height:100px;overflow-y:auto;">
+            <p v-for="(w,i) in procurementWarnings" :key="i" style="color:#999;font-size:11px;margin:2px 0;">⏭️ {{ w }}</p>
           </div>
         </el-tab-pane>
       </el-tabs>
@@ -347,9 +354,11 @@ function showImportDialog() {
 
 function resetImport() {
   importFile.value = null
-  procurementFile.value = null
+  procurementFiles.value = []
+  procurementProductName.value = ''
   procurementResult.value = ''
   procurementErrors.value = []
+  procurementWarnings.value = []
   cloudLink.value = ''
   pasteData.value = ''
   identified.platform = ''
@@ -409,30 +418,51 @@ function identifyLink() {
   }
 }
 
-// ====== 采购BOM导入（固定模板）======
+// ====== 采购BOM导入（多CSV文件）======
 const procurementUploadRef = ref(null)
-const procurementFile = ref(null)
+const procurementFiles = ref([])
+const procurementProductName = ref('')
 const procurementResult = ref('')
 const procurementErrors = ref([])
+const procurementWarnings = ref([])
 
-function onProcurementFileChange(uploadFile) {
-  procurementFile.value = uploadFile.raw
+function onProcurementFileChange(uploadFile, uploadFiles) {
+  // 收集所有已选文件
+  procurementFiles.value = uploadFiles.map(f => f.raw || f)
   procurementResult.value = ''
   procurementErrors.value = []
+  procurementWarnings.value = []
+  // 自动从第一个文件名推断产品名
+  if (procurementFiles.value.length && !procurementProductName.value) {
+    let name = procurementFiles.value[0].name.replace(/\.[^/.]+$/, '')
+    // 去除模块后缀
+    for (const sfx of ['BOM表', 'BOM', '表']) {
+      if (name.endsWith(sfx)) name = name.slice(0, -sfx.length)
+    }
+    procurementProductName.value = name.trim()
+  }
   return false
 }
 
 async function submitImportProcurement() {
-  if (!procurementFile.value) {
-    ElMessage.warning('请先选择采购BOM文件')
+  if (!procurementFiles.value.length) {
+    ElMessage.warning('请先选择CSV文件')
+    return
+  }
+  const name = procurementProductName.value.trim()
+  if (!name) {
+    ElMessage.warning('请输入产品名称')
     return
   }
   importLoading.value = true
   procurementResult.value = ''
   procurementErrors.value = []
+  procurementWarnings.value = []
   try {
     const formData = new FormData()
-    formData.append('file', procurementFile.value)
+    procurementFiles.value.forEach(f => formData.append('files', f))
+    formData.append('product_name', name)
+
     const res = await api.post('/bom/import/procurement', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
@@ -441,15 +471,13 @@ async function submitImportProcurement() {
       if (res.stats) {
         procurementResult.value += `\n📊 产品: ${res.stats.product || 0} | 模块: ${res.stats.modules || 0} | 零件: ${res.stats.parts || 0} | BOM行: ${res.stats.bom_lines || 0}`
       }
-      if (res.errors && res.errors.length) {
-        procurementErrors.value = res.errors.slice(0, 10)
-      }
+      procurementErrors.value = res.errors || []
+      procurementWarnings.value = res.warnings || []
       fetchData()
     } else {
       procurementResult.value = '❌ ' + (res.message || '导入失败')
-      if (res.errors && res.errors.length) {
-        procurementErrors.value = res.errors.slice(0, 10)
-      }
+      procurementErrors.value = res.errors || []
+      procurementWarnings.value = res.warnings || []
     }
   } catch (e) {
     procurementResult.value = '❌ 导入失败: ' + (e.message || e)
