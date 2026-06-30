@@ -2,14 +2,7 @@
   <div class="page-container">
     <div class="page-toolbar">
       <el-button type="primary" @click="showBomDialog(null)"><el-icon><Plus /></el-icon> 新建BOM</el-button>
-      <el-upload
-        :show-file-list="false"
-        :before-upload="handleExcelUpload"
-        accept=".xlsx,.xls"
-        action="#"
-      >
-        <el-button type="success"><el-icon><Upload /></el-icon> 导入Excel BOM</el-button>
-      </el-upload>
+      <el-button type="success" @click="showImportDialog"><el-icon><Upload /></el-icon> 导入BOM</el-button>
       <el-button @click="downloadTemplate"><el-icon><Download /></el-icon> 下载模板</el-button>
       <span style="flex:1"></span>
       <el-select v-model="filterStatus" placeholder="状态筛选" style="width:120px" clearable @change="fetchData">
@@ -60,17 +53,6 @@
         </el-tree>
       </div>
       <el-empty v-else description="暂无BOM数据" />
-    </el-dialog>
-
-    <!-- Excel导入结果 -->
-    <el-dialog v-model="importResultVisible" title="导入结果" width="500px">
-      <el-result :icon="importSuccess ? 'success' : 'error'" :title="importMessage">
-        <template #extra v-if="importErrors.length">
-          <div style="max-height:200px;overflow-y:auto;text-align:left">
-            <p v-for="(e,i) in importErrors" :key="i" style="color:#e6a23c;font-size:13px">{{ e }}</p>
-          </div>
-        </template>
-      </el-result>
     </el-dialog>
 
     <!-- 新建BOM弹窗 -->
@@ -148,6 +130,89 @@
         <el-button type="primary" @click="submitBom" :loading="savingBom">保存</el-button>
       </template>
     </el-dialog>
+
+    <!-- ====== 导入BOM引导弹窗 ====== -->
+    <el-dialog v-model="importDialogVisible" title="导入BOM" width="640px" @close="resetImport">
+      <el-tabs v-model="importTab">
+        <!-- Tab 1: 上传Excel -->
+        <el-tab-pane label="上传Excel" name="excel">
+          <el-upload
+            ref="uploadRef"
+            :auto-upload="false"
+            :limit="1"
+            accept=".xlsx,.xls"
+            :on-change="onFileChange"
+            drag
+          >
+            <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
+            <div style="margin:8px 0">将Excel文件拖到此处，或<em>点击选择</em></div>
+            <template #tip>
+              <div style="color:#999;font-size:12px">支持 .xlsx / .xls 格式，表头须包含：父物料编码、子物料编码、用量</div>
+            </template>
+          </el-upload>
+          <div v-if="importFile" style="margin:8px 0;color:#409eff">已选择: {{ importFile.name }}</div>
+        </el-tab-pane>
+
+        <!-- Tab 2: 在线链接引导 -->
+        <el-tab-pane label="在线链接" name="cloud">
+          <el-input
+            v-model="cloudLink"
+            placeholder="粘贴金山文档 / WPS / 腾讯文档等分享链接"
+            clearable
+            @input="identifyLink"
+            style="margin-bottom:12px"
+          >
+            <template #prefix><el-icon><Link /></el-icon></template>
+          </el-input>
+
+          <div v-if="identified.platform" class="cloud-guide-card">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+              <span style="font-size:20px">{{ identified.icon }}</span>
+              <span style="font-weight:500">已识别：{{ identified.platform }}</span>
+            </div>
+            <div style="background:#f0f9ff;border-radius:8px;padding:12px 16px;margin-bottom:12px;font-size:13px;line-height:1.8;">
+              <div v-for="(step,si) in identified.steps" :key="si" style="display:flex;align-items:flex-start;gap:8px;margin:4px 0;">
+                <span style="background:#409eff;color:#fff;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;">{{ si+1 }}</span>
+                <span>{{ step }}</span>
+              </div>
+            </div>
+            <el-upload
+              :auto-upload="false"
+              :limit="1"
+              accept=".xlsx,.xls"
+              :on-change="onFileChange"
+            >
+              <el-button type="primary"><el-icon><Upload /></el-icon> 选择下载好的Excel文件</el-button>
+            </el-upload>
+            <div v-if="importFile" style="margin-top:8px;color:#409eff">已选择: {{ importFile.name }}</div>
+          </div>
+        </el-tab-pane>
+
+        <!-- Tab 3: 粘贴数据 -->
+        <el-tab-pane label="粘贴数据" name="paste">
+          <div style="color:#666;font-size:13px;margin-bottom:8px;">
+            请按以下格式粘贴数据（每行一条，逗号分隔）：<br>
+            <code style="background:#f5f5f5;padding:2px 6px;border-radius:4px;font-size:12px;">父物料编码,子物料编码,用量,位号</code>
+          </div>
+          <el-input
+            v-model="pasteData"
+            type="textarea"
+            :rows="8"
+            placeholder="例如：
+FG-001,SA-001,1,A1
+FG-001,SA-002,1,A2
+SA-001,RM-001,1,"
+          />
+        </el-tab-pane>
+      </el-tabs>
+
+      <template #footer>
+        <el-button @click="importDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitImport" :loading="importLoading">
+          {{ importTab === 'paste' ? '开始导入' : '开始导入' }}
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -166,11 +231,6 @@ const filterStatus = ref('')
 const treeVisible = ref(false)
 const treeData = ref(null)
 const treeProps = { children: 'children', label: 'material_name' }
-
-const importResultVisible = ref(false)
-const importSuccess = ref(false)
-const importMessage = ref('')
-const importErrors = ref([])
 
 const bomDialogVisible = ref(false)
 const savingBom = ref(false)
@@ -227,15 +287,189 @@ async function handleExcelUpload(file) {
     const res = await api.post('/bom/import/excel', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
-    importSuccess.value = res.success
-    importMessage.value = res.message
-    importErrors.value = res.errors || []
-    importResultVisible.value = true
-    if (res.success) fetchData()
+    if (res.success) {
+      ElMessage.success(res.message || '导入成功')
+      fetchData()
+    } else {
+      ElMessage.error(res.message || '导入失败')
+      if (res.errors && res.errors.length) {
+        ElMessageBox.alert(res.errors.slice(0, 10).join('\n'), '导入错误')
+      }
+    }
   } catch {
     ElMessage.error('导入失败')
   }
   return false
+}
+
+// ====== 导入弹窗（云文档引导 + 粘贴数据） ======
+const importDialogVisible = ref(false)
+const importTab = ref('excel')
+const importLoading = ref(false)
+const importFile = ref(null)
+const cloudLink = ref('')
+const pasteData = ref('')
+const identified = reactive({ platform: '', icon: '📄', steps: [] })
+
+function showImportDialog() {
+  importDialogVisible.value = true
+  importTab.value = 'excel'
+  resetImport()
+}
+
+function resetImport() {
+  importFile.value = null
+  cloudLink.value = ''
+  pasteData.value = ''
+  identified.platform = ''
+  identified.icon = '📄'
+  identified.steps = []
+}
+
+function onFileChange(uploadFile) {
+  importFile.value = uploadFile.raw
+  return false
+}
+
+function identifyLink() {
+  const url = cloudLink.value.trim()
+  if (!url) {
+    identified.platform = ''
+    identified.icon = '📄'
+    identified.steps = []
+    return
+  }
+
+  if (url.includes('kdocs.cn') || url.includes('docs.wps.cn') || url.includes('wps.cn')) {
+    identified.platform = '金山文档 / WPS'
+    identified.steps = [
+      '在浏览器中打开该链接',
+      '点击工具栏「导出 / 下载」→「下载为 Excel (.xlsx)」',
+      '将下载的 .xlsx 文件拖入下方区域',
+    ]
+  } else if (url.includes('docs.qq.com')) {
+    identified.platform = '腾讯文档'
+    identified.steps = [
+      '在浏览器中打开该链接',
+      '点击「文件」→「导出为」→「本地 Excel 表格 (.xlsx)」',
+      '将下载的 .xlsx 文件拖入下方区域',
+    ]
+  } else if (url.includes('shimo.im') || url.includes('石墨文档')) {
+    identified.platform = '石墨文档'
+    identified.steps = [
+      '在浏览器中打开该链接',
+      '点击右上角「···」→「导出」→「导出为 Excel」',
+      '将下载的 .xlsx 文件拖入下方区域',
+    ]
+  } else if (url.includes('aliyundoc') || url.includes('alibabacloud')) {
+    identified.platform = '阿里云文档'
+    identified.steps = [
+      '在浏览器中打开该链接',
+      '点击「导出」→「下载为 Excel」',
+      '将下载的 .xlsx 文件拖入下方区域',
+    ]
+  } else {
+    identified.platform = '其他云文档平台'
+    identified.steps = [
+      '在浏览器中打开该链接',
+      '查找「导出」或「下载」功能，导出为 Excel (.xlsx) 格式',
+      '将下载的 .xlsx 文件拖入下方区域',
+    ]
+  }
+}
+
+async function submitImport() {
+  if (importTab.value === 'paste') {
+    const lines = pasteData.value.trim().split('\n').filter(l => l.trim())
+    if (lines.length === 0) {
+      ElMessage.warning('请粘贴BOM数据')
+      return
+    }
+    importLoading.value = true
+    try {
+      // Parse CSV: parent_code,child_code,quantity,position
+      const pairs = []
+      for (let i = 0; i < lines.length; i++) {
+        const parts = lines[i].split(',').map(s => s.trim())
+        if (parts.length >= 2) {
+          pairs.push({
+            parent_code: parts[0], child_code: parts[1],
+            quantity: parseFloat(parts[2]) || 1, position: parts[3] || '',
+          })
+        }
+      }
+      if (pairs.length === 0) { ElMessage.error('没有有效数据'); return }
+
+      // Group by parent
+      const groups = {}
+      pairs.forEach(p => {
+        if (!groups[p.parent_code]) groups[p.parent_code] = []
+        groups[p.parent_code].push(p)
+      })
+
+      // Get all materials
+      const matRes = await api.get('/materials/all')
+      const matMap = {}
+      matRes.items.forEach(m => { matMap[m.material_code] = m })
+
+      let success = 0
+      for (const [parentCode, children] of Object.entries(groups)) {
+        const product = matMap[parentCode]
+        if (!product) { ElMessage.warning(`物料 ${parentCode} 不存在，跳过`); continue }
+        // Create BOM with lines in one call
+        const linesPayload = children.map(c => ({
+          parent_item_id: product.id,
+          item_id: matMap[c.child_code]?.id || null,
+          quantity: c.quantity,
+          position: c.position,
+          level: 1,
+          sort_order: 0,
+        })).filter(l => l.item_id)
+        if (linesPayload.length === 0) continue
+        const r = await api.post('/bom/headers', {
+          bom_code: `BOM-${parentCode}`,
+          product_id: product.id,
+          version: 'A',
+          status: '生效',
+          lines: linesPayload,
+        })
+        if (r.success) success++
+      }
+      ElMessage.success(`成功导入 ${success} 个BOM`)
+      importDialogVisible.value = false
+      fetchData()
+    } catch (e) {
+      ElMessage.error('导入失败: ' + (e.message || e))
+    } finally {
+      importLoading.value = false
+    }
+    return
+  }
+
+  // Excel mode
+  if (!importFile.value) { ElMessage.warning('请先选择Excel文件'); return }
+  importLoading.value = true
+  try {
+    const formData = new FormData()
+    formData.append('file', importFile.value)
+    const res = await api.post('/bom/import/excel', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    if (res.success) {
+      ElMessage.success(res.message || '导入成功')
+      importDialogVisible.value = false
+      fetchData()
+    } else {
+      ElMessage.error(res.message || '导入失败')
+      if (res.errors?.length) {
+        ElMessageBox.alert(res.errors.slice(0, 10).join('\n'), '导入错误')
+      }
+    }
+  } catch (e) {
+    ElMessage.error('导入失败: ' + (e.message || e))
+  } finally {
+    importLoading.value = false
+  }
 }
 
 async function downloadTemplate() {
