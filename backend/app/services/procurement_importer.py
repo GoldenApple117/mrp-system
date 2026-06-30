@@ -128,6 +128,20 @@ def import_procurement_bom(file_path: str, db: Session) -> dict:
         db.flush()
         stats["product"] = 1
 
+    # 创建产品级BOM头（供Step 3的循环使用）
+    prod_bom = db.query(BomHeader).filter(
+        BomHeader.product_id == product.id,
+    ).first()
+    if not prod_bom:
+        prod_bom = BomHeader(
+            bom_code=f"BOM-{product_name}",
+            product_id=product.id,
+            version="A",
+            status="生效",
+        )
+        db.add(prod_bom)
+        db.flush()
+
     # Step 3: 遍历每个工作表，创建模块和零件
     module_map = {}  # module_name -> MaterialMaster
     created_codes = set()  # 用于行内去重
@@ -247,18 +261,6 @@ def import_procurement_bom(file_path: str, db: Session) -> dict:
 
     # Step 4: 创建产品→模块的BOM行
     sort_order = 0
-    prod_bom = db.query(BomHeader).filter(
-        BomHeader.product_id == product.id,
-    ).first()
-    if not prod_bom:
-        prod_bom = BomHeader(
-            bom_code=f"BOM-{product_name}",
-            product_id=product.id,
-            version="A",
-            status="生效",
-        )
-        db.add(prod_bom)
-        db.flush()
 
     for module_name, mod in module_map.items():
         sort_order += 1
