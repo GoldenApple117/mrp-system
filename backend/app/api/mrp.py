@@ -23,7 +23,7 @@ def run_mrp_logic(db: Session, horizon_days: int = 90, time_fence_days: int = 7)
     """
     start_time = datetime.now()
 
-    # 1. 读取MPS（仅成品物料）
+    # 1. 读取MPS（仅产品层级物料作为MRP起点）
     mps_entries_raw = db.query(MpsEntry).filter(
         MpsEntry.plan_date >= date.today()
     ).all()
@@ -35,7 +35,7 @@ def run_mrp_logic(db: Session, horizon_days: int = 90, time_fence_days: int = 7)
             "quantity": e.quantity,
         }
         for e in mps_entries_raw
-        if e.item and (e.item.material_type == "成品" or e.item.level_type == "产品")
+        if e.item and e.item.level_type == "产品"
     ]
 
     if not mps_entries:
@@ -71,6 +71,7 @@ def run_mrp_logic(db: Session, horizon_days: int = 90, time_fence_days: int = 7)
     material_masters = [
         {
             "code": m.material_code,
+            "level_type": m.level_type,
             "lead_time": m.lead_time,
             "safety_stock": m.safety_stock,
             "lot_size_rule": m.lot_size_rule,
@@ -166,7 +167,7 @@ def run_mrp_logic(db: Session, horizon_days: int = 90, time_fence_days: int = 7)
 
     return {
         "success": True,
-        "message": f"MRP运算完成，耗时 {elapsed:.2f}s",
+        "message": f"MRP运算完成（仅零件层），耗时 {elapsed:.2f}s",
         "data": {
             "planned_orders": planned_orders,
             "exceptions": exceptions,
@@ -179,6 +180,7 @@ def run_mrp_logic(db: Session, horizon_days: int = 90, time_fence_days: int = 7)
                 "warning_count": len([e for e in exceptions if e.get("severity") == "WARNING"]),
                 "run_time_ms": round(elapsed * 1000, 2),
                 "horizon_days": horizon_days,
+                "module_layer_skipped": len([m for m in materials_raw if m.level_type == "模块"]),
             },
         },
     }

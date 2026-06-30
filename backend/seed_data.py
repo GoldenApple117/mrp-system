@@ -117,69 +117,115 @@ def seed_demo_data():
     db.flush()
     mid = {m.material_code: m.id for m in materials}
 
-    # ===== 5. BOM（7 个） =====
-    # FG-001 智能温控器
-    b1 = BomHeader(bom_code="BOM-FG-001", product_id=mid["FG-001"], version="A", status="生效")
-    db.add(b1); db.flush()
+    # ===== 5. BOM（产品→模块→零件 三层结构，共10个BOM头） =====
+    # ── 产品层 → 模块层 ──
+
+    # BOM-FG-001: 智能温控器 → 模块
+    b_fg001 = BomHeader(bom_code="BOM-FG-001", product_id=mid["FG-001"], version="A", status="生效")
+    db.add(b_fg001); db.flush()
     db.add_all([
-        BomLine(bom_header_id=b1.id, parent_item_id=mid["FG-001"], item_id=mid["SA-001"], quantity=1, position="A1", level=1, sort_order=1),
-        BomLine(bom_header_id=b1.id, parent_item_id=mid["FG-001"], item_id=mid["SA-002"], quantity=1, position="A2", level=1, sort_order=2),
-        BomLine(bom_header_id=b1.id, parent_item_id=mid["FG-001"], item_id=mid["RM-005"], quantity=1, position="A3", level=1, sort_order=3),
+        BomLine(bom_header_id=b_fg001.id, parent_item_id=mid["FG-001"], item_id=mid["MOD-ELEC"], quantity=1, position="A1", level=1, sort_order=1),
+        BomLine(bom_header_id=b_fg001.id, parent_item_id=mid["FG-001"], item_id=mid["MOD-POWER"], quantity=1, position="A2", level=1, sort_order=2),
+        BomLine(bom_header_id=b_fg001.id, parent_item_id=mid["FG-001"], item_id=mid["MOD-ENCLOSURE"], quantity=1, position="A3", level=1, sort_order=3),
     ])
 
-    # SA-001 温控主板组件
-    b2 = BomHeader(bom_code="BOM-SA-001", product_id=mid["SA-001"], version="A", status="生效")
-    db.add(b2); db.flush()
+    # BOM-FG-002: 电动阀门 → 模块
+    b_fg002 = BomHeader(bom_code="BOM-FG-002", product_id=mid["FG-002"], version="A", status="生效")
+    db.add(b_fg002); db.flush()
     db.add_all([
-        BomLine(bom_header_id=b2.id, parent_item_id=mid["SA-001"], item_id=mid["RM-001"], quantity=1, level=2, sort_order=1),
-        BomLine(bom_header_id=b2.id, parent_item_id=mid["SA-001"], item_id=mid["RM-002"], quantity=3, level=2, sort_order=2),
-        BomLine(bom_header_id=b2.id, parent_item_id=mid["SA-001"], item_id=mid["RM-006"], quantity=1, level=2, sort_order=3),
+        BomLine(bom_header_id=b_fg002.id, parent_item_id=mid["FG-002"], item_id=mid["MOD-MECH"], quantity=1, position="B1", level=1, sort_order=1),
+        BomLine(bom_header_id=b_fg002.id, parent_item_id=mid["FG-002"], item_id=mid["MOD-POWER"], quantity=1, position="B2", level=1, sort_order=2),
+        BomLine(bom_header_id=b_fg002.id, parent_item_id=mid["FG-002"], item_id=mid["MOD-ENCLOSURE"], quantity=1, position="B3", level=1, sort_order=3),
     ])
 
-    # SA-002 显示面板组件
-    b3 = BomHeader(bom_code="BOM-SA-002", product_id=mid["SA-002"], version="A", status="生效")
-    db.add(b3); db.flush()
+    # BOM-FG-003: 工业传感器模组 → 模块
+    b_fg003 = BomHeader(bom_code="BOM-FG-003", product_id=mid["FG-003"], version="A", status="生效")
+    db.add(b_fg003); db.flush()
     db.add_all([
-        BomLine(bom_header_id=b3.id, parent_item_id=mid["SA-002"], item_id=mid["RM-003"], quantity=1, level=2, sort_order=1),
-        BomLine(bom_header_id=b3.id, parent_item_id=mid["SA-002"], item_id=mid["RM-001"], quantity=1, level=2, sort_order=2),
+        BomLine(bom_header_id=b_fg003.id, parent_item_id=mid["FG-003"], item_id=mid["MOD-SENSOR"], quantity=1, position="C1", level=1, sort_order=1),
+        BomLine(bom_header_id=b_fg003.id, parent_item_id=mid["FG-003"], item_id=mid["MOD-MECH"], quantity=1, position="C2", level=1, sort_order=2),
+        BomLine(bom_header_id=b_fg003.id, parent_item_id=mid["FG-003"], item_id=mid["MOD-ENCLOSURE"], quantity=1, position="C3", level=1, sort_order=3),
     ])
 
-    # FG-002 电动阀门
-    b4 = BomHeader(bom_code="BOM-FG-002", product_id=mid["FG-002"], version="A", status="生效")
-    db.add(b4); db.flush()
+    # ── 模块层 → 零件层 ──
+
+    # BOM-MOD-ELEC: 电子电气模块 → 零件
+    b_me = BomHeader(bom_code="BOM-MOD-ELEC", product_id=mid["MOD-ELEC"], version="A", status="生效")
+    db.add(b_me); db.flush()
     db.add_all([
-        BomLine(bom_header_id=b4.id, parent_item_id=mid["FG-002"], item_id=mid["SA-003"], quantity=1, position="B1", level=1, sort_order=1),
-        BomLine(bom_header_id=b4.id, parent_item_id=mid["FG-002"], item_id=mid["RM-005"], quantity=1, position="B2", level=1, sort_order=2),
+        BomLine(bom_header_id=b_me.id, parent_item_id=mid["MOD-ELEC"], item_id=mid["SA-001"], quantity=1, position="M1", level=2, sort_order=1),
+        BomLine(bom_header_id=b_me.id, parent_item_id=mid["MOD-ELEC"], item_id=mid["SA-002"], quantity=1, position="M2", level=2, sort_order=2),
     ])
 
-    # SA-003 阀门执行器组件
-    b5 = BomHeader(bom_code="BOM-SA-003", product_id=mid["SA-003"], version="A", status="生效")
-    db.add(b5); db.flush()
+    # BOM-MOD-MECH: 机械结构模块 → 零件
+    b_mm = BomHeader(bom_code="BOM-MOD-MECH", product_id=mid["MOD-MECH"], version="A", status="生效")
+    db.add(b_mm); db.flush()
     db.add_all([
-        BomLine(bom_header_id=b5.id, parent_item_id=mid["SA-003"], item_id=mid["RM-004"], quantity=1, level=2, sort_order=1),
-        BomLine(bom_header_id=b5.id, parent_item_id=mid["SA-003"], item_id=mid["RM-007"], quantity=1, level=2, sort_order=2),
-        BomLine(bom_header_id=b5.id, parent_item_id=mid["SA-003"], item_id=mid["RM-008"], quantity=2, level=2, sort_order=3),
-        BomLine(bom_header_id=b5.id, parent_item_id=mid["SA-003"], item_id=mid["RM-006"], quantity=1, level=2, sort_order=4),
+        BomLine(bom_header_id=b_mm.id, parent_item_id=mid["MOD-MECH"], item_id=mid["SA-003"], quantity=1, position="M1", level=2, sort_order=1),
+        BomLine(bom_header_id=b_mm.id, parent_item_id=mid["MOD-MECH"], item_id=mid["RM-007"], quantity=1, position="M2", level=2, sort_order=2),
+        BomLine(bom_header_id=b_mm.id, parent_item_id=mid["MOD-MECH"], item_id=mid["RM-008"], quantity=2, position="M3", level=2, sort_order=3),
     ])
 
-    # FG-003 工业传感器模组
-    b6 = BomHeader(bom_code="BOM-FG-003", product_id=mid["FG-003"], version="A", status="生效")
-    db.add(b6); db.flush()
+    # BOM-MOD-SENSOR: 传感器模块 → 零件
+    b_ms = BomHeader(bom_code="BOM-MOD-SENSOR", product_id=mid["MOD-SENSOR"], version="A", status="生效")
+    db.add(b_ms); db.flush()
     db.add_all([
-        BomLine(bom_header_id=b6.id, parent_item_id=mid["FG-003"], item_id=mid["SA-004"], quantity=1, position="C1", level=1, sort_order=1),
-        BomLine(bom_header_id=b6.id, parent_item_id=mid["FG-003"], item_id=mid["RM-005"], quantity=1, position="C2", level=1, sort_order=2),
-        BomLine(bom_header_id=b6.id, parent_item_id=mid["FG-003"], item_id=mid["RM-009"], quantity=2, position="C3", level=1, sort_order=3),
+        BomLine(bom_header_id=b_ms.id, parent_item_id=mid["MOD-SENSOR"], item_id=mid["SA-004"], quantity=1, position="M1", level=2, sort_order=1),
+        BomLine(bom_header_id=b_ms.id, parent_item_id=mid["MOD-SENSOR"], item_id=mid["RM-009"], quantity=2, position="M2", level=2, sort_order=2),
     ])
 
-    # SA-004 传感器核心模块
-    b7 = BomHeader(bom_code="BOM-SA-004", product_id=mid["SA-004"], version="A", status="生效")
-    db.add(b7); db.flush()
+    # BOM-MOD-POWER: 电源模块 → 零件
+    b_mp = BomHeader(bom_code="BOM-MOD-POWER", product_id=mid["MOD-POWER"], version="A", status="生效")
+    db.add(b_mp); db.flush()
     db.add_all([
-        BomLine(bom_header_id=b7.id, parent_item_id=mid["SA-004"], item_id=mid["RM-001"], quantity=1, level=2, sort_order=1),
-        BomLine(bom_header_id=b7.id, parent_item_id=mid["SA-004"], item_id=mid["RM-002"], quantity=2, level=2, sort_order=2),
-        BomLine(bom_header_id=b7.id, parent_item_id=mid["SA-004"], item_id=mid["RM-009"], quantity=1, level=2, sort_order=3),
+        BomLine(bom_header_id=b_mp.id, parent_item_id=mid["MOD-POWER"], item_id=mid["RM-006"], quantity=1, position="M1", level=2, sort_order=1),
     ])
-    print(f"  BOM: 7 个")
+
+    # BOM-MOD-ENCLOSURE: 外壳包材模块 → 零件
+    b_me2 = BomHeader(bom_code="BOM-MOD-ENCLOSURE", product_id=mid["MOD-ENCLOSURE"], version="A", status="生效")
+    db.add(b_me2); db.flush()
+    db.add_all([
+        BomLine(bom_header_id=b_me2.id, parent_item_id=mid["MOD-ENCLOSURE"], item_id=mid["RM-005"], quantity=1, position="M1", level=2, sort_order=1),
+    ])
+
+    # ── 零件层内部 BOM（半成品→原材料） ──
+
+    # BOM-SA-001: 温控主板组件 → 原材料
+    b_sa001 = BomHeader(bom_code="BOM-SA-001", product_id=mid["SA-001"], version="A", status="生效")
+    db.add(b_sa001); db.flush()
+    db.add_all([
+        BomLine(bom_header_id=b_sa001.id, parent_item_id=mid["SA-001"], item_id=mid["RM-001"], quantity=1, level=3, sort_order=1),
+        BomLine(bom_header_id=b_sa001.id, parent_item_id=mid["SA-001"], item_id=mid["RM-002"], quantity=3, level=3, sort_order=2),
+        BomLine(bom_header_id=b_sa001.id, parent_item_id=mid["SA-001"], item_id=mid["RM-006"], quantity=1, level=3, sort_order=3),
+    ])
+
+    # BOM-SA-002: 显示面板组件 → 原材料
+    b_sa002 = BomHeader(bom_code="BOM-SA-002", product_id=mid["SA-002"], version="A", status="生效")
+    db.add(b_sa002); db.flush()
+    db.add_all([
+        BomLine(bom_header_id=b_sa002.id, parent_item_id=mid["SA-002"], item_id=mid["RM-003"], quantity=1, level=3, sort_order=1),
+        BomLine(bom_header_id=b_sa002.id, parent_item_id=mid["SA-002"], item_id=mid["RM-001"], quantity=1, level=3, sort_order=2),
+    ])
+
+    # BOM-SA-003: 阀门执行器组件 → 原材料
+    b_sa003 = BomHeader(bom_code="BOM-SA-003", product_id=mid["SA-003"], version="A", status="生效")
+    db.add(b_sa003); db.flush()
+    db.add_all([
+        BomLine(bom_header_id=b_sa003.id, parent_item_id=mid["SA-003"], item_id=mid["RM-004"], quantity=1, level=3, sort_order=1),
+        BomLine(bom_header_id=b_sa003.id, parent_item_id=mid["SA-003"], item_id=mid["RM-007"], quantity=1, level=3, sort_order=2),
+        BomLine(bom_header_id=b_sa003.id, parent_item_id=mid["SA-003"], item_id=mid["RM-008"], quantity=2, level=3, sort_order=3),
+        BomLine(bom_header_id=b_sa003.id, parent_item_id=mid["SA-003"], item_id=mid["RM-006"], quantity=1, level=3, sort_order=4),
+    ])
+
+    # BOM-SA-004: 传感器核心模块 → 原材料
+    b_sa004 = BomHeader(bom_code="BOM-SA-004", product_id=mid["SA-004"], version="A", status="生效")
+    db.add(b_sa004); db.flush()
+    db.add_all([
+        BomLine(bom_header_id=b_sa004.id, parent_item_id=mid["SA-004"], item_id=mid["RM-001"], quantity=1, level=3, sort_order=1),
+        BomLine(bom_header_id=b_sa004.id, parent_item_id=mid["SA-004"], item_id=mid["RM-002"], quantity=2, level=3, sort_order=2),
+        BomLine(bom_header_id=b_sa004.id, parent_item_id=mid["SA-004"], item_id=mid["RM-009"], quantity=1, level=3, sort_order=3),
+    ])
+    print(f"  BOM: 10 个（3产品BOM + 6模块BOM + 4零件BOM）")
 
     # ===== 6. 工艺路线（3 条） =====
     rt1 = RoutingHeader(routing_code="RT-FG-001", item_id=mid["FG-001"])
@@ -239,8 +285,9 @@ def seed_demo_data():
     db.close()
 
     print(f"\n✅ 演示数据初始化完成！")
-    print(f"   物料 16 个 | BOM 7 个 | 工作中心 5 个 | 工艺路线 3 条")
+    print(f"   物料 16 个 | BOM 10 个（3产品+6模块+4零件） | 工作中心 5 个 | 工艺路线 3 条")
     print(f"   MPS 14 条 | 库存 16 条")
+    print(f"   ⚡ 三层结构: 产品(3) → 模块(6) → 零件(7) | MRP仅对零件层运算")
 
 
 if __name__ == "__main__":

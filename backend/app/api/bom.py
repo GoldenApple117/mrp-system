@@ -1,5 +1,5 @@
-"""BOM管理 API — 层级BOM + Excel导入 + 版本管理 + ECN"""
-import os, uuid
+"""BOM管理 API — 层级BOM + Excel导入 + 版本管理 + ECN + 金山文档导入"""
+import os, uuid, logging
 from datetime import date, datetime
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from sqlalchemy.orm import Session
@@ -12,8 +12,11 @@ from app.models.bom import BomHeader, BomLine, BomEcn
 from app.models.material import MaterialMaster
 from app.services.excel_importer import ExcelImporter
 from app.services.bom_exploder import BomExploder
+from app.services.kdocs_importer import parse_kdocs_link, parse_kdocs_sheet_data
 
 router = APIRouter(prefix="/api/bom", tags=["BOM管理"])
+
+logger = logging.getLogger(__name__)
 
 
 @router.get("/headers")
@@ -638,3 +641,243 @@ async def import_procurement_bom(
         return result
     except Exception as e:
         return {"success": False, "message": f"导入失败: {str(e)}", "errors": [], "stats": {}}
+
+
+# ====== 金山文档在线导入 + 原始数据导入 ======
+
+@router.post("/import/raw")
+def import_bom_from_raw(data: dict, db: Session = Depends(get_db)):
+    """
+    从原始JSON数据导入BOM（通用入口，支持金山文档/手工录入/API对接）
+
+    请求体格式：
+    {
+        "materials": [
+            {
+                "material_code": "RM-001",
+                "material_name": "PCB电路板",
+                "material_type": "原材料",
+                "level_type": "零件",
+                "unit": "块",
+                "lead_time": 5,
+                "safety_stock": 100,
+                "lot_size_rule": "EOQ",
+                "lot_size_qty": 500,
+                "is_purchased": true
+            }
+        ],
+        "bom_lines": [
+            {
+                "parent_code": "FG-001",
+                "child_code": "MOD-ELEC",
+                "quantity_per": 1,
+                "position": "A1"
+            }
+        ]
+    }
+    """
+    materials = data.get("materials", [])
+    bom_lines_data = data.get("bom_lines", [])
+
+    if not bom_lines_data:
+        return {"success": False, "message": "没有BOM数据", "errors": ["bom_lines 为空"]}
+
+    # Step 1: 自动创建不存在的物料
+    mat_created = 0
+    mat_updated = 0
+    for mat_data in materials:
+        existing = db.query(MaterialMaster).filter(
+            MaterialMaster.material_code == mat_data["material_code"]
+        ).first()
+        if not existing:
+            mat = MaterialMaster(
+                material_code=mat_data["material_code"],
+                material_name=mat_data.get("material_name", mat_data["material_code"]),
+                specification=mat_data.get("specification", ""),
+                unit=mat_data.get("unit", "个"),
+                material_type=mat_data.get("material_type", "原材料"),
+                level_type=mat_data.get("level_type", "零件"),
+                lead_time=mat_data.get("lead_time", 0),
+                safety_stock=mat_data.get("safety_stock", 0),
+                lot_size_rule=mat_data.get("lot_size_rule", "LFL"),
+                lot_size_qty=mat_data.get("lot_size_qty", 1),
+                min_order_qty=mat_data.get("min_order_qty", 0),
+                max_order_qty=mat_data.get("max_order_qty", 0),
+                scrap_rate=mat_data.get("scrap_rate", 0),
+                is_purchased=mat_data.get("is_purchased", True),
+            )
+            db.add(mat)
+            mat_created += 1
+        else:
+            # 更新物料名称（如果为空）
+            if not existing.material_name and mat_data.get("material_name"):
+                existing.material_name = mat_data["material_name"]
+                mat_updated += 1
+
+    if mat_created or mat_updated:
+        db.commit()
+
+    # Step 2: 获取所有涉及物料编码，找顶层物料
+    all_parents = set(line["parent_code"] for line in bom_lines_data if line.get("parent_code"))
+    all_children = set(line["child_code"] for line in bom_lines_data)
+    top_level_codes = all_parents - all_children
+
+    # 如果没有顶层物料（环形结构），全部视为顶层
+    if not top_level_codes:
+        top_level_codes = all_parents
+
+    imported_count = 0
+    errors = []
+
+    for top_code in top_level_codes:
+        product = db.query(MaterialMaster).filter(
+            MaterialMaster.material_code == top_code
+        ).first()
+        if not product:
+            errors.append(f"顶层物料 {top_code} 不存在")
+            continue
+
+        # 跳过已存在的BOM
+        if db.query(BomHeader).filter(BomHeader.bom_code == f"BOM-{top_code}").first():
+            continue
+
+        header = BomHeader(
+            bom_code=f"BOM-{top_code}",
+            product_id=product.id,
+            version="A",
+            status="草稿",
+        )
+        db.add(header)
+        db.flush()
+
+        def add_lines(parent_code, parent_item_id=None, level=0):
+            count = 0
+            for bl in bom_lines_data:
+                if bl.get("parent_code") == parent_code:
+                    child_mat = db.query(MaterialMaster).filter(
+                        MaterialMaster.material_code == bl["child_code"]
+                    ).first()
+                    if not child_mat:
+                        # 尝试自动创建缺失的物料
+                        child_mat = MaterialMaster(
+                            material_code=bl["child_code"],
+                            material_name=bl["child_code"],
+                            level_type=bl.get("level_type", "零件"),
+                        )
+                        db.add(child_mat)
+                        db.flush()
+                    
+                    line = BomLine(
+                        bom_header_id=header.id,
+                        parent_item_id=parent_item_id,
+                        item_id=child_mat.id,
+                        quantity=bl.get("quantity_per", 1),
+                        position=bl.get("position", ""),
+                        is_substitute=bl.get("is_substitute", False),
+                        substitute_group=bl.get("substitute_group", ""),
+                        scrap_rate=bl.get("scrap_rate", 0),
+                        level=level,
+                        sort_order=count + 1,
+                        remark=bl.get("remark", ""),
+                    )
+                    db.add(line)
+                    db.flush()
+                    count += 1
+                    add_lines(bl["child_code"], child_mat.id, level + 1)
+            return count
+
+        add_lines(top_code, product.id, 0)
+        imported_count += 1
+
+    db.commit()
+    msg = f"成功导入 {imported_count} 个BOM，新建物料 {mat_created} 个"
+    if errors:
+        msg += f"，{len(errors)} 个警告"
+    return {
+        "success": True,
+        "message": msg,
+        "imported_count": imported_count,
+        "mat_created": mat_created,
+        "errors": errors,
+    }
+
+
+@router.post("/import/kdocs")
+def import_bom_from_kdocs(data: dict, db: Session = Depends(get_db)):
+    """
+    从金山文档在线链接导入BOM数据
+
+    请求体格式：
+    {
+        "url": "https://www.kdocs.cn/l/xxx",
+        "raw_data": "[可选] 如果提供了raw_data则直接解析，否则通过url获取"
+    }
+
+    支持的表格格式：
+    - 工作表1「物料主数据」：物料编码、名称、规格、单位...
+    - 工作表2「BOM」：父物料编码、子物料编码、用量、位号...
+    """
+    url = data.get("url", "")
+    raw_content = data.get("raw_data", "")
+
+    # 如果提供了原始数据，直接解析
+    if raw_content:
+        parsed = parse_kdocs_sheet_data(raw_content)
+    elif url:
+        file_type, file_id = parse_kdocs_link(url)
+        if not file_id:
+            return {
+                "success": False,
+                "message": "无法解析金山文档链接",
+                "hint": "支持的格式: https://www.kdocs.cn/l/xxx 或 https://www.kdocs.cn/s/xxx",
+            }
+
+        # 尝试通过kdocs API读取文件
+        try:
+            import requests
+            # 金山文档开放API：尝试读取分享链接的内容
+            api_url = f"https://www.kdocs.cn/api/v3/share/file/{file_id}"
+            resp = requests.get(api_url, timeout=10, headers={
+                "User-Agent": "MRP-System/1.3",
+            })
+            if resp.status_code == 200:
+                raw_content = resp.text
+                parsed = parse_kdocs_sheet_data(raw_content)
+            else:
+                return {
+                    "success": False,
+                    "message": f"无法读取金山文档 (HTTP {resp.status_code})",
+                    "hint": "请确认链接可公开访问，或使用 raw_data 参数直接提供数据",
+                    "file_id": file_id,
+                }
+        except Exception as e:
+            logger.warning(f"Kdocs API读取失败: {e}")
+            return {
+                "success": False,
+                "message": f"读取金山文档失败: {str(e)}",
+                "hint": "请使用 raw_data 参数直接传入文档内容，或通过Excel导入",
+                "file_id": file_id,
+            }
+    else:
+        return {
+            "success": False,
+            "message": "请提供 url 或 raw_data 参数",
+            "usage": {
+                "url": "金山文档分享链接",
+                "raw_data": "表格原始数据（JSON格式的行列数据）",
+            },
+        }
+
+    if not parsed.get("bom_lines"):
+        return {
+            "success": False,
+            "message": "解析失败：未找到BOM数据",
+            "parsed_materials": len(parsed.get("materials", [])),
+            "errors": parsed.get("errors", []),
+        }
+
+    # 调用 raw 导入端点
+    return import_bom_from_raw(
+        {"materials": parsed["materials"], "bom_lines": parsed["bom_lines"]},
+        db,
+    )

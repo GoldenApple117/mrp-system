@@ -95,11 +95,16 @@ class MrpCalculator:
                   scheduled_receipts: Dict[str, List[dict]],
                   substitute_groups: Dict[str, List[dict]] = None) -> Tuple[List[dict], List[dict]]:
         """
-        MRP核心计算
+        MRP核心计算 — 支持产品→模块→零件三层结构
+
+        层级处理规则：
+        - 产品层(level_type='产品')：仅接受MPS输入，不参与MRP运算
+        - 模块层(level_type='模块')：幻影物料，需求穿透传递到子物料，不创建计划订单
+        - 零件层(level_type='零件')：正常MRP运算（净需求计算 + 批量规则 + 计划订单）
 
         Args:
             mps_entries: MPS计划 [{item_code, plan_date, quantity}, ...]
-            material_masters: 物料主数据 [{code, lead_time, safety_stock, lot_size_rule, ...}, ...]
+            material_masters: 物料主数据 [{code, lead_time, safety_stock, lot_size_rule, level_type, ...}, ...]
             bom_lines: BOM行 [{parent_code, child_code, quantity_per, is_substitute, substitute_group}, ...]
             inventory_snapshot: 库存快照 {item_code: {on_hand, allocated, reserved}}
             scheduled_receipts: 在途/在制 {item_code: [{date, quantity}, ...]}
@@ -151,7 +156,7 @@ class MrpCalculator:
                 plan_date = date.fromisoformat(plan_date)
             gross_requirements[item_code][plan_date.isoformat()] += quantity
 
-        # Step 3: 逐层计算
+        # Step 3: 逐层计算（模块层跳过净需求，零件层正常运算）
         for level in range(max_level + 1):
             level_items = llc_groups.get(level, [])
 
@@ -160,6 +165,31 @@ class MrpCalculator:
                 if not mat:
                     continue
 
+                item_level_type = mat.get("level_type", "零件")
+
+                # ── 模块层物料：幻影穿透，不计算净需求 ──
+                if item_level_type == "模块":
+                    # 模块的毛需求直接转为计划下达量，传递给子物料
+                    for tb in time_buckets:
+                        tb_str = tb.isoformat()
+                        gross = gross_requirements.get(item_code, {}).get(tb_str, 0)
+                        if gross > 0:
+                            planned_releases[item_code][tb_str] += gross
+                    continue
+
+                # ── 产品层物料：不参与MRP运算，跳过 ──
+                if item_level_type == "产品":
+                    # 产品的毛需求来自MPS，但产品本身不创建计划订单
+                    # 产品的需求已在Step 2输入，由模块层承接传递
+                    # 只需将产品层的毛需求转为下达量传递给下层
+                    for tb in time_buckets:
+                        tb_str = tb.isoformat()
+                        gross = gross_requirements.get(item_code, {}).get(tb_str, 0)
+                        if gross > 0:
+                            planned_releases[item_code][tb_str] += gross
+                    continue
+
+                # ── 零件层物料：正常 MRP 运算 ──
                 inv = inventory_snapshot.get(item_code, {
                     "on_hand": 0, "allocated": 0, "reserved": 0
                 })

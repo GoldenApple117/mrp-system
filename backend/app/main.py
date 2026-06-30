@@ -39,7 +39,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="MRP II 系统",
     description="物料需求计划管理系统 — MPS + BOM + 库存 + MRP引擎 + 采购 + 生产",
-    version="1.2.0",
+    version="1.4.0",
     lifespan=lifespan,
 )
 
@@ -76,20 +76,28 @@ def health():
 
 # 生产环境：托管前端静态文件
 if os.path.exists(FRONTEND_DIST):
-    app.mount("/assets", StaticFiles(directory=os.path.join(FRONTEND_DIST, "assets")), name="assets")
+    logger.info(f"✅ 前端静态文件目录已找到: {FRONTEND_DIST}")
+    assets_dir = os.path.join(FRONTEND_DIST, "assets")
+    if os.path.exists(assets_dir):
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+    else:
+        logger.warning(f"⚠️ assets目录不存在: {assets_dir}")
 
     @app.get("/{full_path:path}")
     async def serve_frontend(full_path: str):
         # 排除 API 路径和文档路径
         if full_path.startswith("api/") or full_path.startswith("docs") or full_path.startswith("openapi"):
-            return {"name": "MRP II 系统", "version": "1.2.0", "docs": "/docs", "status": "running"}
+            return {"name": "MRP II 系统", "version": "1.3.0", "docs": "/docs", "status": "running"}
         file_path = os.path.join(FRONTEND_DIST, full_path)
         if os.path.isfile(file_path):
             return FileResponse(file_path)
         index_path = os.path.join(FRONTEND_DIST, "index.html")
         if os.path.isfile(index_path):
             return FileResponse(index_path, media_type="text/html")
-        return {"name": "MRP II 系统", "version": "1.2.0", "docs": "/docs", "status": "running"}
+        logger.warning(f"⚠️ index.html 未找到于: {index_path}")
+        return {"name": "MRP II 系统", "version": "1.3.0", "docs": "/docs", "status": "running"}
+else:
+    logger.warning(f"⚠️ 前端静态文件目录不存在: {FRONTEND_DIST}，将以纯API模式运行")
 
 
 if __name__ == "__main__":
