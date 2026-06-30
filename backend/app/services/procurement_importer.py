@@ -49,15 +49,16 @@ def _parse_csv(content: str) -> tuple[list[dict], str]:
     start = 0
     for i, row in enumerate(raw_rows):
         if not row or not any(str(c).strip() for c in row):
-            continue  # 空行
-        # 判断是否为数据表头（含"序号"或"物料"等）
-        row_text = " ".join(str(c) for c in row[:8])
-        if any(kw in row_text for kw in ["序号", "物料编码", "物料名称", "名称", "型号", "零件"]):
+            continue
+        row_text = " ".join(str(c) for c in row[:10])
+        # 真正的表头行：同时包含"序号"和"名称/型号"
+        has_seq = "序号" in row_text
+        has_other = any(kw in row_text for kw in ["名称", "型号", "物料", "零件"])
+        if has_seq and has_other:
             start = i
             break
     else:
-        # 没找到表头，尝试用第一行为表头
-        start = 0
+        start = max(0, len(raw_rows) - 2)  # 兜底：最后两行找
 
     header = [str(h).strip().replace("\ufeff", "").replace("\n", "").replace("\r", "") for h in raw_rows[start]]
 
