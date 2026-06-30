@@ -1,10 +1,12 @@
 """采购管理 API"""
 from datetime import date
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from sqlalchemy.orm import Session
 from typing import Optional
+import os, uuid
 
 from app.core.database import get_db
+from app.core.config import UPLOAD_DIR
 from app.models.order import PurchaseOrder
 from app.models.supplier import Supplier
 from app.models.material import MaterialMaster
@@ -115,6 +117,104 @@ def delete_purchase_order(order_id: int, db: Session = Depends(get_db)):
         db.commit()
         return {"success": True}
     raise HTTPException(status_code=400, detail="只能删除'申请'状态的采购单")
+
+
+@router.post("/orders/import/excel")
+async def import_purchase_orders(file: UploadFile = File(...), db: Session = Depends(get_db)):
+    """Excel批量导入采购订单"""
+    if not file.filename.endswith(('.xlsx', '.xls')):
+        raise HTTPException(status_code=400, detail="仅支持 .xlsx / .xls 文件")
+
+    import openpyxl
+    file_path = os.path.join(UPLOAD_DIR, f"po_import_{uuid.uuid4().hex}.xlsx")
+    with open(file_path, "wb") as f:
+        content = await file.read()
+        f.write(content)
+
+    wb = openpyxl.load_workbook(file_path)
+    ws = wb.active
+    header_row = [cell.value for cell in ws[1]]
+    expected = ["物料编码", "数量", "供应商编码", "交货日期", "备注"]
+    col_map = {h: i for i, h in enumerate(header_row)}
+
+    missing = [h for h in expected if h not in col_map]
+    if missing:
+        os.remove(file_path)
+        raise HTTPException(status_code=400, detail=f"缺少列: {', '.join(missing)}")
+
+    imported = 0
+    errors = []
+    for i, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+        try:
+            material_code = str(row[col_map["物料编码"]]).strip()
+            qty = float(row[col_map["数量"]])
+            supplier_code = str(row[col_map["供应商编码"]]).strip()
+            due = str(row[col_map["交货日期"]]).strip()
+            remark = str(row[col_map.get("备注", 4)]).strip() if col_map.get("备注", 4) < len(row) else ""
+
+            material = db.query(MaterialMaster).filter(MaterialMaster.material_code == material_code).first()
+            if not material:
+                errors.append(f"第{i}行: 物料编码 {material_code} 不存在")
+                continue
+            supplier = db.query(Supplier).filter(Supplier.supplier_code == supplier_code).first()
+            if not supplier:
+                errors.append(f"第{i}行: 供应商编码 {supplier_code} 不存在")
+                continue
+
+            # 自动生成单号
+            today_str = date.today().strftime("%Y%m%d")
+            last_po = db.query(PurchaseOrder).filter(
+                PurchaseOrder.po_number.like(f"PO-{today_str}-%")
+            ).order_by(PurchaseOrder.po_number.desc()).first()
+            seq = int(last_po.po_number.split("-")[-1]) + 1 if last_po else 1
+            po_number = f"PO-{today_str}-{seq:04d}"
+
+            po = PurchaseOrder(
+                po_number=po_number,
+                supplier_id=supplier.id,
+                item_id=material.id,
+                order_qty=qty,
+                due_date=date.fromisoformat(due),
+                status="申请",
+                source_type="导入",
+                remark=remark,
+            )
+            db.add(po)
+            imported += 1
+        except Exception as e:
+            errors.append(f"第{i}行: {str(e)}")
+
+    if imported:
+        db.commit()
+    os.remove(file_path)
+    return {
+        "success": True,
+        "message": f"成功导入 {imported} 条采购订单",
+        "errors": errors[:10],
+        "total_errors": len(errors),
+    }
+
+
+@router.get("/orders/import/template")
+def download_import_template():
+    """下载采购订单导入模板"""
+    import openpyxl
+    from fastapi.responses import FileResponse
+
+    file_path = os.path.join(UPLOAD_DIR, "po_import_template.xlsx")
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "采购订单导入"
+    ws.append(["物料编码", "数量", "供应商编码", "交货日期", "备注"])
+    ws.append(["RM-001", 100, "SUP001", "2026-07-15", "急用"])
+    ws.append(["RM-002", 200, "SUP001", "2026-07-20", ""])
+    ws.column_dimensions['A'].width = 16
+    ws.column_dimensions['B'].width = 10
+    ws.column_dimensions['C'].width = 16
+    ws.column_dimensions['D'].width = 14
+    ws.column_dimensions['E'].width = 20
+    wb.save(file_path)
+    return FileResponse(file_path, filename="采购订单导入模板.xlsx", media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 
 # ====== 供应商管理 ======

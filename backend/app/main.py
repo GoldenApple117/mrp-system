@@ -5,10 +5,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import os
+import logging
 
 from app.core.database import init_db
 from app.core.config import UPLOAD_DIR
 from app.api import materials, bom, inventory, mps, mrp, purchase, production, crp, inspection, system as system_api
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -19,6 +23,16 @@ FRONTEND_DIST = os.path.join(os.path.dirname(BASE_DIR), "frontend", "dist")
 async def lifespan(app: FastAPI):
     """应用生命周期"""
     init_db()
+    # 启动定时MRP（每天早上6:00自动执行）
+    try:
+        from apscheduler.schedulers.asyncio import AsyncIOScheduler
+        from app.services.scheduler import auto_run_mrp
+        scheduler = AsyncIOScheduler()
+        scheduler.add_job(auto_run_mrp, "cron", hour=6, minute=0, id="mrp_daily")
+        scheduler.start()
+        logger.info("⏰ 定时MRP已启动（每天6:00）")
+    except Exception as e:
+        logger.warning(f"定时MRP启动失败: {e}")
     yield
 
 

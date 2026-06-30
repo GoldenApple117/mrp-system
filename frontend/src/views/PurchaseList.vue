@@ -2,6 +2,8 @@
   <div class="page-container">
     <div class="page-toolbar">
       <el-button type="primary" @click="showDialog(null)"><el-icon><Plus /></el-icon> 新建采购单</el-button>
+      <el-button @click="handleImport"><el-icon><Upload /></el-icon> 导入Excel</el-button>
+      <el-button @click="downloadTemplate"><el-icon><Download /></el-icon> 下载模板</el-button>
       <el-select v-model="filterStatus" placeholder="状态筛选" style="width:140px" clearable @change="fetchData">
         <el-option label="申请" value="申请" />
         <el-option label="已审批" value="已审批" />
@@ -139,6 +141,30 @@
       </template>
     </el-dialog>
   </div>
+
+  <!-- 导入弹窗 -->
+  <el-dialog v-model="importDialogVisible" title="导入采购订单" width="500px">
+    <el-upload
+      ref="uploadRef"
+      :auto-upload="false"
+      :limit="1"
+      accept=".xlsx,.xls"
+      @change="onFileChange"
+    >
+      <el-button type="primary"><el-icon><Upload /></el-icon> 选择Excel文件</el-button>
+      <template #tip>
+        <div style="color:#999;font-size:12px;margin-top:8px">
+          支持 .xlsx 格式，表头须包含：物料编码、数量、供应商编码、交货日期
+          <el-link type="primary" @click="downloadTemplate" style="margin-left:8px">下载模板</el-link>
+        </div>
+      </template>
+    </el-upload>
+    <div v-if="importResult" style="margin-top:12px;white-space:pre-wrap;font-size:13px;">{{ importResult }}</div>
+    <template #footer>
+      <el-button @click="importDialogVisible = false">关闭</el-button>
+      <el-button type="primary" @click="submitImport" :loading="importLoading">开始导入</el-button>
+    </template>
+  </el-dialog>
 </template>
 
 <script setup>
@@ -159,6 +185,9 @@ const materialOptions = ref([])
 const suppliers = ref([])
 
 const dialogVisible = ref(false)
+const importDialogVisible = ref(false)
+const importLoading = ref(false)
+const importResult = ref('')
 const formRef = ref(null)
 const form = reactive({
   item_id: null, supplier_id: null, order_qty: 1,
@@ -175,6 +204,48 @@ const statusDialogVisible = ref(false)
 const statusForm = reactive({ id: null, oldStatus: '', newStatus: '', received_qty: null })
 
 const selectedIds = ref([])
+const uploadRef = ref(null)
+let importFile = null
+
+function onFileChange(uploadFile) {
+  importFile = uploadFile.raw
+}
+
+async function handleImport() {
+  importResult.value = ''
+  importFile = null
+  importDialogVisible.value = true
+}
+
+async function downloadTemplate() {
+  window.open('/api/purchase/orders/import/template', '_blank')
+}
+
+async function submitImport() {
+  if (!importFile) {
+    ElMessage.warning('请先选择文件')
+    return
+  }
+  importLoading.value = true
+  importResult.value = ''
+  try {
+    const formData = new FormData()
+    formData.append('file', importFile)
+    const res = await api.post('/purchase/orders/import/excel', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    importResult.value = res.message || '导入完成'
+    if (res.errors && res.errors.length) {
+      importResult.value += '\n⚠️ 错误:\n' + res.errors.slice(0, 5).join('\n')
+      if (res.total_errors > 5) importResult.value += `\n...还有${res.total_errors - 5}个错误`
+    }
+    fetchData()
+  } catch (e) {
+    importResult.value = '导入失败: ' + (e.message || e)
+  } finally {
+    importLoading.value = false
+  }
+}
 
 const supplierDialogVisible = ref(false)
 const supplierFormRef = ref(null)

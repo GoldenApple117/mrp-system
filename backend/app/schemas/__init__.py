@@ -6,11 +6,13 @@ from pydantic import BaseModel, Field
 
 # ====== 物料 ======
 class MaterialCreate(BaseModel):
-    material_code: str
+    material_code: str = ""
+    classification_code: str = ""
     material_name: str
     specification: str = ""
     unit: str = "个"
     material_type: str = "原材料"
+    level_type: str = "零件"
     lead_time: int = 0
     safety_stock: float = 0
     lot_size_rule: str = "LFL"
@@ -24,10 +26,12 @@ class MaterialCreate(BaseModel):
 
 
 class MaterialUpdate(BaseModel):
+    classification_code: Optional[str] = None
     material_name: Optional[str] = None
     specification: Optional[str] = None
     unit: Optional[str] = None
     material_type: Optional[str] = None
+    level_type: Optional[str] = None
     lead_time: Optional[int] = None
     safety_stock: Optional[float] = None
     lot_size_rule: Optional[str] = None
@@ -43,10 +47,12 @@ class MaterialUpdate(BaseModel):
 class MaterialResponse(BaseModel):
     id: int
     material_code: str
+    classification_code: str
     material_name: str
     specification: str
     unit: str
     material_type: str
+    level_type: str
     lead_time: int
     safety_stock: float
     lot_size_rule: str

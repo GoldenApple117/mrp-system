@@ -10,6 +10,11 @@
         <el-option label="零件" value="零件" />
         <el-option label="原材料" value="原材料" />
       </el-select>
+      <el-select v-model="filterLevelType" placeholder="层级类型" style="width:120px" clearable @change="fetchData">
+        <el-option label="产品" value="产品" />
+        <el-option label="模块" value="模块" />
+        <el-option label="零件" value="零件" />
+      </el-select>
       <el-button type="primary" @click="showDialog(null)"><el-icon><Plus /></el-icon> 新增物料</el-button>
     </div>
 
@@ -23,7 +28,8 @@
     <el-table :data="tableData" v-loading="loading" stripe border style="width:100%"
       @selection-change="(rows) => selectedIds = rows.map(r => r.id)">
       <el-table-column type="selection" width="50" />
-      <el-table-column prop="material_code" label="物料编码" width="130" />
+      <el-table-column prop="material_code" label="物料编码" width="170" />
+      <el-table-column prop="classification_code" label="分类码" width="120" />
       <el-table-column prop="material_name" label="物料名称" min-width="160" />
       <el-table-column prop="specification" label="规格型号" width="160" />
       <el-table-column prop="unit" label="单位" width="70" />
@@ -62,7 +68,7 @@
         <el-row :gutter="16">
           <el-col :span="12">
             <el-form-item label="物料编码" prop="material_code">
-              <el-input v-model="form.material_code" :disabled="isEdit" />
+              <el-input v-model="form.material_code" :disabled="isEdit" placeholder="留空自动生成" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
@@ -73,23 +79,22 @@
         </el-row>
         <el-row :gutter="16">
           <el-col :span="12">
-            <el-form-item label="规格型号">
-              <el-input v-model="form.specification" />
+            <el-form-item label="分类码">
+              <el-input v-model="form.classification_code" placeholder="手动填写分类编码" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="6">
+            <el-form-item label="层级类型">
+              <el-select v-model="form.level_type">
+                <el-option label="产品" value="产品" />
+                <el-option label="模块" value="模块" />
+                <el-option label="零件" value="零件" />
+              </el-select>
             </el-form-item>
           </el-col>
           <el-col :span="6">
             <el-form-item label="单位">
               <el-input v-model="form.unit" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="6">
-            <el-form-item label="类型">
-              <el-select v-model="form.material_type">
-                <el-option label="成品" value="成品" />
-                <el-option label="半成品" value="半成品" />
-                <el-option label="零件" value="零件" />
-                <el-option label="原材料" value="原材料" />
-              </el-select>
             </el-form-item>
           </el-col>
         </el-row>
@@ -157,6 +162,7 @@ const page = ref(1)
 const pageSize = ref(20)
 const keyword = ref('')
 const filterType = ref('')
+const filterLevelType = ref('')
 
 const selectedIds = ref([])
 
@@ -164,14 +170,13 @@ const dialogVisible = ref(false)
 const isEdit = ref(false)
 const formRef = ref(null)
 const form = reactive({
-  material_code: '', material_name: '', specification: '', unit: '个',
-  material_type: '原材料', lead_time: 0, safety_stock: 0, scrap_rate: 0,
+  material_code: '', classification_code: '', material_name: '', specification: '', unit: '个',
+  material_type: '原材料', level_type: '零件', lead_time: 0, safety_stock: 0, scrap_rate: 0,
   lot_size_rule: 'LFL', lot_size_qty: 1, min_order_qty: 0, max_order_qty: 0,
   is_purchased: true, remark: '',
 })
 
 const rules = {
-  material_code: [{ required: true, message: '请输入物料编码', trigger: 'blur' }],
   material_name: [{ required: true, message: '请输入物料名称', trigger: 'blur' }],
 }
 
@@ -186,6 +191,7 @@ async function fetchData() {
     const params = { page: page.value, page_size: pageSize.value }
     if (keyword.value) params.keyword = keyword.value
     if (filterType.value) params.material_type = filterType.value
+    if (filterLevelType.value) params.level_type = filterLevelType.value
     const res = await api.get('/materials', { params })
     tableData.value = res.items
     total.value = res.total
@@ -198,8 +204,10 @@ function showDialog(row) {
   if (row) {
     isEdit.value = true
     Object.assign(form, {
-      material_code: row.material_code, material_name: row.material_name,
+      material_code: row.material_code, classification_code: row.classification_code || '',
+      material_name: row.material_name,
       specification: row.specification, unit: row.unit, material_type: row.material_type,
+      level_type: row.level_type || '零件',
       lead_time: row.lead_time, safety_stock: row.safety_stock, scrap_rate: row.scrap_rate,
       lot_size_rule: row.lot_size_rule, lot_size_qty: row.lot_size_qty,
       min_order_qty: row.min_order_qty, max_order_qty: row.max_order_qty,

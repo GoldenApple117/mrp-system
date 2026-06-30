@@ -23,11 +23,13 @@ class MaterialMaster(Base):
     __tablename__ = "material_master"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    material_code = Column(String(50), unique=True, nullable=False, index=True, comment="物料编码")
+    material_code = Column(String(50), unique=True, nullable=False, index=True, comment="物料编码（系统自动生成）")
+    classification_code = Column(String(100), default="", comment="分类码（用户手动填写）")
     material_name = Column(String(200), nullable=False, comment="物料名称")
     specification = Column(String(500), default="", comment="规格型号")
     unit = Column(String(20), default="个", comment="单位")
-    material_type = Column(String(20), default=MaterialType.RAW.value, comment="物料类型：成品/半成品/零件/原材料")
+    material_type = Column(String(20), default=MaterialType.RAW.value, comment="物料类型：成品/半成品/零件/原材料/模块")
+    level_type = Column(String(20), default="零件", comment="层级类型：产品/模块/零件")
     lead_time = Column(Integer, default=0, comment="提前期(天)")
     safety_stock = Column(Float, default=0, comment="安全库存")
     lot_size_rule = Column(String(20), default=LotSizeRule.LFL.value, comment="批量规则：LFL/FOQ/EOQ/MULT")

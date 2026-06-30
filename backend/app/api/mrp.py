@@ -15,16 +15,12 @@ from app.services.mrp_calculator import MrpCalculator
 router = APIRouter(prefix="/api/mrp", tags=["MRP运算"])
 
 
-@router.post("/run")
-def run_mrp(data: dict, db: Session = Depends(get_db)):
+def run_mrp_logic(db: Session, horizon_days: int = 90, time_fence_days: int = 7) -> dict:
     """
-    执行MRP运算
+    MRP运算核心逻辑（可被API和定时任务共用）
     
-    输入：horizon_days(展望期天数), time_fence_days(时界天数)
-    输出：planned_orders(采购/生产建议), exceptions(例外信息)
+    返回：{"planned_orders": [...], "exceptions": [...]}
     """
-    horizon_days = data.get("horizon_days", 90)
-    time_fence_days = data.get("time_fence_days", 7)
     start_time = datetime.now()
 
     # 1. 读取MPS（仅成品物料）
@@ -39,7 +35,7 @@ def run_mrp(data: dict, db: Session = Depends(get_db)):
             "quantity": e.quantity,
         }
         for e in mps_entries_raw
-        if e.item and e.item.material_type == "成品"
+        if e.item and (e.item.material_type == "成品" or e.item.level_type == "产品")
     ]
 
     if not mps_entries:
@@ -186,6 +182,17 @@ def run_mrp(data: dict, db: Session = Depends(get_db)):
             },
         },
     }
+
+
+@router.post("/run")
+def run_mrp(data: dict, db: Session = Depends(get_db)):
+    """执行MRP运算（API入口）"""
+    horizon_days = data.get("horizon_days", 90)
+    time_fence_days = data.get("time_fence_days", 7)
+    result = run_mrp_logic(db, horizon_days, time_fence_days)
+    if not result.get("success"):
+        return result
+    return result
 
 
 @router.post("/convert-to-orders")
