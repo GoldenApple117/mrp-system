@@ -2,7 +2,7 @@
   <div class="page-container">
     <div class="page-toolbar">
       <el-button type="primary" @click="showBomDialog(null)"><el-icon><Plus /></el-icon> 新建BOM</el-button>
-      <el-button type="success" @click="showImportDialog"><el-icon><Upload /></el-icon> 导入BOM</el-button>
+      <el-button type="success" @click="showImportDialog"><el-icon><UploadFilled /></el-icon> 导入BOM</el-button>
       <el-button @click="downloadTemplate"><el-icon><Download /></el-icon> 下载模板</el-button>
       <span style="flex:1"></span>
       <el-select v-model="filterStatus" placeholder="状态筛选" style="width:120px" clearable @change="fetchData">
@@ -198,10 +198,7 @@
             v-model="pasteData"
             type="textarea"
             :rows="8"
-            placeholder="例如：
-FG-001,SA-001,1,A1
-FG-001,SA-002,1,A2
-SA-001,RM-001,1,"
+            placeholder="FG-001,SA-001,1,A1&#10;FG-001,SA-002,1,A2&#10;SA-001,RM-001,1,"
           />
         </el-tab-pane>
       </el-tabs>
