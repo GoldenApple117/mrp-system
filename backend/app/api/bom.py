@@ -173,6 +173,18 @@ def update_bom_header(header_id: int, data: dict, db: Session = Depends(get_db))
     return {"success": True, "message": "BOM更新成功"}
 
 
+@router.delete("/headers/{header_id}")
+def delete_bom_header(header_id: int, db: Session = Depends(get_db)):
+    """删除BOM（级联删除BOM行）"""
+    header = db.query(BomHeader).filter(BomHeader.id == header_id).first()
+    if not header:
+        raise HTTPException(status_code=404, detail="BOM不存在")
+    
+    db.delete(header)
+    db.commit()
+    return {"success": True, "message": f"BOM {header.bom_code} 已删除"}
+
+
 @router.get("/tree/{product_id}")
 def get_bom_tree(product_id: int, db: Session = Depends(get_db)):
     """获取物料BOM树形结构"""
