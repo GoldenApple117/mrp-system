@@ -46,6 +46,7 @@ def list_mps(
                 "plan_date": e.plan_date.isoformat() if e.plan_date else None,
                 "quantity": e.quantity, "source_type": e.source_type,
                 "source_id": e.source_id, "is_frozen": e.is_frozen,
+                "status": e.status or "进行中",
             }
             for e in entries
         ],

@@ -15,6 +15,7 @@ class Supplier(Base):
     address = Column(String(500), default="")
     lead_time_days = Column(Float, default=0, comment="平均交货天数")
     quality_rating = Column(Float, default=100, comment="质量评分")
+    purchase_link = Column(String(1000), default="", comment="采购链接")
     is_active = Column(Boolean, default=True)
     remark = Column(Text, default="")
     created_at = Column(DateTime, default=datetime.now)

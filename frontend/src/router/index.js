@@ -57,6 +57,26 @@ const routes = [
     name: 'Inspection',
     component: () => import('@/views/InspectionList.vue'),
   },
+  {
+    path: '/sales',
+    name: 'Sales',
+    component: () => import('@/views/SalesList.vue'),
+  },
+  {
+    path: '/suppliers',
+    name: 'Suppliers',
+    component: () => import('@/views/SuppliersList.vue'),
+  },
+  {
+    path: '/cost',
+    name: 'Cost',
+    component: () => import('@/views/CostSummary.vue'),
+  },
+  {
+    path: '/finance',
+    name: 'Finance',
+    component: () => import('@/views/FinanceList.vue'),
+  },
 ]
 
 const router = createRouter({

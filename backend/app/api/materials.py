@@ -6,6 +6,7 @@ from typing import Optional
 
 from app.core.database import get_db
 from app.models.material import MaterialMaster
+from app.models.bom import BomHeader, BomLine
 from app.schemas import MaterialCreate, MaterialUpdate, MaterialResponse
 
 router = APIRouter(prefix="/api/materials", tags=["物料管理"])
@@ -69,6 +70,9 @@ def list_materials(
                 "min_order_qty": m.min_order_qty, "max_order_qty": m.max_order_qty,
                 "scrap_rate": m.scrap_rate, "is_purchased": m.is_purchased,
                 "is_active": m.is_active, "remark": m.remark,
+                "reference_unit_price": m.reference_unit_price or 0,
+                "reference_submitter": m.reference_submitter or "",
+                "reference_link": m.reference_link or "",
                 "created_at": m.created_at.isoformat() if m.created_at else None,
             }
             for m in items
@@ -99,6 +103,39 @@ def list_all_materials(
             for m in items
         ]
     }
+
+
+@router.get("/tree")
+def material_tree(db: Session = Depends(get_db)):
+    """获取项目→模块→零件的层级结构"""
+    products = db.query(MaterialMaster).filter(
+        MaterialMaster.level_type == "产品", MaterialMaster.is_active == True
+    ).all()
+    result = []
+    for product in products:
+        proj_bom = db.query(BomHeader).filter(BomHeader.product_id == product.id).order_by(BomHeader.id.desc()).first()
+        if not proj_bom: continue
+        module_lines = db.query(BomLine).filter(BomLine.bom_header_id == proj_bom.id).order_by(BomLine.sort_order).all()
+        modules = []
+        for ml in module_lines:
+            mod = db.query(MaterialMaster).filter(MaterialMaster.id == ml.item_id, MaterialMaster.level_type == "模块").first()
+            if not mod: continue
+            mod_bom = db.query(BomHeader).filter(BomHeader.product_id == mod.id).order_by(BomHeader.id.desc()).first()
+            if not mod_bom: continue
+            part_lines = db.query(BomLine).filter(BomLine.bom_header_id == mod_bom.id).order_by(BomLine.sort_order).all()
+            parts = []
+            for pl in part_lines:
+                part = db.query(MaterialMaster).filter(MaterialMaster.id == pl.item_id, MaterialMaster.level_type == "零件").first()
+                if part:
+                    parts.append({"id": part.id, "material_code": part.material_code, "material_name": part.material_name,
+                        "specification": part.specification or "", "unit": part.unit, "is_purchased": part.is_purchased,
+                        "lead_time": part.lead_time, "safety_stock": part.safety_stock,
+                        "reference_unit_price": part.reference_unit_price or 0})
+            modules.append({"id": mod.id, "module_code": mod.material_code, "module_name": mod.material_name,
+                "part_count": len(parts), "parts": parts})
+        result.append({"id": product.id, "product_code": product.material_code, "product_name": product.material_name,
+            "module_count": len(modules), "total_parts": sum(m["part_count"] for m in modules), "modules": modules})
+    return {"projects": result}
 
 
 @router.get("/{material_id}")

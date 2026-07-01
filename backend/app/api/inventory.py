@@ -15,7 +15,7 @@ router = APIRouter(prefix="/api/inventory", tags=["库存管理"])
 @router.get("")
 def list_inventory(
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
+    page_size: int = Query(20, ge=1, le=1000),
     keyword: Optional[str] = Query(None),
     warehouse_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
@@ -75,7 +75,8 @@ def inventory_summary(
         func.sum(InventoryRecord.allocated_qty).label("total_allocated"),
         func.sum(InventoryRecord.on_order_qty).label("total_on_order"),
     ).join(InventoryRecord, MaterialMaster.id == InventoryRecord.item_id, isouter=True
-    ).filter(MaterialMaster.is_active == True)
+    ).filter(MaterialMaster.is_active == True,
+             MaterialMaster.level_type != "模块")
     
     if keyword:
         query = query.filter(
@@ -164,6 +165,43 @@ def create_transaction(data: dict, db: Session = Depends(get_db)):
         remark=data.get("remark", ""),
     )
     db.add(tx)
+    db.flush()
+
+    # 如果是产品出库，自动关联销售订单
+    item = db.query(MaterialMaster).filter(MaterialMaster.id == item_id).first()
+    if item and item.level_type == "产品" and tx_type in ("出库", "销售出库"):
+        from app.models.sales import SalesOrder
+        abs_qty = abs(qty)
+        # 找最早的未全部出货的订单
+        orders = db.query(SalesOrder).filter(
+            SalesOrder.item_id == item_id,
+            SalesOrder.ship_status.in_(["待出货", "部分出货"])
+        ).order_by(SalesOrder.delivery_date.asc(), SalesOrder.id.asc()).all()
+        remaining = abs_qty
+        for order in orders:
+            if remaining <= 0:
+                break
+            need = order.order_qty - (order.shipped_qty or 0)
+            if need <= 0:
+                continue
+            allocate = min(remaining, need)
+            order.shipped_qty = (order.shipped_qty or 0) + allocate
+            order.ship_status = "全部出货" if order.shipped_qty >= order.order_qty else "部分出货"
+            # 更新综合状态
+            if order.ship_status == "全部出货" and order.pay_status == "全部收款":
+                order.status = "已完成"
+            remaining -= allocate
+            # 全部出货 → 标记MPS完成
+            if order.ship_status == "全部出货":
+                from app.models.mps import MpsEntry
+                mps = db.query(MpsEntry).filter(
+                    MpsEntry.source_type == "销售订单",
+                    MpsEntry.source_id == order.order_number,
+                    MpsEntry.status == "进行中"
+                ).first()
+                if mps:
+                    mps.status = "已完成"
+
     db.commit()
 
     return {"success": True, "message": f"{tx_type}成功"}
@@ -172,7 +210,7 @@ def create_transaction(data: dict, db: Session = Depends(get_db)):
 @router.get("/transactions")
 def list_transactions(
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
+    page_size: int = Query(20, ge=1, le=1000),
     item_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
 ):

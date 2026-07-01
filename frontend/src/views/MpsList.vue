@@ -28,7 +28,12 @@
           <el-tag size="small">{{ row.source_type }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="source_id" label="来源单号" width="140" />
+      <el-table-column prop="source_id" label="销售订单号" width="150" />
+      <el-table-column label="状态" width="90">
+        <template #default="{row}">
+          <el-tag :type="row.status==='已完成'?'success':'warning'" size="small">{{ row.status||'进行中' }}</el-tag>
+        </template>
+      </el-table-column>
       <el-table-column label="冻结" width="80">
         <template #default="{row}">
           <el-tag :type="row.is_frozen?'warning':'info'" size="small">{{ row.is_frozen?'已冻结':'正常' }}</el-tag>

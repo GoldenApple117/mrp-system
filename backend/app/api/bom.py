@@ -25,10 +25,15 @@ def list_bom_headers(
     page_size: int = Query(20, ge=1, le=100),
     keyword: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
+    hide_modules: bool = Query(True),
     db: Session = Depends(get_db),
 ):
-    """获取BOM头列表"""
+    """获取BOM头列表 — hide_modules=True 时仅显示产品层BOM"""
     query = db.query(BomHeader)
+    if hide_modules:
+        query = query.join(MaterialMaster, BomHeader.product_id == MaterialMaster.id).filter(
+            MaterialMaster.level_type != '模块'
+        )
     if keyword:
         query = query.filter(
             BomHeader.bom_code.ilike(f"%{keyword}%")
@@ -187,73 +192,62 @@ def delete_bom_header(header_id: int, db: Session = Depends(get_db)):
 
 @router.get("/tree/{product_id}")
 def get_bom_tree(product_id: int, db: Session = Depends(get_db)):
-    """获取物料BOM树形结构"""
-    # 获取该成品的生效BOM
+    """获取物料BOM树形结构 — 跨模块递归展开"""
+    product = db.query(MaterialMaster).filter(MaterialMaster.id == product_id).first()
+    if not product:
+        return {"tree": None, "message": "物料不存在"}
+
     header = db.query(BomHeader).filter(
-        BomHeader.product_id == product_id,
-        BomHeader.status == "生效",
-    ).first()
-
-    if not header:
-        # 尝试草稿状态
-        header = db.query(BomHeader).filter(
-            BomHeader.product_id == product_id
-        ).order_by(BomHeader.id.desc()).first()
-
+        BomHeader.product_id == product_id
+    ).order_by(BomHeader.id.desc()).first()
     if not header:
         return {"tree": None, "message": "该物料没有BOM"}
 
-    # 用递归CTE展开层级
-    result = db.execute(text("""
-        WITH RECURSIVE bom_tree AS (
-            SELECT
-                bl.id, bl.bom_header_id, bl.parent_item_id, bl.item_id,
-                bl.quantity, bl.position, bl.is_substitute, bl.substitute_group,
-                bl.scrap_rate, bl.remark, bl.sort_order, 0 as depth
-            FROM bom_line bl
-            WHERE bl.bom_header_id = :header_id AND (bl.parent_item_id IS NULL OR bl.parent_item_id = :product_id)
+    all_nodes = []
+    seen_headers = set()
 
-            UNION ALL
+    def expand(header_id: int, parent_item_id: int, depth: int, multiplier: float = 1):
+        if header_id in seen_headers:
+            return
+        seen_headers.add(header_id)
+        lines = db.query(BomLine).filter(
+            BomLine.bom_header_id == header_id,
+            BomLine.parent_item_id == parent_item_id,
+        ).order_by(BomLine.sort_order).all()
+        for line in lines:
+            child = db.query(MaterialMaster).filter(MaterialMaster.id == line.item_id).first()
+            if not child:
+                continue
+            node = {
+                "id": line.id, "parent_item_id": parent_item_id, "item_id": child.id,
+                "material_code": child.material_code, "material_name": child.material_name,
+                "unit": child.unit, "quantity": line.quantity * multiplier,
+                "position": line.position or "", "depth": depth + 1,
+                "is_substitute": line.is_substitute or False,
+                "scrap_rate": line.scrap_rate or 0,
+            }
+            all_nodes.append(node)
+            if child.level_type == "模块":
+                sub = db.query(BomHeader).filter(
+                    BomHeader.product_id == child.id
+                ).order_by(BomHeader.id.desc()).first()
+                if sub:
+                    expand(sub.id, child.id, depth + 1, line.quantity * multiplier)
 
-            SELECT
-                bl2.id, bl2.bom_header_id, bl2.parent_item_id, bl2.item_id,
-                bl2.quantity, bl2.position, bl2.is_substitute, bl2.substitute_group,
-                bl2.scrap_rate, bl2.remark, bl2.sort_order, bt.depth + 1
-            FROM bom_line bl2
-            INNER JOIN bom_tree bt ON bl2.parent_item_id = bt.item_id
-            WHERE bl2.bom_header_id = :header_id
-        )
-        SELECT bt.*, mm.material_code, mm.material_name, mm.unit
-        FROM bom_tree bt
-        JOIN material_master mm ON bt.item_id = mm.id
-        ORDER BY bt.depth, bt.sort_order
-    """), {"header_id": header.id, "product_id": header.product_id})
+    # 根节点
+    all_nodes.insert(0, {
+        "id": 0, "parent_item_id": None, "item_id": product.id,
+        "material_code": product.material_code, "material_name": product.material_name,
+        "unit": product.unit, "quantity": 1, "position": "", "depth": 0,
+        "is_substitute": False, "scrap_rate": 0,
+    })
+    expand(header.id, product.id, 0)
 
-    nodes = []
-    for row in result:
-        nodes.append({
-            "id": row.id,
-            "parent_item_id": row.parent_item_id,
-            "item_id": row.item_id,
-            "material_code": row.material_code,
-            "material_name": row.material_name,
-            "unit": row.unit,
-            "quantity": row.quantity,
-            "position": row.position,
-            "depth": row.depth,
-            "is_substitute": row.is_substitute,
-            "scrap_rate": row.scrap_rate,
-        })
-
-    product = db.query(MaterialMaster).filter(MaterialMaster.id == product_id).first()
     return {
         "tree": {
-            "header_id": header.id,
-            "bom_code": header.bom_code,
-            "product_code": product.material_code if product else "",
-            "product_name": product.material_name if product else "",
-            "version": header.version,
-            "nodes": nodes,
+            "header_id": header.id, "bom_code": header.bom_code,
+            "product_code": product.material_code, "product_name": product.material_name,
+            "version": header.version, "nodes": all_nodes,
         }
     }
 

@@ -19,7 +19,7 @@ router = APIRouter(prefix="/api/purchase", tags=["采购管理"])
 @router.get("/orders")
 def list_purchase_orders(
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
+    page_size: int = Query(20, ge=1, le=1000),
     status: Optional[str] = Query(None),
     keyword: Optional[str] = Query(None),
     db: Session = Depends(get_db),
@@ -30,7 +30,11 @@ def list_purchase_orders(
     if status:
         query = query.filter(PurchaseOrder.status == status)
     if keyword:
-        query = query.filter(PurchaseOrder.po_number.ilike(f"%{keyword}%"))
+        query = query.join(MaterialMaster, PurchaseOrder.item_id == MaterialMaster.id).filter(
+            (PurchaseOrder.po_number.ilike(f"%{keyword}%")) |
+            (MaterialMaster.material_code.ilike(f"%{keyword}%")) |
+            (MaterialMaster.material_name.ilike(f"%{keyword}%"))
+        )
 
     total = query.count()
     orders = query.order_by(PurchaseOrder.created_at.desc()).offset(
@@ -48,6 +52,9 @@ def list_purchase_orders(
                 "material_name": o.item.material_name if o.item else "",
                 "unit": o.item.unit if o.item else "",
                 "order_qty": o.order_qty, "received_qty": o.received_qty,
+                "unit_price": o.unit_price or 0, "total_amount": o.total_amount or 0,
+                "brand": o.brand or "", "submitter": o.submitter or "",
+                "supplier_link": o.supplier_link or "",
                 "due_date": o.due_date.isoformat() if o.due_date else None,
                 "status": o.status, "source_type": o.source_type,
                 "priority": o.priority, "remark": o.remark,
@@ -286,7 +293,7 @@ def list_suppliers(
         "items": [
             {"id": s.id, "supplier_code": s.supplier_code, "supplier_name": s.supplier_name,
              "contact_person": s.contact_person, "contact_phone": s.contact_phone,
-             "lead_time_days": s.lead_time_days}
+             "lead_time_days": s.lead_time_days, "purchase_link": s.purchase_link or ""}
             for s in suppliers
         ],
         "total": total,
@@ -300,6 +307,30 @@ def create_supplier(data: dict, db: Session = Depends(get_db)):
     db.add(s)
     db.commit()
     return {"success": True, "data": {"id": s.id}}
+
+
+@router.put("/suppliers/{supplier_id}")
+def update_supplier(supplier_id: int, data: dict, db: Session = Depends(get_db)):
+    """更新供应商"""
+    s = db.query(Supplier).filter(Supplier.id == supplier_id).first()
+    if not s:
+        raise HTTPException(status_code=404, detail="供应商不存在")
+    for k, v in data.items():
+        if hasattr(s, k):
+            setattr(s, k, v)
+    db.commit()
+    return {"success": True, "message": "已更新"}
+
+
+@router.delete("/suppliers/{supplier_id}")
+def delete_supplier(supplier_id: int, db: Session = Depends(get_db)):
+    """删除供应商（软删除）"""
+    s = db.query(Supplier).filter(Supplier.id == supplier_id).first()
+    if not s:
+        raise HTTPException(status_code=404, detail="供应商不存在")
+    s.is_active = False
+    db.commit()
+    return {"success": True, "message": "已删除"}
 
 
 # ====== BOM同步采购 ======
@@ -426,70 +457,54 @@ def sync_purchase_from_bom(data: dict, db: Session = Depends(get_db)):
             skipped += 1
             continue
         
-        # 尝试从规格中提取品牌作为供应商名
-        brand_name = ""
-        spec = mat.specification or ""
-        if "[" in spec and "]" in spec:
-            brand_name = spec.split("[")[-1].split("]")[0]
-        elif " " in spec:
-            # 最后一个词可能是品牌
-            parts = spec.split()
-            if len(parts) > 1:
-                brand_name = parts[-1]
+        # 品牌：从 specification 取
+        brand = (mat.specification or "").strip()
         
-        # 确保供应商存在
-        supplier = None
-        if brand_name and brand_name not in ["mm2","mm","2mm","3mm","5mm","PVC","NPN","AC220V","DC24V","2m","3m"]:
-            if brand_name in supplier_cache:
-                supplier = supplier_cache[brand_name]
-            else:
-                supp_code = f"SUP-{brand_name}" if len(brand_name) < 20 else f"SUP-{brand_name[:10]}"
-                existing_sup = db.query(Supplier).filter(
-                    Supplier.supplier_code == supp_code
-                ).first()
-                if existing_sup:
-                    supplier = existing_sup
-                    supplier_cache[brand_name] = existing_sup
-                else:
-                    supplier = Supplier(
-                        supplier_code=supp_code,
-                        supplier_name=brand_name,
-                        lead_time_days=mat.lead_time or 3,
-                    )
-                    db.add(supplier)
-                    db.flush()
-                    supplier_cache[brand_name] = supplier
-                    created_supplier += 1
+        # 供应商：优先用品牌名创建/匹配
+        supp_name = brand if brand else "默认供应商"
+        if supp_name in supplier_cache:
+            supplier = supplier_cache[supp_name]
         else:
-            # 使用默认供应商
-            supplier = db.query(Supplier).first()
-            if not supplier:
-                supplier = Supplier(
-                    supplier_code="SUP001",
-                    supplier_name="默认供应商",
-                    lead_time_days=3,
-                )
+            supp_code = f"SUP-{supp_name[:15]}" if len(supp_name) < 20 else f"SUP-{supp_name[:10]}"
+            existing_sup = db.query(Supplier).filter(Supplier.supplier_code == supp_code).first()
+            if existing_sup:
+                supplier = existing_sup
+            else:
+                supplier = Supplier(supplier_code=supp_code, supplier_name=supp_name, lead_time_days=5)
                 db.add(supplier)
                 db.flush()
-                supplier_cache["默认供应商"] = supplier
                 created_supplier += 1
+            supplier_cache[supp_name] = supplier
         
-        # 创建采购申请
-        po_number = f"PO-{today_str}-{po_seq:04d}"
-    po = PurchaseOrder(
-        po_number=po_number,
-        supplier_id=supplier.id,
-        item_id=mat.id,
-        order_qty=qty,
-        due_date=date.today(),
-        status="已下单",
-        source_type="BOM同步",
-        priority=0,
-        remark="",
-    )
-    db.add(po)
-    po_seq += 1
-    created_po += 1
+        # 如果物料有参考链接，更新供应商的采购链接
+        ref_link = getattr(mat, 'reference_link', '') or ''
+        if ref_link:
+            if not supplier.purchase_link:
+                supplier.purchase_link = ref_link
+            # also store on the PO
+        else:
+            ref_link = ''
+        
+        # 创建采购单
+        po = PurchaseOrder(
+            po_number=f"PO-{today_str}-{po_seq:04d}",
+            supplier_id=supplier.id,
+            item_id=mat.id,
+            order_qty=qty,
+            due_date=date.today(),
+            status="已下单",
+            source_type="BOM同步",
+            brand=brand,
+            unit_price=getattr(mat, 'reference_unit_price', 0) or 0,
+            total_amount=(getattr(mat, 'reference_unit_price', 0) or 0) * qty,
+            submitter=getattr(mat, 'reference_submitter', '') or '',
+            supplier_link=getattr(mat, 'reference_link', '') or '',
+            priority=0,
+            remark="",
+        )
+        db.add(po)
+        created_po += 1
+        po_seq += 1
     
     db.commit()
     

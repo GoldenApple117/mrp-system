@@ -31,6 +31,10 @@
             <el-icon><Calendar /></el-icon>
             <span>MPS 主计划</span>
           </el-menu-item>
+          <el-menu-item index="/sales">
+            <el-icon><Sell /></el-icon>
+            <span>销售管理</span>
+          </el-menu-item>
           <el-menu-item index="/mrp">
             <el-icon><Cpu /></el-icon>
             <span>MRP 运算</span>
@@ -38,6 +42,14 @@
           <el-menu-item index="/purchase">
             <el-icon><ShoppingCart /></el-icon>
             <span>采购管理</span>
+          </el-menu-item>
+          <el-menu-item index="/cost">
+            <el-icon><Money /></el-icon>
+            <span>费用合计</span>
+          </el-menu-item>
+          <el-menu-item index="/finance">
+            <el-icon><CreditCard /></el-icon>
+            <span>财务管理</span>
           </el-menu-item>
           <el-menu-item index="/production">
             <el-icon><SetUp /></el-icon>
@@ -129,6 +141,8 @@ const pageTitle = computed(() => {
     '/bom': 'BOM 物料清单管理',
     '/inventory': '库存管理与出入库',
     '/mps': 'MPS 主生产计划',
+    '/sales': '销售订单管理',
+    '/suppliers': '供应商管理',
     '/mrp': 'MRP 物料需求计算',
     '/purchase': '采购管理',
     '/production': '生产车间管理',
