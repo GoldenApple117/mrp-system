@@ -7,7 +7,7 @@
     <el-table :data="tableData" v-loading="loading" stripe border @row-click="showDetail">
       <el-table-column prop="routing_code" label="工艺编码" width="150" />
       <el-table-column prop="material_code" label="物料编码" width="130" />
-      <el-table-column prop="material_name" label="物料名称" min-width="160" />
+      <el-table-column prop="material_name" label="物料型号" min-width="160" />
       <el-table-column label="工序数量" width="100">
         <template #default="{row}">
           <el-tag size="small">{{ row.operations_count }} 道</el-tag>

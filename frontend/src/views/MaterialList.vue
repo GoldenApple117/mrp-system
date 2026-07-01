@@ -30,7 +30,7 @@
       <el-table-column type="selection" width="50" />
       <el-table-column prop="material_code" label="物料编码" width="170" />
       <el-table-column prop="classification_code" label="分类码" width="120" />
-      <el-table-column prop="material_name" label="物料名称" min-width="160" />
+      <el-table-column prop="material_name" label="物料型号" min-width="160" />
       <el-table-column prop="specification" label="规格型号" width="160" />
       <el-table-column prop="unit" label="单位" width="70" />
       <el-table-column prop="material_type" label="类型" width="90">
@@ -72,7 +72,7 @@
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="物料名称" prop="material_name">
+            <el-form-item label="物料型号" prop="material_name">
               <el-input v-model="form.material_name" />
             </el-form-item>
           </el-col>
@@ -177,7 +177,7 @@ const form = reactive({
 })
 
 const rules = {
-  material_name: [{ required: true, message: '请输入物料名称', trigger: 'blur' }],
+  material_name: [{ required: true, message: '请输入物料型号', trigger: 'blur' }],
 }
 
 const typeTag = (type) => {

@@ -74,7 +74,7 @@
       </template>
       <el-table :data="plannedOrders" stripe border max-height="500">
         <el-table-column prop="item_code" label="物料编码" width="130" />
-        <el-table-column prop="material_name" label="物料名称" min-width="150" />
+        <el-table-column prop="material_name" label="物料型号" min-width="150" />
         <el-table-column label="类型" width="100">
           <template #default="{row}">
             <el-tag :type="row.order_type==='PURCHASE'?'warning':'primary'" size="small">

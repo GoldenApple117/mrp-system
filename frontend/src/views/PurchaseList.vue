@@ -2,14 +2,13 @@
   <div class="page-container">
     <div class="page-toolbar">
       <el-button type="primary" @click="showDialog(null)"><el-icon><Plus /></el-icon> 新建采购单</el-button>
+      <el-button type="success" @click="syncFromBom" :loading="syncing"><el-icon><Refresh /></el-icon> 从BOM同步</el-button>
       <el-button @click="handleImport"><el-icon><Upload /></el-icon> 导入Excel</el-button>
       <el-button @click="downloadTemplate"><el-icon><Download /></el-icon> 下载模板</el-button>
       <el-select v-model="filterStatus" placeholder="状态筛选" style="width:140px" clearable @change="fetchData">
-        <el-option label="申请" value="申请" />
-        <el-option label="已审批" value="已审批" />
         <el-option label="已下单" value="已下单" />
-        <el-option label="部分收货" value="部分收货" />
-        <el-option label="已完成" value="已完成" />
+        <el-option label="部分到货" value="部分到货" />
+        <el-option label="全部到货" value="全部到货" />
       </el-select>
       <span style="flex:1"></span>
       <el-button @click="tab='suppliers'" :type="tab==='suppliers'?'':'default'">供应商管理</el-button>
@@ -24,31 +23,46 @@
     <div v-if="tab==='orders'">
       <div v-if="selectedIds.length" class="batch-bar">
         <el-tag type="info" style="margin-right:8px">已选 {{ selectedIds.length }} 项</el-tag>
-        <el-button size="small" type="warning" @click="batchUpdateStatus('已下单')">批量下单</el-button>
-        <el-button size="small" type="success" @click="batchComplete">批量完成</el-button>
+        <el-button size="small" type="success" @click="batchAllReceived">批量全部到货</el-button>
         <el-button size="small" type="danger" @click="batchDelete">批量删除</el-button>
         <el-button size="small" @click="selectedIds = []">取消选择</el-button>
       </div>
       <el-table :data="tableData" v-loading="loading" stripe border
+        :row-class-name="rowClassName"
         @selection-change="(rows) => selectedIds = rows.map(r => r.id)">
         <el-table-column type="selection" width="50" />
         <el-table-column prop="po_number" label="采购单号" width="180" />
         <el-table-column prop="material_code" label="物料编码" width="130" />
-        <el-table-column prop="material_name" label="物料名称" min-width="150" />
-        <el-table-column prop="supplier_name" label="供应商" width="140" />
-        <el-table-column prop="order_qty" label="订购数量" width="100" />
-        <el-table-column prop="received_qty" label="已收数量" width="100" />
-        <el-table-column prop="due_date" label="预计到货" width="120" />
-        <el-table-column label="状态" width="100">
+        <el-table-column prop="material_name" label="物料型号" min-width="140" />
+        <el-table-column prop="supplier_name" label="供应商" width="120" />
+        <el-table-column prop="order_qty" label="订购数量" width="90" align="center" />
+        <el-table-column label="到货数量" width="110" align="center">
           <template #default="{row}">
-            <el-tag :type="statusTag(row.status)" size="small">{{ row.status }}</el-tag>
+            <span :style="{color: row.received_qty > 0 ? '#67c23a' : '#c0c4cc', fontWeight: row.received_qty > 0 ? 'bold' : 'normal'}">
+              {{ row.received_qty || 0 }}
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column label="未到数量" width="110" align="center">
+          <template #default="{row}">
+            <span :style="{color: (row.order_qty - (row.received_qty||0)) > 0 ? '#f56c6c' : '#67c23a', fontWeight: 'bold'}">
+              {{ (row.order_qty - (row.received_qty || 0)).toFixed(0) }}
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column label="状态" width="110">
+          <template #default="{row}">
+            <div class="status-cell">
+              <span class="status-dot" :class="statusDotClass(row)"></span>
+              <el-tag :type="statusTag(row.status)" size="small">{{ row.status }}</el-tag>
+            </div>
           </template>
         </el-table-column>
         <el-table-column prop="source_type" label="来源" width="90" />
-        <el-table-column label="操作" width="200" fixed="right">
+        <el-table-column label="操作" width="150" fixed="right">
           <template #default="{row}">
-            <el-button link type="primary" size="small" @click="updateStatus(row)">更新状态</el-button>
-            <el-button link type="danger" size="small" @click="deleteItem(row)" v-if="row.status==='申请'">删除</el-button>
+            <el-button link type="primary" size="small" @click="updateStatus(row)">更新到货</el-button>
+            <el-button link type="danger" size="small" @click="deleteItem(row)" v-if="row.status==='已下单'">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -99,29 +113,39 @@
       </template>
     </el-dialog>
 
-    <!-- 更新状态弹窗 -->
-    <el-dialog v-model="statusDialogVisible" title="更新采购单状态" width="400px">
+    <!-- 更新到货弹窗 -->
+    <el-dialog v-model="statusDialogVisible" title="更新到货数量" width="480px">
       <el-form label-width="90px">
+        <el-form-item label="物料型号">
+          <span style="font-weight:bold">{{ statusForm.material_name }}</span>
+        </el-form-item>
+        <el-form-item label="订购总数">
+          <el-tag type="info" size="large">{{ statusForm.order_qty }}</el-tag>
+        </el-form-item>
         <el-form-item label="当前状态">
-          <el-tag>{{ statusForm.oldStatus }}</el-tag>
+          <el-tag :type="statusTag(statusForm.oldStatus)">{{ statusForm.oldStatus }}</el-tag>
         </el-form-item>
-        <el-form-item label="新状态">
-          <el-select v-model="statusForm.newStatus">
-            <el-option label="申请" value="申请" />
-            <el-option label="已审批" value="已审批" />
-            <el-option label="已下单" value="已下单" />
-            <el-option label="部分收货" value="部分收货" />
-            <el-option label="已完成" value="已完成" />
-            <el-option label="已取消" value="已取消" />
-          </el-select>
+        <el-form-item label="本次到货">
+          <el-input-number v-model="statusForm.received_delta" :min="0" :max="statusForm.remain_qty" 
+            size="large" style="width:180px" @change="calcRemain" />
+          <span style="margin-left:12px;color:#999">(累计已到: {{ statusForm.existing_received }})</span>
         </el-form-item>
-        <el-form-item label="收货数量" v-if="['部分收货','已完成'].includes(statusForm.newStatus)">
-          <el-input-number v-model="statusForm.received_qty" :min="0" />
+        <el-divider />
+        <el-form-item label="到货后状态">
+          <el-tag :type="statusTag(statusForm.calcNewStatus)" size="large" style="font-size:14px">
+            {{ statusForm.calcNewStatus || '—' }}
+          </el-tag>
+        </el-form-item>
+        <el-form-item label="累计到货">
+          <span style="font-size:18px;color:#67c23a;font-weight:bold">{{ statusForm.total_after }}</span>
+        </el-form-item>
+        <el-form-item label="剩余未到">
+          <span style="font-size:18px;color:#f56c6c;font-weight:bold">{{ statusForm.remain_after }}</span>
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="statusDialogVisible=false">取消</el-button>
-        <el-button type="primary" @click="confirmStatus">确认</el-button>
+        <el-button type="primary" @click="confirmStatus" :disabled="!statusForm.received_delta">确认到货</el-button>
       </template>
     </el-dialog>
 
@@ -138,6 +162,32 @@
       <template #footer>
         <el-button @click="supplierDialogVisible=false">取消</el-button>
         <el-button type="primary" @click="submitSupplier">保存</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- BOM同步弹窗 -->
+    <el-dialog v-model="bomSyncVisible" title="选择BOM同步生成采购单" width="500px">
+      <el-alert type="info" :closable="false" show-icon style="margin-bottom:16px">
+        系统将自动提取BOM中所有采购件，生成采购申请并匹配供应商。
+      </el-alert>
+      <el-form label-width="100px">
+        <el-form-item label="选择BOM">
+          <el-select v-model="bomSyncBomId" placeholder="选择要同步的BOM" style="width:100%">
+            <el-option v-for="b in bomOptions" :key="b.id" 
+              :label="`${b.bom_code} - ${b.product_name}`" :value="b.id" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="自动审批">
+          <el-switch v-model="bomSyncAutoApprove" />
+          <span style="margin-left:8px;color:#999;font-size:12px">开启后直接生成"已审批"状态的采购单</span>
+        </el-form-item>
+      </el-form>
+      <div v-if="syncResult" style="margin-top:12px;white-space:pre-wrap;font-size:14px;color:#67c23a;background:#f0f9eb;padding:12px;border-radius:6px;">
+        {{ syncResult }}
+      </div>
+      <template #footer>
+        <el-button @click="bomSyncVisible=false">取消</el-button>
+        <el-button type="primary" @click="doBomSync" :loading="syncing">开始同步</el-button>
       </template>
     </el-dialog>
   </div>
@@ -174,6 +224,7 @@ import api from '@/api'
 
 const loading = ref(false)
 const saving = ref(false)
+const syncing = ref(false)
 const tab = ref('orders')
 const tableData = ref([])
 const total = ref(0)
@@ -183,11 +234,16 @@ const filterStatus = ref('')
 
 const materialOptions = ref([])
 const suppliers = ref([])
+const bomOptions = ref([])
 
 const dialogVisible = ref(false)
 const importDialogVisible = ref(false)
 const importLoading = ref(false)
 const importResult = ref('')
+const bomSyncVisible = ref(false)
+const bomSyncBomId = ref(null)
+const bomSyncAutoApprove = ref(false)
+const syncResult = ref('')
 const formRef = ref(null)
 const form = reactive({
   item_id: null, supplier_id: null, order_qty: 1,
@@ -201,7 +257,11 @@ const rules = {
 }
 
 const statusDialogVisible = ref(false)
-const statusForm = reactive({ id: null, oldStatus: '', newStatus: '', received_qty: null })
+const statusForm = reactive({ 
+  id: null, material_name: '', order_qty: 0, oldStatus: '', 
+  existing_received: 0, received_delta: 0,
+  remain_qty: 0, calcNewStatus: '', total_after: 0, remain_after: 0,
+})
 
 const selectedIds = ref([])
 const uploadRef = ref(null)
@@ -255,8 +315,30 @@ const supplierForm = reactive({
 })
 
 function statusTag(s) {
-  const map = { '申请': '', '已审批': 'info', '已下单': 'warning', '部分收货': '', '已完成': 'success', '已取消': 'danger' }
+  const map = { '已下单': 'danger', '部分到货': 'warning', '全部到货': 'success' }
   return map[s] || ''
+}
+
+function statusDotClass(row) {
+  const map = { '已下单': 'dot-ordered', '部分到货': 'dot-partial', '全部到货': 'dot-done' }
+  return map[row.status] || ''
+}
+
+function rowClassName({ row }) {
+  const map = { '已下单': 'row-ordered', '部分到货': 'row-partial', '全部到货': 'row-done' }
+  return map[row.status] || ''
+}
+
+function calcRemain() {
+  const delta = statusForm.received_delta || 0
+  statusForm.total_after = statusForm.existing_received + delta
+  statusForm.remain_after = statusForm.order_qty - statusForm.total_after
+  if (statusForm.remain_after <= 0) {
+    statusForm.calcNewStatus = '全部到货'
+    statusForm.remain_after = 0
+  } else {
+    statusForm.calcNewStatus = '部分到货'
+  }
 }
 
 async function fetchData() {
@@ -298,16 +380,29 @@ async function submitForm() {
 }
 
 function updateStatus(row) {
-  Object.assign(statusForm, { id: row.id, oldStatus: row.status, newStatus: '', received_qty: row.received_qty })
+  const existRec = row.received_qty || 0
+  const remain = row.order_qty - existRec
+  Object.assign(statusForm, { 
+    id: row.id, material_name: row.material_name,
+    order_qty: row.order_qty, oldStatus: row.status,
+    existing_received: existRec, received_delta: 0,
+    remain_qty: remain, calcNewStatus: '', total_after: existRec, remain_after: remain,
+  })
   statusDialogVisible.value = true
 }
 
 async function confirmStatus() {
+  const delta = statusForm.received_delta || 0
+  if (delta <= 0) { ElMessage.warning('请输入到货数量'); return }
+  
+  const total = statusForm.existing_received + delta
+  const newStatus = total >= statusForm.order_qty ? '全部到货' : '部分到货'
+  
   await api.put(`/purchase/orders/${statusForm.id}/status`, {
-    status: statusForm.newStatus,
-    received_qty: statusForm.received_qty,
+    status: newStatus,
+    received_qty: total,
   })
-  ElMessage.success('状态已更新')
+  ElMessage.success(`收货 ${delta} 件, 累计 ${total}/${statusForm.order_qty}, 状态: ${newStatus}`)
   statusDialogVisible.value = false
   fetchData()
 }
@@ -315,6 +410,27 @@ async function confirmStatus() {
 async function deleteItem(row) {
   await ElMessageBox.confirm('确定删除？', '提示', { type: 'warning' })
   await api.delete(`/purchase/orders/${row.id}`)
+  fetchData()
+}
+
+async function batchAllReceived() {
+  await ElMessageBox.confirm(
+    `确定将 ${selectedIds.value.length} 个采购单标记为"全部到货"？\n(到货数量将自动设为订购数量)`,
+    '批量全部到货', { type: 'info' }
+  )
+  let count = 0
+  for (const id of selectedIds.value) {
+    try { 
+      const item = tableData.value.find(r => r.id === id)
+      await api.put(`/purchase/orders/${id}/status`, { 
+        status: '全部到货', 
+        received_qty: item?.order_qty || 0
+      })
+      count++
+    } catch {}
+  }
+  ElMessage.success(`已更新 ${count} 个采购单为全部到货`)
+  selectedIds.value = []
   fetchData()
 }
 
@@ -330,24 +446,13 @@ async function submitSupplier() {
   fetchSuppliers()
 }
 
-async function batchUpdateStatus(newStatus) {
-  await ElMessageBox.confirm(`确定将 ${selectedIds.value.length} 个采购单状态更新为"${newStatus}"？`, '批量操作', { type: 'info' })
+async function batchDelete() {
+  await ElMessageBox.confirm(`确定删除 ${selectedIds.value.length} 个采购单？`, '批量删除', { type: 'warning' })
   let count = 0
   for (const id of selectedIds.value) {
-    try { await api.put(`/purchase/orders/${id}/status`, { status: newStatus }); count++ } catch {}
+    try { await api.delete(`/purchase/orders/${id}`); count++ } catch (e) {}
   }
-  ElMessage.success(`已更新 ${count} 个采购单`)
-  selectedIds.value = []
-  fetchData()
-}
-
-async function batchComplete() {
-  await ElMessageBox.confirm(`确定将 ${selectedIds.value.length} 个采购单标记为已完成？`, '批量完成', { type: 'warning' })
-  let count = 0
-  for (const id of selectedIds.value) {
-    try { await api.put(`/purchase/orders/${id}/status`, { status: '已完成', received_qty: null }); count++ } catch {}
-  }
-  ElMessage.success(`已完成 ${count} 个采购单`)
+  ElMessage.success(`已删除 ${count} 个采购单`)
   selectedIds.value = []
   fetchData()
 }
@@ -357,15 +462,36 @@ function onTabChange(val) {
   else fetchData()
 }
 
-async function batchDelete() {
-  await ElMessageBox.confirm(`确定删除 ${selectedIds.value.length} 个采购单？(仅删除"申请"状态)`, '批量删除', { type: 'warning' })
-  let count = 0
-  for (const id of selectedIds.value) {
-    try { await api.delete(`/purchase/orders/${id}`); count++ } catch (e) { /* 非"申请"状态无法删除 */ }
+// BOM同步功能
+async function syncFromBom() {
+  syncResult.value = ''
+  bomSyncBomId.value = null
+  bomSyncAutoApprove.value = false
+  const res = await api.get('/bom/headers')
+  bomOptions.value = res.items || []
+  bomSyncVisible.value = true
+}
+
+async function doBomSync() {
+  if (!bomSyncBomId.value) {
+    ElMessage.warning('请选择BOM')
+    return
   }
-  ElMessage.success(`已删除 ${count} 个采购单`)
-  selectedIds.value = []
-  fetchData()
+  syncing.value = true
+  syncResult.value = ''
+  try {
+    const res = await api.post('/purchase/sync-from-bom', {
+      bom_header_id: bomSyncBomId.value,
+      auto_approve: bomSyncAutoApprove.value,
+    })
+    syncResult.value = res.message
+    fetchData()
+    fetchSuppliers()
+  } catch (e) {
+    syncResult.value = '同步失败: ' + (e.message || e)
+  } finally {
+    syncing.value = false
+  }
 }
 
 onMounted(() => { fetchData(); fetchSuppliers() })
@@ -374,4 +500,23 @@ onMounted(() => { fetchData(); fetchSuppliers() })
 <style scoped>
 .page-container { background:#fff; padding:20px; border-radius:8px; }
 .page-toolbar { display:flex; gap:12px; margin-bottom:16px; align-items:center; }
+
+/* 采购状态彩色标注 */
+.status-cell { display:flex; align-items:center; gap:6px; }
+.status-dot {
+  width: 8px; height: 8px; border-radius: 50%; display:inline-block;
+  box-shadow: 0 0 6px currentColor;
+}
+.dot-ordered  { background:#f56c6c; box-shadow:0 0 8px #f56c6c; }   /* 已下单 - 红色 */
+.dot-partial  { background:#e6a23c; box-shadow:0 0 8px #e6a23c; }   /* 部分到货 - 黄色 */
+.dot-done     { background:#67c23a; box-shadow:0 0 8px #67c23a; }   /* 全部到货 - 绿色 */
+
+/* 行级高亮 */
+:deep(.row-ordered)  { background-color:#fef0f0 !important; }
+:deep(.row-partial)  { background-color:#fdf6ec !important; }
+:deep(.row-done)     { background-color:#f0f9eb !important; }
+
+:deep(.row-ordered:hover)  { background-color:#fde2e2 !important; }
+:deep(.row-partial:hover)  { background-color:#faecd8 !important; }
+:deep(.row-done:hover)     { background-color:#e1f3d8 !important; }
 </style>

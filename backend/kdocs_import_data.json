@@ -1,0 +1,1493 @@
+{
+  "materials": [
+    {
+      "material_code": "PROJ-SWG-15",
+      "material_name": "三工位-15台",
+      "material_type": "成品",
+      "level_type": "产品",
+      "unit": "台",
+      "lead_time": 30,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": false
+    },
+    {
+      "material_code": "TOOL-0001",
+      "material_name": "普通多芯线 5芯  0.3平方毫米  100米/卷",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "专票",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0002",
+      "material_name": "普通多芯线 6芯  0.3平方毫米  100米/卷",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "专票",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0003",
+      "material_name": "普通多芯线 8芯  0.3平方毫米  100米/卷",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "专票",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0004",
+      "material_name": "高柔多芯线 6芯  0.2平方毫米  100米/卷",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "专票",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0005",
+      "material_name": "2芯电线 2芯  0.5平方毫米  200米/卷",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "卷",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0006",
+      "material_name": "单芯线 1平方毫米  红色---100米/卷",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "卷",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0007",
+      "material_name": "单芯线 1平方毫米  黑色---100米/卷",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "卷",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0008",
+      "material_name": "单芯线 1平方毫米  双色---100米/卷",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "卷",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0009",
+      "material_name": "单芯线 1.5平方毫米  红色---100米/卷",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "卷",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0010",
+      "material_name": "单芯线 1.5平方毫米  黑色---100米/卷",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "卷",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0011",
+      "material_name": "单芯线 0.5平方毫米  棕色---100米/卷",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "卷",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0012",
+      "material_name": "单芯线 0.5平方毫米  蓝色---100米/卷",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "卷",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0013",
+      "material_name": "单芯线 2.5平方毫米  棕色---100米/卷",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "卷",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0014",
+      "material_name": "单芯线 2.5平方毫米  蓝色---100米/卷",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "卷",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0015",
+      "material_name": "单芯线 0.3平方毫米  黑色---100米/卷",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "卷",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0016",
+      "material_name": "单芯线 2.5平方毫米  红色---100米/卷",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "卷",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0017",
+      "material_name": "单芯线 2.5平方毫米  黑色---100米/卷",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "卷",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0018",
+      "material_name": "电柜线槽 高80*宽60  【特厚款】一箱",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "专票",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0019",
+      "material_name": "菲尼克斯两进两出端子 PT 2.5-QUATTRO 3209578",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "盒",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0020",
+      "material_name": "WS28-3芯正装插头+插座 航空插头",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "套",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0021",
+      "material_name": "公牛插头三脚GNT-10Sa三项插 3插10A 新款(20只装)",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "盒",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0022",
+      "material_name": "焊锡丝 1.0mm500克",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "卷",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0023",
+      "material_name": "大固定座 HC-1(4MM)黑色/1000装",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "专票",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0024",
+      "material_name": "端子短接条 FBS-10-5",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "专票",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0025",
+      "material_name": "小扎带 黑3*200长20厘米（宽1.8mm）500根",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "包",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0026",
+      "material_name": "电阻 1W 金属膜电阻1% 20个   4.7K",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0027",
+      "material_name": "亚德客气管 4*2.5（透明）",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "200/卷",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0028",
+      "material_name": "亚德客气管 6*4（透明）",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "200/卷",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0029",
+      "material_name": "亚德客气管 8*5（透明）",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "100/卷",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0030",
+      "material_name": "普通多芯线 5芯  0.2平方毫米  100米/卷",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "专票",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0031",
+      "material_name": "普通多芯线 5芯  0.3平方毫米  100米/卷",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "专票",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0032",
+      "material_name": "普通多芯线 6芯  0.3平方毫米  100米/卷",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "专票",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0033",
+      "material_name": "普通多芯线 8芯  0.3平方毫米  100米/卷",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "专票",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0034",
+      "material_name": "多芯电源线 3芯  2.5平方毫米  100米/卷",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "专票",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0035",
+      "material_name": "高柔多芯线 6芯  0.2平方毫米  100米/卷",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "专票",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0036",
+      "material_name": "高柔多芯线 2芯  0.3平方毫米  100米/卷",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "专票",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0037",
+      "material_name": "2芯电线 2芯  0.5平方毫米  200米/卷",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "卷",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0038",
+      "material_name": "单芯线 1平方毫米  红色---100米/卷",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "卷",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0039",
+      "material_name": "单芯线 1平方毫米  黑色---100米/卷",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "卷",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0040",
+      "material_name": "单芯线 1平方毫米  双色---100米/卷",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "卷",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0041",
+      "material_name": "单芯线 1.5平方毫米  棕色---100米/卷",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "卷",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0042",
+      "material_name": "单芯线 1.5平方毫米  蓝色---100米/卷",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "卷",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0043",
+      "material_name": "单芯线 1.5平方毫米  红色---100米/卷",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "卷",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0044",
+      "material_name": "单芯线 1.5平方毫米  黑色---100米/卷",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "卷",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0045",
+      "material_name": "单芯线 0.5平方毫米  棕色---100米/卷",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "卷",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0046",
+      "material_name": "单芯线 0.5平方毫米  蓝色---100米/卷",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "卷",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0047",
+      "material_name": "单芯线 2.5平方毫米  棕色---100米/卷",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "卷",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0048",
+      "material_name": "单芯线 2.5平方毫米  蓝色---100米/卷",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "卷",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0049",
+      "material_name": "单芯线 0.3平方毫米  黑色---100米/卷",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "卷",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0050",
+      "material_name": "单芯线 2.5平方毫米  红色---100米/卷",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "卷",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0051",
+      "material_name": "单芯线 2.5平方毫米  黑色---100米/卷",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "卷",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0052",
+      "material_name": "WS28-3芯正装插头+插座 航空插头",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "套",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0053",
+      "material_name": "公牛插头三脚GNT-10Sa三项插 3插10A 新款(20只装)",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "盒",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0054",
+      "material_name": "斜口钳 塑料专用水口钳（不适合剪金属）PL-726/6寸150mm",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "把",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0055",
+      "material_name": "亚德客气管 4*2.5（透明）",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "200/卷",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0056",
+      "material_name": "亚德客气管 6*4（透明）",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "200/卷",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0057",
+      "material_name": "亚德客气管 8*5（透明）",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "100/卷",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0058",
+      "material_name": "亚德客气管接头 PE8",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0059",
+      "material_name": "亚德客气管接头 PY8",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0060",
+      "material_name": "亚德客气管接头 PV8",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0061",
+      "material_name": "亚德客气管接头 PE4",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0062",
+      "material_name": "亚德客气管接头 PY6",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0063",
+      "material_name": "亚德客消音 BSL02 宝塔消声器",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0064",
+      "material_name": "亚德客气管接头 PG6-4",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0065",
+      "material_name": "亚德客气管接头 PG8-4",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0066",
+      "material_name": "亚德客气管接头 PG8-6",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0067",
+      "material_name": "亚德客气管接头 PU6",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0068",
+      "material_name": "手套M 白色涂掌手套（24双）",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "10袋",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0069",
+      "material_name": "酒精 *真95%*医用2000ml*6桶【送喷瓶】",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "箱",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0070",
+      "material_name": "无尘纸 9寸（21cm*21cm)300张/包/白色 60克/平方",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "1",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0071",
+      "material_name": "美工刀 刻刀6色各1把+刀片30块",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "1",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0072",
+      "material_name": "哥俩好AB胶 盒装10g（A5g+B5g）:10组",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "1",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0073",
+      "material_name": "M3螺丝平垫 3*6*0.5(100个)",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "1",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0074",
+      "material_name": "销钉不锈钢4.5*10销钉 4.5*10mm(20个)",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "1",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0075",
+      "material_name": "M3*30螺丝 M3*30(50个)全牙",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "50颗",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0076",
+      "material_name": "M4*30螺丝 M4*30(20个)全牙",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "20颗",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0077",
+      "material_name": "M6*8基米 M6*8(50粒)",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "(50粒)",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0078",
+      "material_name": "M3*6基米 M3*6(100粒)",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "(100粒)",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0079",
+      "material_name": "内六角 TLS-8",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0080",
+      "material_name": "内六角 TLS-9",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0081",
+      "material_name": "塑料镊子 93302",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "TOOL-0082",
+      "material_name": "不锈钢镊子 ESD-11镊子 (细长头)",
+      "specification": "",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 3,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    }
+  ],
+  "bom_lines": [
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0001",
+      "quantity_per": 1.0,
+      "position": "T1"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0002",
+      "quantity_per": 1.0,
+      "position": "T2"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0003",
+      "quantity_per": 1.0,
+      "position": "T3"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0004",
+      "quantity_per": 1.0,
+      "position": "T4"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0005",
+      "quantity_per": 1.0,
+      "position": "T5"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0006",
+      "quantity_per": 1.0,
+      "position": "T6"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0007",
+      "quantity_per": 1.0,
+      "position": "T7"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0008",
+      "quantity_per": 1.0,
+      "position": "T8"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0009",
+      "quantity_per": 1.0,
+      "position": "T9"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0010",
+      "quantity_per": 1.0,
+      "position": "T10"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0011",
+      "quantity_per": 1.0,
+      "position": "T11"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0012",
+      "quantity_per": 1.0,
+      "position": "T12"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0013",
+      "quantity_per": 1.0,
+      "position": "T13"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0014",
+      "quantity_per": 1.0,
+      "position": "T14"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0015",
+      "quantity_per": 1.0,
+      "position": "T15"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0016",
+      "quantity_per": 1.0,
+      "position": "T16"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0017",
+      "quantity_per": 1.0,
+      "position": "T17"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0018",
+      "quantity_per": 1.0,
+      "position": "T18"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0019",
+      "quantity_per": 1.0,
+      "position": "T19"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0020",
+      "quantity_per": 1.0,
+      "position": "T20"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0021",
+      "quantity_per": 1.0,
+      "position": "T21"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0022",
+      "quantity_per": 1.0,
+      "position": "T22"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0023",
+      "quantity_per": 1.0,
+      "position": "T23"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0024",
+      "quantity_per": 1.0,
+      "position": "T24"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0025",
+      "quantity_per": 1.0,
+      "position": "T25"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0026",
+      "quantity_per": 1.0,
+      "position": "T26"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0027",
+      "quantity_per": 4.0,
+      "position": "T27"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0028",
+      "quantity_per": 2.0,
+      "position": "T28"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0029",
+      "quantity_per": 1.0,
+      "position": "T29"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0030",
+      "quantity_per": 1.0,
+      "position": "T30"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0031",
+      "quantity_per": 1.0,
+      "position": "T31"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0032",
+      "quantity_per": 1.0,
+      "position": "T32"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0033",
+      "quantity_per": 1.0,
+      "position": "T33"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0034",
+      "quantity_per": 1.0,
+      "position": "T34"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0035",
+      "quantity_per": 1.0,
+      "position": "T35"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0036",
+      "quantity_per": 1.0,
+      "position": "T36"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0037",
+      "quantity_per": 1.0,
+      "position": "T37"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0038",
+      "quantity_per": 1.0,
+      "position": "T38"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0039",
+      "quantity_per": 1.0,
+      "position": "T39"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0040",
+      "quantity_per": 1.0,
+      "position": "T40"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0041",
+      "quantity_per": 1.0,
+      "position": "T41"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0042",
+      "quantity_per": 1.0,
+      "position": "T42"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0043",
+      "quantity_per": 1.0,
+      "position": "T43"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0044",
+      "quantity_per": 1.0,
+      "position": "T44"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0045",
+      "quantity_per": 1.0,
+      "position": "T45"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0046",
+      "quantity_per": 1.0,
+      "position": "T46"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0047",
+      "quantity_per": 1.0,
+      "position": "T47"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0048",
+      "quantity_per": 1.0,
+      "position": "T48"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0049",
+      "quantity_per": 1.0,
+      "position": "T49"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0050",
+      "quantity_per": 1.0,
+      "position": "T50"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0051",
+      "quantity_per": 1.0,
+      "position": "T51"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0052",
+      "quantity_per": 1.0,
+      "position": "T52"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0053",
+      "quantity_per": 1.0,
+      "position": "T53"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0054",
+      "quantity_per": 5.0,
+      "position": "T54"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0055",
+      "quantity_per": 6.0,
+      "position": "T55"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0056",
+      "quantity_per": 2.0,
+      "position": "T56"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0057",
+      "quantity_per": 1.0,
+      "position": "T57"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0058",
+      "quantity_per": 150.0,
+      "position": "T58"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0059",
+      "quantity_per": 150.0,
+      "position": "T59"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0060",
+      "quantity_per": 50.0,
+      "position": "T60"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0061",
+      "quantity_per": 150.0,
+      "position": "T61"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0062",
+      "quantity_per": 100.0,
+      "position": "T62"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0063",
+      "quantity_per": 60.0,
+      "position": "T63"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0064",
+      "quantity_per": 30.0,
+      "position": "T64"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0065",
+      "quantity_per": 50.0,
+      "position": "T65"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0066",
+      "quantity_per": 50.0,
+      "position": "T66"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0067",
+      "quantity_per": 50.0,
+      "position": "T67"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0068",
+      "quantity_per": 1.0,
+      "position": "T68"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0069",
+      "quantity_per": 1.0,
+      "position": "T69"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0070",
+      "quantity_per": 1.0,
+      "position": "T70"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0071",
+      "quantity_per": 1.0,
+      "position": "T71"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0072",
+      "quantity_per": 1.0,
+      "position": "T72"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0073",
+      "quantity_per": 1.0,
+      "position": "T73"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0074",
+      "quantity_per": 1.0,
+      "position": "T74"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0075",
+      "quantity_per": 1.0,
+      "position": "T75"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0076",
+      "quantity_per": 1.0,
+      "position": "T76"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0077",
+      "quantity_per": 1.0,
+      "position": "T77"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0078",
+      "quantity_per": 1.0,
+      "position": "T78"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0079",
+      "quantity_per": 1.0,
+      "position": "T79"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0080",
+      "quantity_per": 1.0,
+      "position": "T80"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0081",
+      "quantity_per": 1.0,
+      "position": "T81"
+    },
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "TOOL-0082",
+      "quantity_per": 1.0,
+      "position": "T82"
+    }
+  ]
+}

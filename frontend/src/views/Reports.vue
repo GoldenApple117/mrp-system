@@ -29,7 +29,7 @@
           <template #header><span style="font-weight:500">缺料/低库存物料</span></template>
           <el-table :data="lowStockItems" stripe border size="small" max-height="260">
             <el-table-column prop="material_code" label="物料编码" width="120" />
-            <el-table-column prop="material_name" label="物料名称" min-width="140" />
+            <el-table-column prop="material_name" label="物料型号" min-width="140" />
             <el-table-column prop="on_hand" label="现有库存" width="90" />
             <el-table-column prop="safety_stock" label="安全库存" width="90" />
             <el-table-column prop="available" label="可用量" width="90" />

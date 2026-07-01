@@ -10,6 +10,8 @@ from app.core.config import UPLOAD_DIR
 from app.models.order import PurchaseOrder
 from app.models.supplier import Supplier
 from app.models.material import MaterialMaster
+from app.models.bom import BomHeader, BomLine
+from app.models.inventory import InventoryRecord, InventoryTransaction, Warehouse
 
 router = APIRouter(prefix="/api/purchase", tags=["采购管理"])
 
@@ -93,30 +95,75 @@ def create_purchase_order(data: dict, db: Session = Depends(get_db)):
 
 @router.put("/orders/{order_id}/status")
 def update_po_status(order_id: int, data: dict, db: Session = Depends(get_db)):
-    """更新采购单状态"""
+    """更新采购单状态 — 到货时自动同步库存"""
     po = db.query(PurchaseOrder).filter(PurchaseOrder.id == order_id).first()
     if not po:
         raise HTTPException(status_code=404, detail="采购单不存在")
 
-    po.status = data["status"]
-    if "received_qty" in data and data["received_qty"] is not None:
-        po.received_qty = data["received_qty"]
-    if po.status == "已完成" and po.received_qty == 0:
-        po.received_qty = po.order_qty
+    old_status = po.status
+    old_received = po.received_qty or 0
+    new_status = data["status"]
+    new_received = data.get("received_qty", old_received)
+    if new_received is None:
+        new_received = old_received
+    
+    # 计算本次到货增量
+    delta = new_received - old_received
+
+    po.status = new_status
+    po.received_qty = new_received
+    
+    # 自动入库：当状态变为部分到货或全部到货且数量有增加
+    if new_status in ("部分到货", "全部到货") and delta > 0:
+        # 找到或创建仓库
+        wh = db.query(Warehouse).filter(Warehouse.warehouse_code == "WH01").first()
+        if not wh:
+            wh = Warehouse(warehouse_code="WH01", warehouse_name="主仓库")
+            db.add(wh)
+            db.flush()
+        
+        # 更新库存记录
+        inv = db.query(InventoryRecord).filter(
+            InventoryRecord.item_id == po.item_id,
+            InventoryRecord.warehouse_id == wh.id,
+        ).first()
+        if not inv:
+            inv = InventoryRecord(item_id=po.item_id, warehouse_id=wh.id)
+            db.add(inv)
+            db.flush()
+        
+        inv.on_hand_qty += delta
+        
+        # 记录入库流水
+        tx = InventoryTransaction(
+            item_id=po.item_id,
+            warehouse_id=wh.id,
+            transaction_type="采购入库",
+            quantity=delta,
+            reference_no=po.po_number,
+            operator=data.get("operator", ""),
+            remark=f"采购单 {po.po_number} 到货, 供应商:{po.supplier.supplier_name if po.supplier else ''}",
+        )
+        db.add(tx)
 
     db.commit()
-    return {"success": True, "message": f"状态更新为: {po.status}"}
+    
+    msg = f"状态更新为: {po.status}"
+    if delta > 0:
+        msg = f"收货 {delta} 件, 累计 {new_received}/{po.order_qty}, 状态: {po.status}, 已自动入库"
+    
+    return {"success": True, "message": msg, "data": {"delta": delta, "total_received": new_received}}
 
 
 @router.delete("/orders/{order_id}")
 def delete_purchase_order(order_id: int, db: Session = Depends(get_db)):
     """删除采购单"""
     po = db.query(PurchaseOrder).filter(PurchaseOrder.id == order_id).first()
-    if po and po.status == "申请":
+    if po and po.status in ("申请", "已下单"):
         db.delete(po)
         db.commit()
         return {"success": True}
-    raise HTTPException(status_code=400, detail="只能删除'申请'状态的采购单")
+    raise HTTPException(status_code=400, detail="只能删除'已下单'状态的采购单")
 
 
 @router.post("/orders/import/excel")
@@ -253,3 +300,206 @@ def create_supplier(data: dict, db: Session = Depends(get_db)):
     db.add(s)
     db.commit()
     return {"success": True, "data": {"id": s.id}}
+
+
+# ====== BOM同步采购 ======
+
+@router.post("/sync-from-bom")
+def sync_purchase_from_bom(data: dict, db: Session = Depends(get_db)):
+    """
+    从BOM同步生成采购申请
+    
+    对BOM中所有 is_purchased=True 的零件，自动创建采购申请。
+    如果供应商不存在，自动创建供应商。
+    
+    请求体:
+    {
+        "bom_header_id": 1,     // 或
+        "product_id": 1,         // 二选一
+        "auto_approve": false    // 是否自动审批
+    }
+    """
+    bom_header_id = data.get("bom_header_id")
+    product_id = data.get("product_id")
+    auto_approve = data.get("auto_approve", False)
+    
+    if not bom_header_id and not product_id:
+        raise HTTPException(status_code=400, detail="请提供 bom_header_id 或 product_id")
+    
+    # 找到BOM
+    if bom_header_id:
+        header = db.query(BomHeader).filter(BomHeader.id == bom_header_id).first()
+    else:
+        header = db.query(BomHeader).filter(
+            BomHeader.product_id == product_id
+        ).order_by(BomHeader.id.desc()).first()
+    
+    if not header:
+        raise HTTPException(status_code=404, detail="BOM不存在")
+    
+    # 收集BOM中的所有采购件
+    from app.models.bom import BomLine
+    from sqlalchemy import func
+    
+    created_po = 0
+    created_supplier = 0
+    skipped = 0
+    errors = []
+    
+    # 递归获取所有子物料
+    def get_all_children(parent_id, visited=None):
+        if visited is None:
+            visited = set()
+        items = []
+        lines = db.query(BomLine).filter(
+            BomLine.parent_item_id == parent_id
+        ).all()
+        for line in lines:
+            if line.item_id not in visited:
+                visited.add(line.item_id)
+                items.append(line.item)
+                items.extend(get_all_children(line.item_id, visited))
+            else:
+                items.extend(get_all_children(line.item_id, visited))
+        return items
+    
+    # 先获取顶层物料下的直接子物料
+    from app.models.material import MaterialMaster as MM
+    top_children = db.query(BomLine).filter(
+        BomLine.parent_item_id == header.product_id
+    ).all()
+    
+    all_items = []
+    visited = set()
+    for line in top_children:
+        if line.item_id not in visited:
+            visited.add(line.item_id)
+            item = db.query(MM).filter(MM.id == line.item_id).first()
+            if item:
+                all_items.append((item, line.quantity))
+    
+    # 递归展开模块层
+    all_parts = []
+    seen = set()
+    queue = [(item, qty) for item, qty in all_items]
+    while queue:
+        mat, multiplier = queue.pop(0)
+        if mat.id in seen:
+            continue
+        seen.add(mat.id)
+        
+        if mat.is_purchased and mat.level_type == "零件":
+            all_parts.append((mat, multiplier))
+        elif mat.level_type in ("模块", "产品"):
+            # 展开子物料
+            children = db.query(BomLine).filter(
+                BomLine.parent_item_id == mat.id
+            ).all()
+            for child in children:
+                child_mat = db.query(MM).filter(MM.id == child.item_id).first()
+                if child_mat:
+                    queue.append((child_mat, multiplier * child.quantity))
+    
+    # 收集品牌列表
+    from collections import Counter
+    brand_set = set()
+    
+    # 创建采购申请
+    today_str = date.today().strftime("%Y%m%d")
+    last_po = db.query(PurchaseOrder).filter(
+        PurchaseOrder.po_number.like(f"PO-{today_str}-%")
+    ).order_by(PurchaseOrder.po_number.desc()).first()
+    po_seq = int(last_po.po_number.split("-")[-1]) + 1 if last_po else 1
+    
+    # 供应商缓存
+    supplier_cache = {}
+    for s in db.query(Supplier).all():
+        supplier_cache[s.supplier_name] = s
+    
+    for mat, qty in all_parts:
+        # 检查是否已有采购申请
+        existing = db.query(PurchaseOrder).filter(
+            PurchaseOrder.item_id == mat.id,
+            PurchaseOrder.status.in_(["已下单", "部分到货"]),
+        ).first()
+        if existing:
+            skipped += 1
+            continue
+        
+        # 尝试从规格中提取品牌作为供应商名
+        brand_name = ""
+        spec = mat.specification or ""
+        if "[" in spec and "]" in spec:
+            brand_name = spec.split("[")[-1].split("]")[0]
+        elif " " in spec:
+            # 最后一个词可能是品牌
+            parts = spec.split()
+            if len(parts) > 1:
+                brand_name = parts[-1]
+        
+        # 确保供应商存在
+        supplier = None
+        if brand_name and brand_name not in ["mm2","mm","2mm","3mm","5mm","PVC","NPN","AC220V","DC24V","2m","3m"]:
+            if brand_name in supplier_cache:
+                supplier = supplier_cache[brand_name]
+            else:
+                supp_code = f"SUP-{brand_name}" if len(brand_name) < 20 else f"SUP-{brand_name[:10]}"
+                existing_sup = db.query(Supplier).filter(
+                    Supplier.supplier_code == supp_code
+                ).first()
+                if existing_sup:
+                    supplier = existing_sup
+                    supplier_cache[brand_name] = existing_sup
+                else:
+                    supplier = Supplier(
+                        supplier_code=supp_code,
+                        supplier_name=brand_name,
+                        lead_time_days=mat.lead_time or 3,
+                    )
+                    db.add(supplier)
+                    db.flush()
+                    supplier_cache[brand_name] = supplier
+                    created_supplier += 1
+        else:
+            # 使用默认供应商
+            supplier = db.query(Supplier).first()
+            if not supplier:
+                supplier = Supplier(
+                    supplier_code="SUP001",
+                    supplier_name="默认供应商",
+                    lead_time_days=3,
+                )
+                db.add(supplier)
+                db.flush()
+                supplier_cache["默认供应商"] = supplier
+                created_supplier += 1
+        
+        # 创建采购申请
+        po_number = f"PO-{today_str}-{po_seq:04d}"
+    po = PurchaseOrder(
+        po_number=po_number,
+        supplier_id=supplier.id,
+        item_id=mat.id,
+        order_qty=qty,
+        due_date=date.today(),
+        status="已下单",
+        source_type="BOM同步",
+        priority=0,
+        remark="",
+    )
+    db.add(po)
+    po_seq += 1
+    created_po += 1
+    
+    db.commit()
+    
+    return {
+        "success": True,
+        "message": f"同步完成: 采购申请 {created_po} 笔, 跳过(已存在) {skipped} 笔, 新建供应商 {created_supplier} 个",
+        "data": {
+            "created_orders": created_po,
+            "skipped": skipped,
+            "new_suppliers": created_supplier,
+            "total_parts_found": len(all_parts),
+        },
+    }

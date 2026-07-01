@@ -25,7 +25,7 @@
       <el-table-column type="selection" width="50" />
       <el-table-column prop="wo_number" label="工单号" width="180" />
       <el-table-column prop="material_code" label="物料编码" width="130" />
-      <el-table-column prop="material_name" label="物料名称" min-width="150" />
+      <el-table-column prop="material_name" label="物料型号" min-width="150" />
       <el-table-column prop="plan_qty" label="计划产量" width="100" />
       <el-table-column prop="completed_qty" label="完成数量" width="100" />
       <el-table-column prop="start_date" label="开始日期" width="120" />

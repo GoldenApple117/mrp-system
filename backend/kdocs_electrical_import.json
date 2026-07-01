@@ -1,0 +1,1132 @@
+{
+  "materials": [
+    {
+      "material_code": "PROJ-SWG-15",
+      "material_name": "三工位-15台",
+      "material_type": "成品",
+      "level_type": "产品",
+      "unit": "台",
+      "lead_time": 30,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": false
+    },
+    {
+      "material_code": "MOD-ELEC-SWG",
+      "material_name": "电气模块",
+      "material_type": "模块",
+      "level_type": "模块",
+      "unit": "套",
+      "lead_time": 0,
+      "safety_stock": 0,
+      "lot_size_rule": "LFL",
+      "is_purchased": false
+    },
+    {
+      "material_code": "EL-PLC-001",
+      "material_name": "PLC主机",
+      "specification": "FX5U-80MT/ES [三菱]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "台",
+      "lead_time": 3,
+      "safety_stock": 1,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-PLC-002",
+      "material_name": "PLC输入模块",
+      "specification": "FX5-16EX/ES [三菱]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "台",
+      "lead_time": 3,
+      "safety_stock": 1,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-PLC-003",
+      "material_name": "PLC输出模块",
+      "specification": "FX5-16EYR/ES [三菱]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "台",
+      "lead_time": 3,
+      "safety_stock": 1,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-PLC-004",
+      "material_name": "模拟量模块",
+      "specification": "FX5-4AD 4通道 [三菱]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "台",
+      "lead_time": 3,
+      "safety_stock": 1,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-PWR-001",
+      "material_name": "开关电源24V",
+      "specification": "S-350-24 14.6A [明纬]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "台",
+      "lead_time": 3,
+      "safety_stock": 1,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-PWR-002",
+      "material_name": "开关电源12V",
+      "specification": "S-150-12 12.5A [明纬]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "台",
+      "lead_time": 3,
+      "safety_stock": 1,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-PWR-003",
+      "material_name": "断路器",
+      "specification": "NXB-63 C32 2P [正泰]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 3,
+      "safety_stock": 1,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-PWR-004",
+      "material_name": "断路器",
+      "specification": "NXB-63 C16 1P [正泰]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 3,
+      "safety_stock": 1,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-PWR-005",
+      "material_name": "断路器",
+      "specification": "NXB-63 C6 2P [正泰]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 3,
+      "safety_stock": 1,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-PWR-006",
+      "material_name": "漏电保护器",
+      "specification": "NXBLE-63 C32 30mA [正泰]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 3,
+      "safety_stock": 1,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-PWR-007",
+      "material_name": "交流接触器",
+      "specification": "CJX2-2510 220V [正泰]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 3,
+      "safety_stock": 1,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-PWR-008",
+      "material_name": "热继电器",
+      "specification": "NR2-25 7-10A [正泰]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 3,
+      "safety_stock": 1,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-PWR-009",
+      "material_name": "中间继电器",
+      "specification": "JZX-22F/4Z DC24V [正泰]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 3,
+      "safety_stock": 2,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-PWR-010",
+      "material_name": "继电器底座",
+      "specification": "PYF08A-E 8脚 [正泰]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 3,
+      "safety_stock": 2,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-PWR-011",
+      "material_name": "接线端子(灰)",
+      "specification": "UK2.5B 灰色 [菲尼克斯]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 5,
+      "safety_stock": 26,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-PWR-012",
+      "material_name": "接线端子(蓝)",
+      "specification": "UK2.5B 蓝色 [菲尼克斯]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 5,
+      "safety_stock": 13,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-PWR-013",
+      "material_name": "接线端子(PE)",
+      "specification": "UK2.5B-PE 黄绿 [菲尼克斯]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 5,
+      "safety_stock": 10,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-PWR-014",
+      "material_name": "端板",
+      "specification": "D-UK2.5 [菲尼克斯]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 3,
+      "safety_stock": 6,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-PWR-015",
+      "material_name": "标记条",
+      "specification": "ZB6 1-10 [菲尼克斯]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "条",
+      "lead_time": 3,
+      "safety_stock": 5,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-SEN-001",
+      "material_name": "光电传感器",
+      "specification": "E3Z-D61 NPN [欧姆龙]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 3,
+      "safety_stock": 1,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-SEN-002",
+      "material_name": "光纤放大器",
+      "specification": "E3X-NA11 2M [欧姆龙]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 3,
+      "safety_stock": 1,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-SEN-003",
+      "material_name": "光纤探头",
+      "specification": "E32-DC200 同轴 [欧姆龙]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 3,
+      "safety_stock": 1,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-SEN-004",
+      "material_name": "接近开关",
+      "specification": "TL-Q5MC1 NPN [欧姆龙]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 3,
+      "safety_stock": 2,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-SEN-005",
+      "material_name": "磁性开关",
+      "specification": "D-M9B 无触点 [SMC]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 3,
+      "safety_stock": 2,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-SEN-006",
+      "material_name": "限位开关",
+      "specification": "WLCA12-2N 滚轮 [欧姆龙]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 3,
+      "safety_stock": 2,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-VLV-001",
+      "material_name": "电磁阀",
+      "specification": "SY5120-5LZD-C6 [SMC]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 3,
+      "safety_stock": 1,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-VLV-002",
+      "material_name": "电磁阀",
+      "specification": "SY5220-5LZD-C6 [SMC]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 3,
+      "safety_stock": 1,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-VLV-003",
+      "material_name": "汇流板",
+      "specification": "SS5Y3-20-02 4联 [SMC]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 3,
+      "safety_stock": 1,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-VLV-004",
+      "material_name": "消音器",
+      "specification": "AN103-KM5 [SMC]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 3,
+      "safety_stock": 1,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-BTN-001",
+      "material_name": "急停按钮",
+      "specification": "XB2BS542C 旋转复位 [施耐德]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 3,
+      "safety_stock": 1,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-BTN-002",
+      "material_name": "按钮(绿)",
+      "specification": "XB2BA31C 常开 [施耐德]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 3,
+      "safety_stock": 1,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-BTN-003",
+      "material_name": "按钮(红)",
+      "specification": "XB2BA42C 常闭 [施耐德]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 3,
+      "safety_stock": 1,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-BTN-004",
+      "material_name": "按钮(黄)",
+      "specification": "XB2BA51C 常开 [施耐德]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 3,
+      "safety_stock": 1,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-BTN-005",
+      "material_name": "指示灯(绿)",
+      "specification": "XB2BVM3LC AC220V [施耐德]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 3,
+      "safety_stock": 1,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-BTN-006",
+      "material_name": "指示灯(红)",
+      "specification": "XB2BVM4LC AC220V [施耐德]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 3,
+      "safety_stock": 1,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-BTN-007",
+      "material_name": "指示灯(黄)",
+      "specification": "XB2BVM5LC AC220V [施耐德]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 3,
+      "safety_stock": 1,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-BTN-008",
+      "material_name": "蜂鸣器",
+      "specification": "XB2BSB4LC 90dB [施耐德]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 3,
+      "safety_stock": 1,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-BTN-009",
+      "material_name": "选择开关",
+      "specification": "XB2BD21C 2位 [施耐德]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 3,
+      "safety_stock": 1,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-HMI-001",
+      "material_name": "触摸屏",
+      "specification": "MT8106iQ 10寸 [威纶通]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "台",
+      "lead_time": 3,
+      "safety_stock": 1,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-HMI-002",
+      "material_name": "编程电缆",
+      "specification": "USB-MINI 3米 [威纶通]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "根",
+      "lead_time": 5,
+      "safety_stock": 1,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-MTR-001",
+      "material_name": "伺服驱动器",
+      "specification": "SV630PS2R8I 750W [汇川]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "台",
+      "lead_time": 3,
+      "safety_stock": 1,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-MTR-002",
+      "material_name": "伺服电机",
+      "specification": "MS1H1-75B30CB 750W [汇川]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "台",
+      "lead_time": 3,
+      "safety_stock": 1,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-MTR-003",
+      "material_name": "伺服动力线",
+      "specification": "S6-L-P021-3.0 3m [汇川]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "根",
+      "lead_time": 5,
+      "safety_stock": 1,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-MTR-004",
+      "material_name": "编码器线",
+      "specification": "S6-L-F021-3.0 3m [汇川]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "根",
+      "lead_time": 5,
+      "safety_stock": 1,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-MTR-005",
+      "material_name": "步进驱动器",
+      "specification": "DM542 4.2A [雷赛]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "台",
+      "lead_time": 3,
+      "safety_stock": 1,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-MTR-006",
+      "material_name": "步进电机",
+      "specification": "57HS22 2.2Nm [雷赛]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "台",
+      "lead_time": 3,
+      "safety_stock": 1,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-CAB-001",
+      "material_name": "电气柜",
+      "specification": "1800x800x500 前单门 [威图]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "台",
+      "lead_time": 3,
+      "safety_stock": 1,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-CAB-002",
+      "material_name": "安装板",
+      "specification": "1750x750 镀锌2mm [定制]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "块",
+      "lead_time": 3,
+      "safety_stock": 1,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-CAB-003",
+      "material_name": "线槽80x60",
+      "specification": "PVC 灰色 2m/根 [凯士士]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "根",
+      "lead_time": 5,
+      "safety_stock": 5,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-CAB-004",
+      "material_name": "线槽60x40",
+      "specification": "PVC 灰色 2m/根 [凯士士]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "根",
+      "lead_time": 5,
+      "safety_stock": 3,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-CAB-005",
+      "material_name": "DIN导轨",
+      "specification": "TH35-7.5 1m/根 [国产]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "根",
+      "lead_time": 3,
+      "safety_stock": 2,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-CAB-006",
+      "material_name": "电缆格兰头",
+      "specification": "M20x1.5 尼龙 [国产]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 5,
+      "safety_stock": 6,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-CAB-007",
+      "material_name": "电缆格兰头",
+      "specification": "M25x1.5 尼龙 [国产]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 5,
+      "safety_stock": 3,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-CAB-008",
+      "material_name": "柜内照明灯",
+      "specification": "LED 10W AC220V [施耐德]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 3,
+      "safety_stock": 1,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-CAB-009",
+      "material_name": "散热风扇",
+      "specification": "120x120x38 AC220V [卡固]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 3,
+      "safety_stock": 1,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-CAB-010",
+      "material_name": "风扇过滤网",
+      "specification": "120x120 黑色 [卡固]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "个",
+      "lead_time": 3,
+      "safety_stock": 1,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-CBL-001",
+      "material_name": "动力电缆",
+      "specification": "RVV 4x2.5mm2 黑 [起帆]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "米",
+      "lead_time": 5,
+      "safety_stock": 16,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-CBL-002",
+      "material_name": "控制电缆",
+      "specification": "RVV 10x0.5mm2 黑 [起帆]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "米",
+      "lead_time": 5,
+      "safety_stock": 10,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-CBL-003",
+      "material_name": "屏蔽电缆",
+      "specification": "RVVP 4x0.3mm2 黑 [起帆]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "米",
+      "lead_time": 5,
+      "safety_stock": 13,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-CBL-004",
+      "material_name": "超五类网线",
+      "specification": "屏蔽 305m/箱 [安普]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "箱",
+      "lead_time": 5,
+      "safety_stock": 1,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    },
+    {
+      "material_code": "EL-CBL-005",
+      "material_name": "RJ45水晶头",
+      "specification": "超五类 100个/盒 [安普]",
+      "material_type": "原材料",
+      "level_type": "零件",
+      "unit": "盒",
+      "lead_time": 3,
+      "safety_stock": 1,
+      "lot_size_rule": "LFL",
+      "is_purchased": true
+    }
+  ],
+  "bom_lines": [
+    {
+      "parent_code": "PROJ-SWG-15",
+      "child_code": "MOD-ELEC-SWG",
+      "quantity_per": 1,
+      "position": "模块1"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-PLC-001",
+      "quantity_per": 1,
+      "position": "位号1"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-PLC-002",
+      "quantity_per": 1,
+      "position": "位号2"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-PLC-003",
+      "quantity_per": 2,
+      "position": "位号3"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-PLC-004",
+      "quantity_per": 1,
+      "position": "位号4"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-PWR-001",
+      "quantity_per": 2,
+      "position": "位号5"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-PWR-002",
+      "quantity_per": 1,
+      "position": "位号6"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-PWR-003",
+      "quantity_per": 2,
+      "position": "位号7"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-PWR-004",
+      "quantity_per": 4,
+      "position": "位号8"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-PWR-005",
+      "quantity_per": 1,
+      "position": "位号9"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-PWR-006",
+      "quantity_per": 1,
+      "position": "位号10"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-PWR-007",
+      "quantity_per": 3,
+      "position": "位号11"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-PWR-008",
+      "quantity_per": 3,
+      "position": "位号12"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-PWR-009",
+      "quantity_per": 8,
+      "position": "位号13"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-PWR-010",
+      "quantity_per": 8,
+      "position": "位号14"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-PWR-011",
+      "quantity_per": 80,
+      "position": "位号15"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-PWR-012",
+      "quantity_per": 40,
+      "position": "位号16"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-PWR-013",
+      "quantity_per": 30,
+      "position": "位号17"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-PWR-014",
+      "quantity_per": 20,
+      "position": "位号18"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-PWR-015",
+      "quantity_per": 15,
+      "position": "位号19"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-SEN-001",
+      "quantity_per": 3,
+      "position": "位号20"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-SEN-002",
+      "quantity_per": 3,
+      "position": "位号21"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-SEN-003",
+      "quantity_per": 3,
+      "position": "位号22"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-SEN-004",
+      "quantity_per": 6,
+      "position": "位号23"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-SEN-005",
+      "quantity_per": 6,
+      "position": "位号24"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-SEN-006",
+      "quantity_per": 6,
+      "position": "位号25"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-VLV-001",
+      "quantity_per": 3,
+      "position": "位号26"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-VLV-002",
+      "quantity_per": 2,
+      "position": "位号27"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-VLV-003",
+      "quantity_per": 1,
+      "position": "位号28"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-VLV-004",
+      "quantity_per": 4,
+      "position": "位号29"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-BTN-001",
+      "quantity_per": 2,
+      "position": "位号30"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-BTN-002",
+      "quantity_per": 3,
+      "position": "位号31"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-BTN-003",
+      "quantity_per": 3,
+      "position": "位号32"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-BTN-004",
+      "quantity_per": 1,
+      "position": "位号33"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-BTN-005",
+      "quantity_per": 3,
+      "position": "位号34"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-BTN-006",
+      "quantity_per": 3,
+      "position": "位号35"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-BTN-007",
+      "quantity_per": 1,
+      "position": "位号36"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-BTN-008",
+      "quantity_per": 1,
+      "position": "位号37"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-BTN-009",
+      "quantity_per": 2,
+      "position": "位号38"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-HMI-001",
+      "quantity_per": 1,
+      "position": "位号39"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-HMI-002",
+      "quantity_per": 1,
+      "position": "位号40"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-MTR-001",
+      "quantity_per": 1,
+      "position": "位号41"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-MTR-002",
+      "quantity_per": 1,
+      "position": "位号42"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-MTR-003",
+      "quantity_per": 1,
+      "position": "位号43"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-MTR-004",
+      "quantity_per": 1,
+      "position": "位号44"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-MTR-005",
+      "quantity_per": 3,
+      "position": "位号45"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-MTR-006",
+      "quantity_per": 3,
+      "position": "位号46"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-CAB-001",
+      "quantity_per": 1,
+      "position": "位号47"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-CAB-002",
+      "quantity_per": 1,
+      "position": "位号48"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-CAB-003",
+      "quantity_per": 15,
+      "position": "位号49"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-CAB-004",
+      "quantity_per": 10,
+      "position": "位号50"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-CAB-005",
+      "quantity_per": 8,
+      "position": "位号51"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-CAB-006",
+      "quantity_per": 20,
+      "position": "位号52"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-CAB-007",
+      "quantity_per": 10,
+      "position": "位号53"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-CAB-008",
+      "quantity_per": 1,
+      "position": "位号54"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-CAB-009",
+      "quantity_per": 2,
+      "position": "位号55"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-CAB-010",
+      "quantity_per": 2,
+      "position": "位号56"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-CBL-001",
+      "quantity_per": 50,
+      "position": "位号57"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-CBL-002",
+      "quantity_per": 30,
+      "position": "位号58"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-CBL-003",
+      "quantity_per": 40,
+      "position": "位号59"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-CBL-004",
+      "quantity_per": 1,
+      "position": "位号60"
+    },
+    {
+      "parent_code": "MOD-ELEC-SWG",
+      "child_code": "EL-CBL-005",
+      "quantity_per": 1,
+      "position": "位号61"
+    }
+  ]
+}

@@ -1,7 +1,8 @@
 """库存管理 API"""
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, desc
 from typing import Optional
 
 from app.core.database import get_db
@@ -58,9 +59,12 @@ def list_inventory(
 
 
 @router.get("/summary")
-def inventory_summary(db: Session = Depends(get_db)):
+def inventory_summary(
+    keyword: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+):
     """库存汇总（按物料汇总所有仓库）"""
-    results = db.query(
+    query = db.query(
         MaterialMaster.id,
         MaterialMaster.material_code,
         MaterialMaster.material_name,
@@ -71,25 +75,52 @@ def inventory_summary(db: Session = Depends(get_db)):
         func.sum(InventoryRecord.allocated_qty).label("total_allocated"),
         func.sum(InventoryRecord.on_order_qty).label("total_on_order"),
     ).join(InventoryRecord, MaterialMaster.id == InventoryRecord.item_id, isouter=True
-    ).filter(MaterialMaster.is_active == True
-    ).group_by(MaterialMaster.id).all()
+    ).filter(MaterialMaster.is_active == True)
+    
+    if keyword:
+        query = query.filter(
+            (MaterialMaster.material_code.ilike(f"%{keyword}%")) |
+            (MaterialMaster.material_name.ilike(f"%{keyword}%"))
+        )
+    
+    results = query.group_by(MaterialMaster.id).all()
 
-    return {
-        "items": [
-            {
-                "item_id": r.id, "material_code": r.material_code,
-                "material_name": r.material_name, "material_type": r.material_type,
-                "unit": r.unit,
-                "safety_stock": r.safety_stock,
-                "on_hand": float(r.total_on_hand or 0),
-                "allocated": float(r.total_allocated or 0),
-                "on_order": float(r.total_on_order or 0),
-                "available": float(r.total_on_hand or 0) - float(r.total_allocated or 0),
-                "is_low": (float(r.total_on_hand or 0) - float(r.total_allocated or 0)) < r.safety_stock,
-            }
-            for r in results
-        ]
-    }
+    # 构建基础结果
+    result_items = []
+    for r in results:
+        result_items.append({
+            "item_id": r.id, "material_code": r.material_code,
+            "material_name": r.material_name, "material_type": r.material_type,
+            "unit": r.unit,
+            "safety_stock": r.safety_stock,
+            "on_hand": float(r.total_on_hand or 0),
+            "allocated": float(r.total_allocated or 0),
+            "on_order": float(r.total_on_order or 0),
+            "available": float(r.total_on_hand or 0) - float(r.total_allocated or 0),
+            "is_low": (float(r.total_on_hand or 0) - float(r.total_allocated or 0)) < r.safety_stock if r.safety_stock else False,
+            "last_received_qty": 0,
+            "last_received_date": None,
+        })
+
+    # 批量查询最近入库记录
+    item_ids = [r.id for r in results]
+    if item_ids:
+        last_txs = {}
+        for item_id in item_ids:
+            tx = db.query(InventoryTransaction).filter(
+                InventoryTransaction.item_id == item_id,
+                InventoryTransaction.transaction_type.ilike("%入库%")
+            ).order_by(desc(InventoryTransaction.created_at)).first()
+            if tx:
+                last_txs[item_id] = (tx.quantity, tx.created_at)
+        
+        for item in result_items:
+            if item["item_id"] in last_txs:
+                qty, dt = last_txs[item["item_id"]]
+                item["last_received_qty"] = qty
+                item["last_received_date"] = dt.isoformat() if dt else None
+
+    return {"items": result_items}
 
 
 @router.post("/transaction")

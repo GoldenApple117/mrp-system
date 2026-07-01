@@ -15,7 +15,7 @@
           <el-table-column prop="inspection_no" label="检验单号" width="180" />
           <el-table-column prop="po_number" label="采购单号" width="150" />
           <el-table-column prop="material_code" label="物料编码" width="120" />
-          <el-table-column prop="material_name" label="物料名称" min-width="140" />
+          <el-table-column prop="material_name" label="物料型号" min-width="140" />
           <el-table-column prop="inspect_qty" label="检验数量" width="100" />
           <el-table-column prop="pass_qty" label="合格" width="80" />
           <el-table-column prop="reject_qty" label="不合格" width="80" />
@@ -39,7 +39,7 @@
         <el-table :data="stockCounts" v-loading="loading2" stripe border>
           <el-table-column prop="count_no" label="盘点单号" width="180" />
           <el-table-column prop="material_code" label="物料编码" width="120" />
-          <el-table-column prop="material_name" label="物料名称" min-width="140" />
+          <el-table-column prop="material_name" label="物料型号" min-width="140" />
           <el-table-column prop="warehouse_name" label="仓库" width="100" />
           <el-table-column prop="system_qty" label="系统库存" width="100" />
           <el-table-column prop="actual_qty" label="实盘数量" width="100" />

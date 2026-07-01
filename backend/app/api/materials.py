@@ -166,3 +166,27 @@ def delete_material(material_id: int, db: Session = Depends(get_db)):
     mat.is_active = False
     db.commit()
     return {"success": True, "message": "已停用"}
+
+
+@router.put("/batch/safety-stock")
+def batch_update_safety_stock(data: dict, db: Session = Depends(get_db)):
+    """批量更新安全库存"""
+    item_ids = data.get("item_ids", [])
+    new_value = data.get("safety_stock", 0)
+    
+    if not item_ids:
+        raise HTTPException(status_code=400, detail="请提供物料ID列表")
+    
+    updated = 0
+    for item_id in item_ids:
+        mat = db.query(MaterialMaster).filter(MaterialMaster.id == item_id).first()
+        if mat:
+            mat.safety_stock = new_value
+            updated += 1
+    
+    db.commit()
+    return {
+        "success": True,
+        "message": f"已更新 {updated} 个物料的安全库存为 {new_value}",
+        "data": {"updated": updated},
+    }
