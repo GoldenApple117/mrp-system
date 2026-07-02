@@ -71,10 +71,21 @@
             <el-icon><Stamp /></el-icon>
             <span>检验盘点</span>
           </el-menu-item>
+          <el-menu-item index="/exceptions">
+            <el-icon><Warning /></el-icon>
+            <span>例外看板</span>
+          </el-menu-item>
           <el-divider style="border-color:rgba(255,255,255,0.08);margin:8px 12px;"></el-divider>
           <div style="padding:8px 12px;">
+            <el-button type="primary" size="small" @click="handleExport" style="width:100%;font-size:12px;margin-bottom:6px;">
+              📥 导出数据
+            </el-button>
+            <el-button type="success" size="small" @click="handleImport" style="width:100%;font-size:12px;margin-bottom:6px;">
+              📤 导入数据
+            </el-button>
+            <input ref="importFileRef" type="file" accept=".json" style="display:none" @change="onImportFile" />
             <el-button type="warning" size="small" @click="handleSeedDemo" :loading="seeding" style="width:100%;font-size:12px;">
-              🚀 一键初始化演示数据
+              🚀 一键初始化
             </el-button>
           </div>
         </el-menu>
@@ -106,6 +117,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 const route = useRoute()
 const isCollapse = ref(false)
 const seeding = ref(false)
+const importFileRef = ref(null)
 
 const handleSeedDemo = () => {
   ElMessageBox.confirm(
@@ -131,6 +143,42 @@ const handleSeedDemo = () => {
         ElMessage.error('请求失败: ' + e.message)
       })
   }).catch(() => {})
+}
+
+const handleExport = async () => {
+  try {
+    const resp = await fetch('/api/system/export')
+    const blob = await resp.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url; a.download = `mrp_backup_${new Date().toISOString().slice(0,10)}.json`
+    a.click(); URL.revokeObjectURL(url)
+    ElMessage.success('数据已导出')
+  } catch (e) { ElMessage.error('导出失败') }
+}
+
+const handleImport = () => { importFileRef.value?.click() }
+
+const onImportFile = (e) => {
+  const file = e.target.files[0]
+  if (!file) return
+  ElMessageBox.confirm('导入将覆盖现有数据，确定继续？', '⚠️ 确认导入', { type: 'warning' }).then(() => {
+    const reader = new FileReader()
+    reader.onload = async (ev) => {
+      try {
+        const data = JSON.parse(ev.target.result)
+        const resp = await fetch('/api/system/import', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        })
+        const result = await resp.json()
+        if (result.success) { ElMessage.success(result.message); setTimeout(() => location.reload(), 500) }
+        else ElMessage.error(result.message)
+      } catch (ex) { ElMessage.error('导入失败: ' + ex.message) }
+    }
+    reader.readAsText(file)
+  }).catch(() => {})
+  e.target.value = ''  // 重置input以便重复选择同一文件
 }
 
 const activeMenu = computed(() => route.path)

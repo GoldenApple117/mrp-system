@@ -82,6 +82,8 @@
 
     <!-- 编辑弹窗 -->
     <el-dialog v-model="dialogVisible" :title="isEdit?'编辑计划':'添加计划'" width="450px">
+      <el-alert v-if="form.source_type==='销售订单' && isEdit" type="info" :closable="false" show-icon
+        title="此计划关联销售订单，修改数量/日期将自动同步到对应订单" style="margin-bottom:12px" />
       <el-form ref="formRef" :model="form" :rules="rules" label-width="90px">
         <el-form-item label="成品物料" prop="item_id">
           <el-select v-model="form.item_id" filterable placeholder="选择成品" style="width:100%">

@@ -94,22 +94,43 @@ def update_mps(entry_id: int, data: dict, db: Session = Depends(get_db)):
     if not entry:
         raise HTTPException(status_code=404, detail="不存在")
 
-    for key in ["quantity", "plan_date", "is_frozen", "source_type"]:
+    for key in ["quantity", "plan_date", "is_frozen", "source_type", "status"]:
         if key in data:
             if key == "plan_date" and isinstance(data[key], str):
                 setattr(entry, key, date.fromisoformat(data[key]))
             else:
                 setattr(entry, key, data[key])
 
+    # 双向同步：MPS变更 → 回写关联销售订单
+    if entry.source_type == "销售订单" and entry.source_id:
+        from app.models.sales import SalesOrder
+        so = db.query(SalesOrder).filter(
+            SalesOrder.order_number == entry.source_id
+        ).first()
+        if so and so.ship_status == "待出货":
+            if "quantity" in data:
+                so.order_qty = data["quantity"]
+                so.total_amount = so.order_qty * (so.unit_price or 0)
+            if "plan_date" in data and data["plan_date"]:
+                so.delivery_date = date.fromisoformat(data["plan_date"]) if isinstance(data["plan_date"], str) else data["plan_date"]
+
     db.commit()
-    return {"success": True}
+    return {"success": True, "message": "已更新" + ("，已同步销售订单" if entry.source_type == "销售订单" else "")}
 
 
 @router.delete("/{entry_id}")
 def delete_mps(entry_id: int, db: Session = Depends(get_db)):
-    """删除MPS"""
+    """删除MPS（关联销售订单时恢复为待出货）"""
     entry = db.query(MpsEntry).filter(MpsEntry.id == entry_id).first()
     if entry:
+        # 如果关联销售订单，回退订单信息
+        if entry.source_type == "销售订单" and entry.source_id:
+            from app.models.sales import SalesOrder
+            so = db.query(SalesOrder).filter(
+                SalesOrder.order_number == entry.source_id
+            ).first()
+            if so and so.ship_status == "待出货":
+                so.order_qty = entry.quantity
         db.delete(entry)
         db.commit()
     return {"success": True}

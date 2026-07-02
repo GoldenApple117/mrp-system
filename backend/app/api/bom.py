@@ -252,6 +252,67 @@ def get_bom_tree(product_id: int, db: Session = Depends(get_db)):
     }
 
 
+# ====== BOM行编辑（树形编辑支持） ======
+
+@router.post("/lines")
+def add_bom_line(data: dict, db: Session = Depends(get_db)):
+    """在BOM中添加一行"""
+    header = db.query(BomHeader).filter(BomHeader.id == data["bom_header_id"]).first()
+    if not header:
+        raise HTTPException(status_code=404, detail="BOM不存在")
+    max_sort = db.query(BomLine).filter(BomLine.bom_header_id == header.id).count()
+    line = BomLine(
+        bom_header_id=header.id,
+        parent_item_id=data["parent_item_id"],
+        item_id=data["item_id"],
+        quantity=data.get("quantity", 1),
+        position=data.get("position", ""),
+        is_substitute=data.get("is_substitute", False),
+        level=data.get("level", 1),
+        sort_order=max_sort + 1,
+        remark=data.get("remark", ""),
+    )
+    db.add(line)
+    db.commit()
+    return {"success": True, "data": {"id": line.id}}
+
+
+@router.put("/lines/{line_id}")
+def update_bom_line(line_id: int, data: dict, db: Session = Depends(get_db)):
+    """更新BOM行（数量/位号/替代料标记）"""
+    line = db.query(BomLine).filter(BomLine.id == line_id).first()
+    if not line:
+        raise HTTPException(status_code=404, detail="BOM行不存在")
+    for field in ["quantity", "position", "is_substitute", "scrap_rate", "remark", "sort_order"]:
+        if field in data:
+            setattr(line, field, data[field])
+    db.commit()
+    return {"success": True, "message": "已更新"}
+
+
+@router.delete("/lines/{line_id}")
+def delete_bom_line(line_id: int, db: Session = Depends(get_db)):
+    """删除BOM行"""
+    line = db.query(BomLine).filter(BomLine.id == line_id).first()
+    if not line:
+        raise HTTPException(status_code=404, detail="BOM行不存在")
+    db.delete(line)
+    db.commit()
+    return {"success": True, "message": "已删除"}
+
+
+@router.put("/lines/sort")
+def sort_bom_lines(data: dict, db: Session = Depends(get_db)):
+    """批量更新BOM行排序"""
+    lines = data.get("lines", [])
+    for item in lines:
+        l = db.query(BomLine).filter(BomLine.id == item["id"]).first()
+        if l:
+            l.sort_order = item["sort_order"]
+    db.commit()
+    return {"success": True, "message": f"已更新 {len(lines)} 行排序"}
+
+
 @router.get("/where-used/{item_id}")
 def where_used(item_id: int, db: Session = Depends(get_db)):
     """物料用途反查：哪些BOM使用了该物料"""

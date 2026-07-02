@@ -35,24 +35,81 @@
     <el-pagination v-model:current-page="page" v-model:page-size="pageSize" :total="total"
       :page-sizes="[10,20,50]" layout="total,sizes,prev,pager,next" @change="fetchData" style="margin-top:16px;justify-content:flex-end" />
 
-    <!-- BOM树形弹窗 -->
-    <el-dialog v-model="treeVisible" title="BOM 树形结构" width="800px">
+    <!-- BOM树形弹窗（可编辑 — 三级折叠视图） -->
+    <el-dialog v-model="treeVisible" :title="treeData ? `${treeData.product_code} ${treeData.product_name} BOM编辑` : 'BOM 树形结构'" width="900px" @close="editingId=null">
       <div v-if="treeData">
-        <el-alert :title="`${treeData.product_code} ${treeData.product_name} [${treeData.version}]`" type="info" :closable="false" style="margin-bottom:12px" />
-        <el-tree :data="buildTree(treeData.nodes)" :props="treeProps" node-key="id" default-expand-all highlight-current>
-          <template #default="{node,data}">
-            <span style="display:flex;align-items:center;gap:8px;font-size:14px">
-              <el-tag size="small" :type="node.level===0?'danger':node.level===1?'warning':'info'">L{{ node.level }}</el-tag>
-              <strong>{{ data.material_code }}</strong>
-              <span>{{ data.material_name }}</span>
-              <el-tag size="small" type="success" effect="plain">x{{ data.quantity }}</el-tag>
-              <span v-if="data.position" style="color:#999">位号:{{ data.position }}</span>
-              <el-tag v-if="data.is_substitute" size="small" type="danger" effect="plain">替代料</el-tag>
-            </span>
-          </template>
-        </el-tree>
+        <div style="display:flex;align-items:center;margin-bottom:12px">
+          <el-alert :title="`${treeData.product_code} ${treeData.product_name} [${treeData.version}]`" type="info" :closable="false" style="flex:1" />
+          <el-button type="primary" size="small" style="margin-left:12px" @click="showAddPart"><el-icon><Plus /></el-icon> 添加零件</el-button>
+        </div>
+
+        <!-- 产品根节点 -->
+        <div class="bom-proj-card">
+          <div class="bom-proj-header" @click="rootOpen=!rootOpen">
+            <span style="font-weight:600;font-size:15px">{{ treeData.product_code }} {{ treeData.product_name }}</span>
+            <el-tag size="small" type="danger" style="margin:0 8px">{{ bomModules.length }}个模块</el-tag>
+            <el-tag size="small" type="info" style="margin:0 8px">{{ bomModules.reduce((s,m)=>s+(m.parts?.length||0),0) }}个零件</el-tag>
+            <span style="margin-left:auto;color:#999">{{ rootOpen?'▲':'▼' }}</span>
+          </div>
+
+          <!-- 模块层 -->
+          <div v-show="rootOpen" style="padding:0 12px 8px">
+            <div v-for="m in bomModules" :key="m.module_code" class="bom-mod-card">
+              <div class="bom-mod-header" @click="toggleModule(m.module_code)">
+                <span style="font-weight:500">{{ m.module_name }}</span>
+                <el-tag size="small" style="margin:0 6px">{{ m.parts?.length || 0 }}项</el-tag>
+                <span style="margin-left:auto;color:#999;font-size:12px">{{ m._open?'▲':'▼' }}</span>
+              </div>
+              <div v-show="m._open">
+                <el-table :data="m.parts||[]" size="small" stripe border>
+                  <el-table-column prop="material_code" label="编码" width="120" />
+                  <el-table-column prop="material_name" label="型号" min-width="120" show-overflow-tooltip />
+                  <el-table-column label="用量" width="90" align="center">
+                    <template #default="{row}">
+                      <span v-if="editingId!==row.line_id" @click="startEditQty(row)" style="cursor:pointer;text-decoration:underline dashed #409eff">{{ row.quantity }}</span>
+                      <span v-else style="display:flex;gap:4px;justify-content:center">
+                        <el-input-number v-model="editQty" :min="0.001" size="small" style="width:65px" controls-position="right" />
+                        <el-button size="small" type="primary" @click="saveQty(row)">✓</el-button>
+                        <el-button size="small" @click="editingId=null">✕</el-button>
+                      </span>
+                    </template>
+                  </el-table-column>
+                  <el-table-column label="位号" width="85">
+                    <template #default="{row}">
+                      <span v-if="editingPosId!==row.line_id" @click="startEditPos(row)" style="cursor:pointer;text-decoration:underline dashed #409eff">{{ row.position || '—' }}</span>
+                      <span v-else style="display:flex;gap:4px">
+                        <el-input v-model="editPos" size="small" style="width:60px" />
+                        <el-button size="small" type="primary" @click="savePos(row)">✓</el-button>
+                        <el-button size="small" @click="editingPosId=null">✕</el-button>
+                      </span>
+                    </template>
+                  </el-table-column>
+                  <el-table-column label="操作" width="80" fixed="right">
+                    <template #default="{row}">
+                      <el-button link type="danger" size="small" @click="deleteLine(row)">删除</el-button>
+                    </template>
+                  </el-table-column>
+                </el-table>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
       <el-empty v-else description="暂无BOM数据" />
+    </el-dialog>
+
+    <!-- 添加零件弹窗 -->
+    <el-dialog v-model="addPartVisible" title="选择零件加入BOM" width="500px" append-to-body>
+      <el-input v-model="searchPart" placeholder="搜索物料编码或型号" clearable style="margin-bottom:12px" @keyup.enter="searchParts">
+        <template #prefix><el-icon><Search /></el-icon></template>
+      </el-input>
+      <el-button type="primary" size="small" @click="searchParts" style="margin-bottom:8px">搜索</el-button>
+      <el-table :data="filteredParts.slice(0,15)" stripe border size="small" max-height="300" @row-click="confirmAddPart" style="cursor:pointer">
+        <el-table-column prop="material_code" label="编码" width="120" />
+        <el-table-column prop="material_name" label="型号" min-width="120" />
+        <el-table-column prop="level_type" label="类型" width="60" />
+      </el-table>
+      <el-empty v-if="!filteredParts.length" description="输入关键词搜索物料" />
     </el-dialog>
 
     <!-- 新建BOM弹窗 -->
@@ -252,7 +309,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '@/api'
 
@@ -265,7 +322,107 @@ const filterStatus = ref('')
 
 const treeVisible = ref(false)
 const treeData = ref(null)
-const treeProps = { children: 'children', label: 'material_name' }
+
+// ====== BOM树形编辑（三级折叠视图） ======
+const editingId = ref(null); const editQty = ref(1)
+const editingPosId = ref(null); const editPos = ref('')
+const addPartVisible = ref(false); const searchPart = ref('')
+const allPartOptions = ref([]); const filteredParts = ref([])
+const rootOpen = ref(true)
+const openModules = ref(new Set())  // 追踪哪些模块展开了
+
+async function showBomTree(row) {
+  try {
+    const res = await api.get(`/bom/tree/${row.product_id}`)
+    treeData.value = res.tree
+    rootOpen.value = true
+    // 默认展开所有模块
+    const nodes = res.tree?.nodes || []
+    nodes.filter(n => n.depth === 1).forEach(m => openModules.value.add(m.material_code))
+    treeVisible.value = true
+  } catch {
+    ElMessage.error('获取BOM树失败')
+  }
+}
+
+// 将树节点重组为模块→零件二级折叠结构
+const bomModules = computed(() => {
+  if (!treeData.value?.nodes) return []
+  const nodes = treeData.value.nodes
+  const depth1 = nodes.filter(n => n.depth === 1)
+  const depth2 = nodes.filter(n => n.depth === 2)
+  return depth1.map(m => ({
+    module_code: m.material_code,
+    module_name: m.material_name,
+    _open: openModules.value.has(m.material_code),
+    parts: depth2.filter(p => p.parent_item_id === m.item_id).map(p => ({
+      ...p, line_id: p.id,
+    }))
+  }))
+})
+
+function toggleModule(code) {
+  if (openModules.value.has(code)) openModules.value.delete(code)
+  else openModules.value.add(code)
+  openModules.value = new Set(openModules.value)  // 触发响应式更新
+}
+
+function startEditQty(row) { editingId.value = row.line_id; editQty.value = row.quantity }
+async function saveQty(row) {
+  await api.put(`/bom/lines/${row.line_id}`, { quantity: editQty.value })
+  row.quantity = editQty.value; editingId.value = null; ElMessage.success('用量已更新')
+}
+function startEditPos(row) { editingPosId.value = row.line_id; editPos.value = row.position || '' }
+async function savePos(row) {
+  await api.put(`/bom/lines/${row.line_id}`, { position: editPos.value })
+  row.position = editPos.value; editingPosId.value = null; ElMessage.success('位号已更新')
+}
+async function deleteLine(row) {
+  await ElMessageBox.confirm(`确定删除 ${row.material_code}？`, '提示', { type: 'warning' })
+  await api.delete(`/bom/lines/${row.line_id}`)
+  ElMessage.success('已删除')
+  const productId = treeData.value.nodes[0]?.item_id
+  if (productId) { const res = await api.get(`/bom/tree/${productId}`); treeData.value = res.tree }
+}
+
+async function showAddPart() {
+  if (!allPartOptions.value.length) {
+    const res = await api.get('/materials/all')
+    allPartOptions.value = res.items || []
+  }
+  searchPart.value = ''; filteredParts.value = allPartOptions.value
+  addPartVisible.value = true
+}
+
+function searchParts() {
+  const kw = searchPart.value.toLowerCase()
+  filteredParts.value = allPartOptions.value.filter(m =>
+    (m.material_code || '').toLowerCase().includes(kw) ||
+    (m.material_name || '').toLowerCase().includes(kw)
+  )
+}
+
+async function confirmAddPart(part) {
+  if (!treeData.value) return
+  const nodes = treeData.value.nodes
+  const root = nodes[0]
+  // Find the BOM header from root's parent
+  const headerId = treeData.value.header_id
+  const parentItemId = root.item_id
+  await api.post('/bom/lines', {
+    bom_header_id: headerId,
+    parent_item_id: parentItemId,
+    item_id: part.id,
+    quantity: 1,
+    position: '',
+    level: 1,
+  })
+  ElMessage.success(`已添加 ${part.material_code}`)
+  addPartVisible.value = false
+  // Reload tree
+  const res = await api.get(`/bom/tree/${parentItemId}`)
+  treeData.value = res.tree
+}
 
 const bomDialogVisible = ref(false)
 const savingBom = ref(false)
@@ -288,32 +445,6 @@ async function fetchData() {
   } finally {
     loading.value = false
   }
-}
-
-async function showBomTree(row) {
-  try {
-    const res = await api.get(`/bom/tree/${row.product_id}`)
-    treeData.value = res.tree
-    treeVisible.value = true
-  } catch {
-    ElMessage.error('获取BOM树失败')
-  }
-}
-
-function buildTree(nodes) {
-  if (!nodes) return []
-  const map = {}
-  const roots = []
-  nodes.forEach(n => { map[n.item_id] = { ...n, children: [] } })
-  nodes.forEach(n => {
-    // 父节点存在于节点列表中 → 挂为子节点；否则 → 作为根节点
-    if (n.parent_item_id && map[n.parent_item_id]) {
-      map[n.parent_item_id].children.push(map[n.item_id])
-    } else {
-      roots.push(map[n.item_id])
-    }
-  })
-  return roots
 }
 
 async function handleExcelUpload(file) {
@@ -636,4 +767,12 @@ onMounted(fetchData)
 <style scoped>
 .page-container { background:#fff; padding:20px; border-radius:8px; }
 .page-toolbar { display:flex; gap:12px; margin-bottom:16px; align-items:center; }
+
+/* BOM三级折叠卡片样式 — 与库存管理页面统一 */
+.bom-proj-card { border:1px solid #e4e7ed; border-radius:8px; margin-bottom:12px; overflow:hidden }
+.bom-proj-header { display:flex; align-items:center; padding:12px 16px; background:#fafbfc; cursor:pointer; user-select:none; border-bottom:1px solid #ebeef5 }
+.bom-proj-header:hover { background:#f0f5ff }
+.bom-mod-card { border:1px solid #f0f0f0; border-radius:6px; margin:8px 0; overflow:hidden }
+.bom-mod-header { display:flex; align-items:center; padding:8px 12px; background:#fafbfc; cursor:pointer; user-select:none }
+.bom-mod-header:hover { background:#f5f7fa }
 </style>

@@ -165,6 +165,20 @@ def run_mrp_logic(db: Session, horizon_days: int = 90, time_fence_days: int = 7)
 
     elapsed = (datetime.now() - start_time).total_seconds()
 
+    # 持久化例外到数据库
+    run_id = f"MRP-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+    from app.models.mrp_exception import MrpException
+    for ex in exceptions:
+        db.add(MrpException(
+            run_id=run_id,
+            exception_type=ex.get("type", ""),
+            item_code=ex.get("item_code", ""),
+            material_name=ex.get("material_name", ""),
+            message=ex.get("message", ""),
+            severity=ex.get("severity", "INFO"),
+        ))
+    db.commit()
+
     return {
         "success": True,
         "message": f"MRP运算完成（仅零件层），耗时 {elapsed:.2f}s",

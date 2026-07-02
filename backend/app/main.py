@@ -9,7 +9,7 @@ import logging
 
 from app.core.database import init_db
 from app.core.config import UPLOAD_DIR
-from app.api import materials, bom, inventory, mps, mrp, purchase, production, crp, inspection, sales, cost, finance, system as system_api
+from app.api import materials, bom, inventory, mps, mrp, purchase, production, crp, inspection, sales, cost, finance, exceptions, system as system_api
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -65,6 +65,7 @@ app.include_router(inspection.router)
 app.include_router(sales.router)
 app.include_router(cost.router)
 app.include_router(finance.router)
+app.include_router(exceptions.router)
 app.include_router(system_api.router)
 
 # 上传文件静态访问

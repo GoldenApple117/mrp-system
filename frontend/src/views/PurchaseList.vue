@@ -139,7 +139,7 @@ async function loadGrouped() {
   try {
     const [treeRes, poRes] = await Promise.all([
       api.get('/materials/tree'),
-      api.get('/purchase/orders', { params: { page_size: 500 } })  // le=1000 now
+      api.get('/purchase/orders/all')
     ])
     const pos = poRes.items || []
     const projects = (treeRes.projects || []).map(p => {

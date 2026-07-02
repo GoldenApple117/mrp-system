@@ -106,7 +106,7 @@ const form = reactive({ sales_order_id: null, customer_id: null, _customer_name:
 
 async function showDialog(row) {
   if (!orderOptions.value.length) {
-    const r = await api.get('/sales/orders', { params: { page_size: 200 } })
+    const r = await api.get('/sales/orders', { params: { page_size: 1000 } })
     orderOptions.value = r.items || []
   }
   if (row) {

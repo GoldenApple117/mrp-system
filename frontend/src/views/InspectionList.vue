@@ -211,7 +211,7 @@ async function fetchStock() {
 
 async function showInspectionDialog() {
   const [poRes] = await Promise.all([
-    api.get('/purchase/orders', { params: { status: '已下单', page_size: 50 } }),
+    api.get('/purchase/orders', { params: { status: '已下单', page_size: 10000 } }),
   ])
   poOptions.value = poRes.items || []
   Object.assign(inspForm, { purchase_order_id: null, item_id: null, inspect_qty: 1, inspector: '', remark: '' })

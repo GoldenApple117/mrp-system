@@ -16,6 +16,34 @@ from app.models.inventory import InventoryRecord, InventoryTransaction, Warehous
 router = APIRouter(prefix="/api/purchase", tags=["采购管理"])
 
 
+@router.get("/orders/all")
+def list_purchase_orders_all(db: Session = Depends(get_db)):
+    """获取全部采购订单（不分页，供折叠视图使用）"""
+    orders = db.query(PurchaseOrder).order_by(PurchaseOrder.id.desc()).all()
+    return {
+        "items": [
+            {
+                "id": o.id, "po_number": o.po_number,
+                "supplier_id": o.supplier_id,
+                "supplier_name": o.supplier.supplier_name if o.supplier else "",
+                "item_id": o.item_id,
+                "material_code": o.item.material_code if o.item else "",
+                "material_name": o.item.material_name if o.item else "",
+                "order_qty": o.order_qty, "received_qty": o.received_qty,
+                "unit_price": o.unit_price or 0, "total_amount": o.total_amount or 0,
+                "brand": o.brand or "", "submitter": o.submitter or "",
+                "supplier_link": o.supplier_link or "",
+                "due_date": o.due_date.isoformat() if o.due_date else None,
+                "status": o.status, "source_type": o.source_type,
+                "priority": o.priority,
+                "created_at": o.created_at.isoformat() if o.created_at else None,
+            }
+            for o in orders
+        ],
+        "total": len(orders),
+    }
+
+
 @router.get("/orders")
 def list_purchase_orders(
     page: int = Query(1, ge=1),

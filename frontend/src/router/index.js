@@ -77,6 +77,11 @@ const routes = [
     name: 'Finance',
     component: () => import('@/views/FinanceList.vue'),
   },
+  {
+    path: '/exceptions',
+    name: 'Exceptions',
+    component: () => import('@/views/ExceptionBoard.vue'),
+  },
 ]
 
 const router = createRouter({

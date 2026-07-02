@@ -227,3 +227,28 @@ def batch_update_safety_stock(data: dict, db: Session = Depends(get_db)):
         "message": f"已更新 {updated} 个物料的安全库存为 {new_value}",
         "data": {"updated": updated},
     }
+
+
+@router.put("/batch/update")
+def batch_update_materials(data: dict, db: Session = Depends(get_db)):
+    """批量更新物料字段（单价/提交人/链接等）"""
+    item_ids = data.get("item_ids", [])
+    fields = data.get("fields", {})
+    if not item_ids:
+        raise HTTPException(status_code=400, detail="请提供物料ID列表")
+    if not fields:
+        raise HTTPException(status_code=400, detail="请提供要更新的字段")
+    updated = 0
+    for item_id in item_ids:
+        mat = db.query(MaterialMaster).filter(MaterialMaster.id == item_id).first()
+        if mat:
+            for key, val in fields.items():
+                if hasattr(mat, key):
+                    setattr(mat, key, val)
+            updated += 1
+    db.commit()
+    return {
+        "success": True,
+        "message": f"已更新 {updated} 个物料",
+        "data": {"updated": updated},
+    }

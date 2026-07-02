@@ -170,37 +170,16 @@ def create_transaction(data: dict, db: Session = Depends(get_db)):
     # 如果是产品出库，自动关联销售订单
     item = db.query(MaterialMaster).filter(MaterialMaster.id == item_id).first()
     if item and item.level_type == "产品" and tx_type in ("出库", "销售出库"):
+        from app.services.sales_order_service import SalesOrderService
+        SalesOrderService.allocate_shipment(db, item_id, abs(qty))
+        # 标记对应的MPS完成
         from app.models.sales import SalesOrder
-        abs_qty = abs(qty)
-        # 找最早的未全部出货的订单
         orders = db.query(SalesOrder).filter(
             SalesOrder.item_id == item_id,
-            SalesOrder.ship_status.in_(["待出货", "部分出货"])
-        ).order_by(SalesOrder.delivery_date.asc(), SalesOrder.id.asc()).all()
-        remaining = abs_qty
+            SalesOrder.ship_status == "全部出货",
+        ).all()
         for order in orders:
-            if remaining <= 0:
-                break
-            need = order.order_qty - (order.shipped_qty or 0)
-            if need <= 0:
-                continue
-            allocate = min(remaining, need)
-            order.shipped_qty = (order.shipped_qty or 0) + allocate
-            order.ship_status = "全部出货" if order.shipped_qty >= order.order_qty else "部分出货"
-            # 更新综合状态
-            if order.ship_status == "全部出货" and order.pay_status == "全部收款":
-                order.status = "已完成"
-            remaining -= allocate
-            # 全部出货 → 标记MPS完成
-            if order.ship_status == "全部出货":
-                from app.models.mps import MpsEntry
-                mps = db.query(MpsEntry).filter(
-                    MpsEntry.source_type == "销售订单",
-                    MpsEntry.source_id == order.order_number,
-                    MpsEntry.status == "进行中"
-                ).first()
-                if mps:
-                    mps.status = "已完成"
+            SalesOrderService.mark_mps_completed(db, order)
 
     db.commit()
 
@@ -238,6 +217,72 @@ def list_transactions(
             for t in txs
         ],
         "total": total, "page": page, "page_size": page_size,
+    }
+
+
+# ====== 呆滞料预警 ======
+
+@router.get("/obsolete")
+def get_obsolete_materials(
+    days: int = Query(90, ge=1, description="超过多少天未使用视为呆滞"),
+    db: Session = Depends(get_db),
+):
+    """查询呆滞物料：有库存但超过N天没有任何出入库操作的物料"""
+    from datetime import datetime, timedelta
+    cutoff = datetime.now() - timedelta(days=days)
+
+    # 获取所有有库存的物料
+    records = db.query(InventoryRecord).filter(InventoryRecord.on_hand_qty > 0).all()
+
+    result = []
+    for rec in records:
+        mat = db.query(MaterialMaster).filter(MaterialMaster.id == rec.item_id).first()
+        if not mat or mat.level_type == "模块":
+            continue
+
+        # 最后交易时间
+        last_tx = db.query(InventoryTransaction).filter(
+            InventoryTransaction.item_id == rec.item_id
+        ).order_by(InventoryTransaction.created_at.desc()).first()
+
+        last_tx_date = last_tx.created_at if last_tx else None
+        is_obsolete = (last_tx_date is None) or (last_tx_date < cutoff)
+
+        if is_obsolete:
+            # 最后一次是什么操作
+            last_action = last_tx.transaction_type if last_tx else "无记录"
+            last_qty = last_tx.quantity if last_tx else 0
+            idle_days = (datetime.now() - last_tx_date).days if last_tx_date else 999
+
+            result.append({
+                "item_id": rec.item_id,
+                "material_code": mat.material_code,
+                "material_name": mat.material_name,
+                "material_type": mat.material_type,
+                "unit": mat.unit,
+                "on_hand": rec.on_hand_qty,
+                "last_action": last_action,
+                "last_qty": last_qty,
+                "last_date": last_tx_date.isoformat() if last_tx_date else None,
+                "idle_days": idle_days,
+                "level": "⚠️严重" if idle_days > days * 2 else ("⚡关注" if idle_days > days * 1.5 else "提醒"),
+            })
+
+    # 按闲置天数倒序排列
+    result.sort(key=lambda x: x["idle_days"], reverse=True)
+
+    return {
+        "items": result,
+        "total": len(result),
+        "threshold_days": days,
+        "summary": {
+            "total_obsolete": len(result),
+            "severity_counts": {
+                "严重": len([r for r in result if r["level"] == "⚠️严重"]),
+                "关注": len([r for r in result if r["level"] == "⚡关注"]),
+                "提醒": len([r for r in result if r["level"] == "提醒"]),
+            },
+        },
     }
 
 

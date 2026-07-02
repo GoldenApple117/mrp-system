@@ -8,6 +8,14 @@
     </div>
 
     <div v-loading="loading">
+      <div v-if="selIds.length" class="batch-bar">
+        <el-tag type="info">已选 {{ selIds.length }} 项</el-tag>
+        <el-input-number v-model="batchPrice" :min="0" size="small" style="width:110px" placeholder="新单价"/>
+        <el-button size="small" type="primary" @click="batchUpdate('reference_unit_price',batchPrice,'单价')" :disabled="!batchPrice&&batchPrice!==0">批量设单价</el-button>
+        <el-input v-model="batchSubmitter" size="small" style="width:90px" placeholder="提交人"/>
+        <el-button size="small" type="primary" @click="batchUpdate('reference_submitter',batchSubmitter,'提交人')" :disabled="!batchSubmitter">批量设提交人</el-button>
+        <el-button size="small" @click="selIds=[];batchPrice=null;batchSubmitter=''">取消</el-button>
+      </div>
       <div v-for="p in projects" :key="p.product_code" class="proj-card">
         <div class="proj-header" @click="p._open=!p._open">
           <span style="font-weight:600;font-size:15px">{{ p.product_name }}</span>
@@ -23,15 +31,19 @@
               <span style="margin-left:auto;color:#999;font-size:12px">{{ m._open?'▲':'▼' }}</span>
             </div>
             <div v-show="m._open">
-              <el-table :data="filterParts(m.parts)" size="small" stripe border>
+              <el-table :data="filterParts(m.parts)" size="small" stripe border @selection-change="onSel">
+                <el-table-column type="selection" width="40" />
                 <el-table-column prop="material_code" label="物料编码" width="120" />
-                <el-table-column prop="material_name" label="物料型号" min-width="130" show-overflow-tooltip />
-                <el-table-column prop="specification" label="品牌/规格" width="100" show-overflow-tooltip />
-                <el-table-column prop="unit" label="单位" width="60" />
-                <el-table-column label="参考单价" width="90" align="right">
+                <el-table-column prop="material_name" label="物料型号" min-width="110" show-overflow-tooltip />
+                <el-table-column prop="specification" label="品牌" width="80" show-overflow-tooltip />
+                <el-table-column prop="unit" label="单位" width="55" />
+                <el-table-column label="参考单价" width="85" align="right">
                   <template #default="{row}"><span v-if="row.reference_unit_price>0">¥{{ row.reference_unit_price }}</span><span v-else style="color:#c0c4cc">—</span></template>
                 </el-table-column>
-                <el-table-column label="安全库存" width="80" align="center" prop="safety_stock" />
+                <el-table-column label="提交人" width="65" align="center">
+                  <template #default="{row}"><span v-if="row.reference_submitter">{{ row.reference_submitter }}</span><span v-else style="color:#c0c4cc">—</span></template>
+                </el-table-column>
+                <el-table-column label="安全库存" width="70" align="center" prop="safety_stock" />
                 <el-table-column label="采购件" width="65" align="center">
                   <template #default="{row}"><el-tag :type="row.is_purchased?'success':'info'" size="small">{{ row.is_purchased?'是':'否' }}</el-tag></template>
                 </el-table-column>
@@ -63,6 +75,21 @@ import api from '@/api'
 
 const loading = ref(false); const saving = ref(false); const keyword = ref('')
 const projects = ref([])
+const selIds = ref([]); const batchPrice = ref(null); const batchSubmitter = ref('')
+
+function onSel(rows) { selIds.value = rows.map(r => r.id) }
+function filterParts(parts) {
+  if (!keyword.value) return parts
+  const kw = keyword.value.toLowerCase()
+  return parts.filter(p => (p.material_code||'').toLowerCase().includes(kw) || (p.material_name||'').toLowerCase().includes(kw))
+}
+async function batchUpdate(field, value, label) {
+  if (!value && value !== 0) return
+  await api.put('/materials/batch/update', { item_ids: selIds.value, fields: { [field]: value } })
+  ElMessage.success(`已更新 ${selIds.value.length} 项${label}`)
+  selIds.value = []; batchPrice.value = null; batchSubmitter.value = ''
+  fetchData()
+}
 
 async function loadData() {
   loading.value = true
@@ -75,11 +102,6 @@ async function loadData() {
   } finally { loading.value = false }
 }
 
-function filterParts(parts) {
-  if (!keyword.value) return parts
-  const kw = keyword.value.toLowerCase()
-  return parts.filter(p => (p.material_code||'').toLowerCase().includes(kw) || (p.material_name||'').toLowerCase().includes(kw))
-}
 function onSearch() { loadData() }
 
 const dialogVisible = ref(false)
@@ -105,4 +127,5 @@ onMounted(loadData)
 .mod-card { border:1px solid #f0f0f0; border-radius:6px; margin:8px 0; overflow:hidden }
 .mod-header { display:flex; align-items:center; padding:8px 12px; background:#fafbfc; cursor:pointer; user-select:none }
 .mod-header:hover { background:#f5f7fa }
+.batch-bar { display:flex; align-items:center; gap:8px; background:#f0f9eb; border:1px solid #b3e19d; padding:8px 14px; border-radius:6px; margin-bottom:12px }
 </style>

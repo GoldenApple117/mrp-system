@@ -8,6 +8,7 @@
       <span style="flex:1" />
       <el-button @click="tab='parts'" :type="tab==='parts'?'primary':'default'">零件管理</el-button>
       <el-button @click="tab='products'" :type="tab==='products'?'':'default'">产品管理</el-button>
+      <el-button @click="tab='obsolete';fetchObsolete()" :type="tab==='obsolete'?'warning':'default'">呆滞料预警</el-button>
       <el-button @click="tab='tx'">出入库流水</el-button>
     </div>
 
@@ -33,7 +34,7 @@
               <span style="margin-left:auto;color:#999;font-size:12px">{{ m._open?'▲':'▼' }}</span>
             </div>
             <div v-show="m._open">
-              <el-table :data="getParts(m.parts)" size="small" stripe border @selection-change="(rows)=>selectedIds=rows.map(r=>r.item_id)">
+              <el-table :data="getParts(m)" size="small" stripe border @selection-change="(rows)=>onTableSel(rows,m.module_code)">
                 <el-table-column type="selection" width="40" />
                 <el-table-column prop="material_code" label="编码" width="110" />
                 <el-table-column prop="material_name" label="型号" min-width="110" show-overflow-tooltip />
@@ -62,6 +63,44 @@
         <el-table-column label="库存" width="80" align="center"><template #default="{row}"><span :style="{color:row.on_hand>0?'#67c23a':'#c0c4cc',fontWeight:'bold'}">{{ row.on_hand||0 }}</span></template></el-table-column>
         <el-table-column label="操作" width="120"><template #default="{row}"><el-button size="small" type="success" link @click="quickIn(row)">入库</el-button><el-button size="small" type="danger" link @click="quickOut(row)">出库</el-button></template></el-table-column>
       </el-table>
+    </div>
+
+    <!-- 呆滞料预警 -->
+    <div v-if="tab==='obsolete'" v-loading="loading">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+        <span style="font-weight:500">呆滞天数阈值:</span>
+        <el-input-number v-model="obsoleteDays" :min="1" :max="365" size="small" style="width:100px" />
+        <span style="color:#999;font-size:12px">天</span>
+        <el-button type="primary" size="small" @click="fetchObsolete">查询</el-button>
+        <span style="flex:1"></span>
+        <el-tag type="danger" size="small">⚠️严重: {{ obsoleteSummary.severity_counts?.严重 || 0 }}</el-tag>
+        <el-tag type="warning" size="small">⚡关注: {{ obsoleteSummary.severity_counts?.关注 || 0 }}</el-tag>
+        <el-tag type="info" size="small">提醒: {{ obsoleteSummary.severity_counts?.提醒 || 0 }}</el-tag>
+      </div>
+      <el-table :data="obsoleteData" stripe border size="small" max-height="500">
+        <el-table-column prop="material_code" label="物料编码" width="120" />
+        <el-table-column prop="material_name" label="物料型号" min-width="130" show-overflow-tooltip />
+        <el-table-column prop="on_hand" label="库存" width="70" align="center" />
+        <el-table-column label="闲置天数" width="100" align="center">
+          <template #default="{row}">
+            <span :style="{color:row.idle_days>180?'#f56c6c':row.idle_days>90?'#e6a23c':'#909399',fontWeight:'bold',fontSize:'15px'}">{{ row.idle_days }}</span>
+            <span style="color:#999;font-size:12px"> 天</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="last_action" label="最近操作" width="85" />
+        <el-table-column prop="last_date" label="最近日期" width="100">
+          <template #default="{row}">
+            <span v-if="row.last_date" style="color:#909399;font-size:12px">{{ row.last_date.slice(0,10) }}</span>
+            <span v-else style="color:#f56c6c;font-size:12px">从未操作</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="等级" width="80">
+          <template #default="{row}">
+            <el-tag :type="row.level==='⚠️严重'?'danger':row.level==='⚡关注'?'warning':'info'" size="small">{{ row.level }}</el-tag>
+          </template>
+        </el-table-column>
+      </el-table>
+      <el-empty v-if="!obsoleteData.length && !loading" description="🎉 暂无呆滞物料" />
     </div>
 
     <!-- 流水 -->
@@ -97,8 +136,31 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '@/api'
 
 const loading = ref(false); const tab = ref('parts'); const keyword = ref('')
+
+// ====== 呆滞料预警 ======
+const obsoleteDays = ref(90)
+const obsoleteData = ref([])
+const obsoleteSummary = ref({ severity_counts: {} })
+
+async function fetchObsolete() {
+  loading.value = true
+  try {
+    const res = await api.get('/inventory/obsolete', { params: { days: obsoleteDays.value } })
+    obsoleteData.value = res.items
+    obsoleteSummary.value = res.summary
+  } finally { loading.value = false }
+}
 const projects = ref([])
 const selectedIds = ref([]); const batchSafetyStock = ref(null)
+const _selSet = new Set()
+
+function onTableSel(rows, tableKey) {
+  // 移除本表之前的选择
+  _allTableSels[tableKey] = (rows || []).map(r => r.item_id)
+  // 合并所有表的选择
+  selectedIds.value = Object.values(_allTableSels).flat()
+}
+const _allTableSels = {}
 const productStock = ref([])
 const inventoryMap = ref({})
 
@@ -111,15 +173,26 @@ async function loadData() {
     productStock.value = (invRes.items||[]).filter(i => i.material_type==='成品')
     projects.value = (treeRes.projects||[]).map(p => ({
       ...p, _open: true,
-      modules: p.modules.map(m => ({ ...m, _open: false }))
+      modules: p.modules.map(m => ({
+        ...m, _open: false,
+        // 预合并库存数据到每个零件，避免每次 getParts 创建新对象导致 el-table 失去选择
+        _enriched: m.parts.map(part => {
+          const inv = invMap[part.material_code] || {}
+          return { ...part, on_hand: inv.on_hand||0, last_received_qty: inv.last_received_qty||0, last_received_date: inv.last_received_date }
+        })
+      }))
     }))
   } finally { loading.value = false }
 }
 
-function getParts(parts) {
-  let r = parts.map(p => { const inv = inventoryMap.value[p.material_code]||{}; return { ...p, on_hand: inv.on_hand||0, last_received_qty:inv.last_received_qty||0, last_received_date:inv.last_received_date } })
-  if (keyword.value) { const kw = keyword.value.toLowerCase(); r = r.filter(p => (p.material_code||'').toLowerCase().includes(kw) || (p.material_name||'').toLowerCase().includes(kw)) }
-  return r
+function getParts(mod) {
+  // 使用预缓存的_enriched数组，避免每次创建新对象导致el-table丢失选择状态
+  const enriched = mod._enriched || []
+  if (keyword.value) {
+    const kw = keyword.value.toLowerCase()
+    return enriched.filter(p => (p.material_code||'').toLowerCase().includes(kw) || (p.material_name||'').toLowerCase().includes(kw))
+  }
+  return enriched
 }
 function onSearch() { loadData() }
 
