@@ -41,11 +41,33 @@ def init_db():
     Base.metadata.create_all(bind=engine)
 
     # 迁移：补齐新增的列（不破坏已有数据）
+    # 每条 ALTER TABLE 单独 try/except，避免一条失败阻塞后续
     with engine.connect() as conn:
-        for stmt in [
+        migration_stmts = [
+            # v1.3 — 物料层级
             "ALTER TABLE material_master ADD COLUMN classification_code VARCHAR(100) DEFAULT ''",
             "ALTER TABLE material_master ADD COLUMN level_type VARCHAR(20) DEFAULT '零件'",
-        ]:
+            # v1.5 — 物料参考价格/提交人/链接
+            "ALTER TABLE material_master ADD COLUMN reference_unit_price FLOAT DEFAULT 0",
+            "ALTER TABLE material_master ADD COLUMN reference_submitter VARCHAR(50) DEFAULT ''",
+            "ALTER TABLE material_master ADD COLUMN reference_link VARCHAR(1000) DEFAULT ''",
+            # v1.5 — 采购单品牌/提交人/链接
+            "ALTER TABLE purchase_order ADD COLUMN brand VARCHAR(100) DEFAULT ''",
+            "ALTER TABLE purchase_order ADD COLUMN submitter VARCHAR(50) DEFAULT ''",
+            "ALTER TABLE purchase_order ADD COLUMN supplier_link VARCHAR(1000) DEFAULT ''",
+            # v1.5 — 销售订单出货/收款状态
+            "ALTER TABLE sales_order ADD COLUMN shipped_qty FLOAT DEFAULT 0",
+            "ALTER TABLE sales_order ADD COLUMN unit_price FLOAT DEFAULT 0",
+            "ALTER TABLE sales_order ADD COLUMN total_amount FLOAT DEFAULT 0",
+            "ALTER TABLE sales_order ADD COLUMN paid_amount FLOAT DEFAULT 0",
+            "ALTER TABLE sales_order ADD COLUMN ship_status VARCHAR(20) DEFAULT '待出货'",
+            "ALTER TABLE sales_order ADD COLUMN pay_status VARCHAR(20) DEFAULT '未收款'",
+            # v1.5 — MPS 状态
+            "ALTER TABLE mps_entry ADD COLUMN status VARCHAR(20) DEFAULT '进行中'",
+            # v1.5 — 供应商购买链接
+            "ALTER TABLE supplier ADD COLUMN purchase_link VARCHAR(1000) DEFAULT ''",
+        ]
+        for stmt in migration_stmts:
             try:
                 conn.execute(text(stmt))
                 conn.commit()
