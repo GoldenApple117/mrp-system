@@ -143,3 +143,40 @@ def seed_demo_api():
         return {"success": True, "message": "✅ 演示数据初始化完成！所有物料、BOM、工作中心、工艺路线、库存、MPS数据已就绪。"}
     except Exception as e:
         return {"success": False, "message": f"❌ 初始化失败: {str(e)}"}
+
+
+@router.get("/dashboard/modules")
+def get_module_inventory(db=Depends(get_db)):
+    """仪表盘：按模块统计库存，每个项目模块地位平等"""
+    from app.models.material import MaterialMaster as M
+    from app.models.inventory import InventoryRecord as I
+    from app.models.bom import BomLine as BL
+
+    # 找到所有物料对应的模块（通过BOM线 → 父物料）
+    module_map = {}  # item_id → module_name
+    all_lines = db.query(BL).all()
+    for line in all_lines:
+        parent = db.query(M).filter(M.id == line.parent_item_id).first()
+        if parent:
+            module_map[line.item_id] = parent.material_name
+
+    # 按模块聚合库存
+    module_inv = {}  # module_name → total_qty
+    all_mats = db.query(M).all()
+    for mat in all_mats:
+        inv = db.query(I).filter(I.item_id == mat.id).first()
+        qty = inv.on_hand_qty if inv else 0
+        module_name = module_map.get(mat.id, "未归类")
+        module_inv[module_name] = module_inv.get(module_name, 0) + qty
+
+    result = []
+    for name, total in module_inv.items():
+        mat_ids_in_module = [mid for mid, mn in module_map.items() if mn == name]
+        result.append({
+            "module_name": name,
+            "total_qty": total,
+            "material_count": len(mat_ids_in_module) if mat_ids_in_module else 1,
+        })
+
+    result.sort(key=lambda x: x["total_qty"], reverse=True)
+    return result

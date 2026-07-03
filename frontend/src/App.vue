@@ -1,5 +1,11 @@
 <template>
-  <div id="app-container" class="flex h-screen overflow-hidden">
+  <!-- 登录页：独立全屏，无侧边栏 -->
+  <div v-if="isLoginPage" class="h-screen overflow-hidden">
+    <router-view />
+  </div>
+
+  <!-- 正常布局：侧边栏 + 顶栏 + 内容 -->
+  <div v-else id="app-container" class="flex h-screen overflow-hidden">
     <!-- ══════════ 侧边栏 ══════════ -->
     <aside
       :class="[
@@ -210,11 +216,37 @@
           <span class="w-1.5 h-1.5 rounded-full bg-[var(--color-success)] shadow-[0_0_4px_var(--color-success)]"></span>
           <span class="text-[var(--color-text-tertiary)]">系统运行中</span>
         </div>
+
+        <!-- 用户 -->
+        <div class="flex items-center gap-2 text-xs">
+          <!-- 管理员：权限管理入口 + 待审批角标 -->
+          <template v-if="auth.user?.role === 'admin'">
+            <router-link
+              to="/permissions"
+              class="relative text-[var(--color-text-tertiary)] hover:text-[var(--color-accent)] transition-colors no-underline flex items-center gap-0.5"
+            >
+              <el-icon :size="14"><Setting /></el-icon>
+              <span>权限</span>
+              <span v-if="pendingCount > 0"
+                class="absolute -top-1 -right-2 min-w-[16px] h-4 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold px-1"
+              >{{ pendingCount }}</span>
+            </router-link>
+          </template>
+          <span class="text-[var(--color-text-secondary)]">{{ auth.user?.username || 'admin' }}</span>
+          <button
+            class="text-[var(--color-text-tertiary)] hover:text-[var(--color-accent)] transition-colors cursor-pointer bg-transparent border-0 py-0.5 px-1 rounded"
+            @click="handleLogout"
+            title="退出登录"
+          >
+            <el-icon :size="14"><SwitchButton /></el-icon>
+          </button>
+        </div>
       </header>
 
       <!-- 内容区 -->
-      <main class="flex-1 overflow-y-auto bg-[var(--color-bg-base)] p-5">
+      <main class="flex-1 overflow-y-auto bg-[var(--color-bg-base)] p-5 relative">
         <router-view />
+        <PermissionOverlay />
       </main>
     </div>
 
@@ -230,9 +262,12 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import NavGroup from '@/components/NavGroup.vue'
 import NavItem from '@/components/NavItem.vue'
 import SearchPalette from '@/components/SearchPalette.vue'
+import PermissionOverlay from '@/components/PermissionOverlay.vue'
+import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
 const router = useRouter()
+const auth = useAuthStore()
 const isCollapse = ref(false)
 const importFileRef = ref(null)
 const searchPaletteRef = ref(null)
@@ -269,6 +304,7 @@ onMounted(() => {
   window.addEventListener('keydown', handleGlobalKeydown)
   loadSchedule()
   loadEmailConfig()
+  if (auth.user?.role === 'admin') fetchPendingCount()
 })
 
 onBeforeUnmount(() => {
@@ -303,6 +339,12 @@ const runMrpNow = async () => {
     const d = await r.json()
     ElMessage[d.success ? 'success' : 'error'](d.message)
   } catch {}
+}
+
+function handleLogout() {
+  auth.logout()
+  router.push('/login')
+  ElMessage.success('已退出登录')
 }
 
 // ====== 邮件配置 ======
@@ -365,6 +407,19 @@ async function sendTestEmail() {
   }
 }
 
+// ====== 权限管理 ======
+const pendingCount = ref(0)
+
+async function fetchPendingCount() {
+  try {
+    const r = await fetch('/api/permissions/pending-count', {
+      headers: { Authorization: `Bearer ${auth.token}` },
+    })
+    const d = await r.json()
+    pendingCount.value = d.count || 0
+  } catch {}
+}
+
 const handleExport = async () => {
   try {
     const resp = await fetch('/api/system/export')
@@ -410,6 +465,7 @@ const onImportFile = (e) => {
 
 // ====== 路由 ======
 const activeMenu = computed(() => route.path)
+const isLoginPage = computed(() => route.path === '/login')
 
 const pageTitle = computed(() => {
   const map = {
@@ -430,6 +486,7 @@ const pageTitle = computed(() => {
     '/cost': '费用合计',
     '/exceptions': '例外看板',
     '/suppliers': '供应商管理',
+    '/permissions': '权限管理',
   }
   return map[route.path] || 'MRP II 物料需求计划系统'
 })

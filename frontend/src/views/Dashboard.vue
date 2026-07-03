@@ -131,9 +131,9 @@
 
     <!-- ══════════ 图表区域 ══════════ -->
     <div class="grid grid-cols-2 gap-4">
-      <!-- 库存概览图 -->
+      <!-- 库存概览（按模块） -->
       <div class="stat-card">
-        <h3 class="text-[var(--color-text-primary)] font-medium text-sm mb-3">库存概览（按物料类型）</h3>
+        <h3 class="text-[var(--color-text-primary)] font-medium text-sm mb-3">库存概览（按模块）</h3>
         <div ref="inventoryChart" style="height: 280px"></div>
         <div v-if="!invData.length && !loading" class="flex items-center justify-center h-[280px] text-[var(--color-text-tertiary)] text-xs">
           暂无库存数据
@@ -269,18 +269,19 @@ async function loadMrpHistory() {
 
 async function loadInventory() {
   try {
+    // 按模块统计库存（平等对待每个模块）
+    const modRes = await api.get('/system/dashboard/modules')
+    invData.value = (modRes || []).map(d => ({
+      name: d.module_name,
+      value: d.total_qty,
+      count: d.material_count,
+    }))
+    renderInventoryChart()
+
+    // 低库存预警仍从 inventory summary 获取
     const res = await api.get('/inventory/summary', { params: { page_size: 1000 } })
     const items = res.items || []
     lowStockItems.value = items.filter(i => i.is_low).slice(0, 5)
-
-    // 按物料类型分组
-    const typeMap = {}
-    items.forEach(i => {
-      const t = i.material_type || '其他'
-      typeMap[t] = (typeMap[t] || 0) + (i.on_hand || 0)
-    })
-    invData.value = Object.entries(typeMap).map(([name, value]) => ({ name, value }))
-    renderInventoryChart()
   } catch {
     lowStockItems.value = []
     invData.value = []
@@ -317,35 +318,51 @@ async function loadTimer() {
 function renderInventoryChart() {
   if (!inventoryChart.value || !invData.value.length) return
   const chart = echarts.init(inventoryChart.value)
+  const names = invData.value.map(d => d.name)
+  const values = invData.value.map(d => d.value)
+  const colors = ['#3b82f6', '#8b5cf6', '#22c55e', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899', '#14b8a6']
+
   chart.setOption({
     tooltip: {
-      trigger: 'item',
+      trigger: 'axis',
       backgroundColor: '#1a1a1e',
       borderColor: '#333',
       textStyle: { color: '#ccc', fontSize: 12 },
+      formatter: (params) => {
+        const d = invData.value[params[0].dataIndex]
+        return `${d.name}<br/>库存总量: ${d.value}<br/>物料数: ${d.count}`
+      },
     },
-    legend: {
-      bottom: 0,
-      textStyle: { color: '#888', fontSize: 11 },
-      itemWidth: 8,
-      itemHeight: 8,
+    grid: { left: 100, right: 40, top: 8, bottom: 8 },
+    xAxis: {
+      type: 'value',
+      splitLine: { lineStyle: { color: '#2a2a2e' } },
+      axisLabel: { color: '#888', fontSize: 11 },
+    },
+    yAxis: {
+      type: 'category',
+      data: names,
+      axisLine: { lineStyle: { color: '#333' } },
+      axisLabel: { color: '#ccc', fontSize: 12 },
+      inverse: true,
     },
     series: [{
-      type: 'pie',
-      radius: ['50%', '75%'],
-      center: ['50%', '45%'],
-      avoidLabelOverlap: false,
-      itemStyle: { borderColor: '#1a1a1e', borderWidth: 2 },
-      label: { show: false },
-      emphasis: {
-        label: { show: true, fontSize: 14, fontWeight: 'bold', color: '#e8e8ed' },
-      },
-      data: invData.value.map(d => ({
-        ...d,
+      type: 'bar',
+      data: values.map((v, i) => ({
+        value: v,
         itemStyle: {
-          color: getTypeColor(d.name),
+          color: colors[i % colors.length],
+          borderRadius: [0, 4, 4, 0],
         },
       })),
+      barWidth: 20,
+      label: {
+        show: true,
+        position: 'right',
+        color: '#a0a0a8',
+        fontSize: 11,
+        formatter: '{c}',
+      },
     }],
   })
   window.addEventListener('resize', () => chart.resize())
@@ -392,17 +409,6 @@ function renderWoChart() {
     }],
   })
   window.addEventListener('resize', () => chart.resize())
-}
-
-function getTypeColor(type) {
-  const map = {
-    '成品': '#3b82f6',
-    '半成品': '#8b5cf6',
-    '零件': '#22c55e',
-    '原材料': '#f59e0b',
-    '模块': '#06b6d4',
-  }
-  return map[type] || '#6b7280'
 }
 
 // ====== 路由切换时重新加载 ======

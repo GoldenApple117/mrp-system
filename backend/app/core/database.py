@@ -68,6 +68,8 @@ def init_db():
             "ALTER TABLE mps_entry ADD COLUMN status VARCHAR(20) DEFAULT '进行中'",
             # v1.5 — 供应商购买链接
             "ALTER TABLE supplier ADD COLUMN purchase_link VARCHAR(1000) DEFAULT ''",
+            # v1.7 — 权限系统
+            "ALTER TABLE users ADD COLUMN is_approved INTEGER DEFAULT 1",
         ]
         for stmt in migration_stmts:
             try:
@@ -75,4 +77,18 @@ def init_db():
                 conn.commit()
             except Exception:
                 conn.rollback()  # 列已存在时忽略
+
+        # v1.7 — 确保admin用户被标记为已授权
+        conn.execute(text("UPDATE users SET is_approved=1, role='admin' WHERE username='admin'"))
+        conn.commit()
+
+        # v1.6 — 创建默认管理员用户（含 is_approved）
+        from app.core.security import hash_password
+        result = conn.execute(text("SELECT id FROM users WHERE username='admin'"))
+        if not result.fetchone():
+            conn.execute(text(
+                "INSERT INTO users (username, password_hash, role, is_approved) "
+                "VALUES ('admin', :pw, 'admin', 1)"
+            ), {"pw": hash_password("admin123")})
+            conn.commit()
 

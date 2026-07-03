@@ -7,6 +7,9 @@ from app.models.routing import WorkCenter, RoutingHeader, RoutingOperation
 from app.models.supplier import Supplier
 from app.models.inspection import InspectionRecord, StockCount
 
+from app.models.user import User
+from app.models.permission import PermissionRequest
+
 __all__ = [
     "MaterialMaster",
     "BomHeader", "BomLine", "BomEcn",

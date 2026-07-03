@@ -1,0 +1,167 @@
+[
+  {
+    "seq": 1,
+    "model": "MER-503-20GM-P",
+    "name": "工业相机 500万像素 黑白 GigE接口 2/3\" CMOS",
+    "brand": "大恒图像",
+    "qty": 3.0,
+    "unit": "台",
+    "price": 2850.0,
+    "submitter": "熊振",
+    "link": ""
+  },
+  {
+    "seq": 2,
+    "model": "MER-503-20GC-P",
+    "name": "工业相机 500万像素 彩色 GigE接口 2/3\" CMOS",
+    "brand": "大恒图像",
+    "qty": 1.0,
+    "unit": "台",
+    "price": 3200.0,
+    "submitter": "熊振",
+    "link": ""
+  },
+  {
+    "seq": 3,
+    "model": "M1614-MP2",
+    "name": "定焦镜头 16mm F1.4 C口 2/3\"",
+    "brand": "Computar",
+    "qty": 3.0,
+    "unit": "个",
+    "price": 850.0,
+    "submitter": "熊振",
+    "link": ""
+  },
+  {
+    "seq": 4,
+    "model": "M2514-MP2",
+    "name": "定焦镜头 25mm F1.4 C口 2/3\"",
+    "brand": "Computar",
+    "qty": 1.0,
+    "unit": "个",
+    "price": 980.0,
+    "submitter": "熊振",
+    "link": ""
+  },
+  {
+    "seq": 5,
+    "model": "RL12090-W",
+    "name": "环形光源 120mm外径 90°照射角 白光",
+    "brand": "OPT奥普特",
+    "qty": 3.0,
+    "unit": "个",
+    "price": 680.0,
+    "submitter": "熊振",
+    "link": ""
+  },
+  {
+    "seq": 6,
+    "model": "BL18018-W",
+    "name": "条形光源 180×18mm 白光 高亮",
+    "brand": "OPT奥普特",
+    "qty": 2.0,
+    "unit": "个",
+    "price": 850.0,
+    "submitter": "熊振",
+    "link": ""
+  },
+  {
+    "seq": 7,
+    "model": "DP1024-4CH",
+    "name": "数字光源控制器 4通道 24V/1A",
+    "brand": "OPT奥普特",
+    "qty": 2.0,
+    "unit": "台",
+    "price": 1200.0,
+    "submitter": "熊振",
+    "link": ""
+  },
+  {
+    "seq": 8,
+    "model": "IPC-610L-I7",
+    "name": "视觉工控机 研华IPC-610L i7-12700/32G/512G+2T",
+    "brand": "研华",
+    "qty": 1.0,
+    "unit": "台",
+    "price": 6800.0,
+    "submitter": "熊振",
+    "link": ""
+  },
+  {
+    "seq": 9,
+    "model": "U2422H",
+    "name": "显示器 23.8英寸 IPS 1920×1080",
+    "brand": "戴尔",
+    "qty": 1.0,
+    "unit": "台",
+    "price": 1200.0,
+    "submitter": "熊振",
+    "link": ""
+  },
+  {
+    "seq": 10,
+    "model": "CA100-AL",
+    "name": "相机安装支架 铝合金 可调角度 兼容M4/M6",
+    "brand": "大恒图像",
+    "qty": 4.0,
+    "unit": "个",
+    "price": 180.0,
+    "submitter": "熊振",
+    "link": ""
+  },
+  {
+    "seq": 11,
+    "model": "I350-T4",
+    "name": "千兆网卡 PCIe x4 4口 Intel I350芯片",
+    "brand": "Intel",
+    "qty": 1.0,
+    "unit": "个",
+    "price": 580.0,
+    "submitter": "熊振",
+    "link": ""
+  },
+  {
+    "seq": 12,
+    "model": "NW102-SFTP",
+    "name": "超六类屏蔽网线 2米 蓝色",
+    "brand": "绿联",
+    "qty": 6.0,
+    "unit": "根",
+    "price": 18.0,
+    "submitter": "熊振",
+    "link": ""
+  },
+  {
+    "seq": 13,
+    "model": "CG-100-100",
+    "name": "棋盘格标定板 100×100mm 方格6×6 陶瓷基板",
+    "brand": "OPT奥普特",
+    "qty": 1.0,
+    "unit": "块",
+    "price": 350.0,
+    "submitter": "熊振",
+    "link": ""
+  },
+  {
+    "seq": 14,
+    "model": "BP660-25.4",
+    "name": "带通滤光片 BP660nm Φ25.4mm 硬膜",
+    "brand": "Edmund Optics",
+    "qty": 3.0,
+    "unit": "片",
+    "price": 420.0,
+    "submitter": "熊振",
+    "link": ""
+  },
+  {
+    "seq": 15,
+    "model": "PRA-25.4-BK7",
+    "name": "直角棱镜 BK7 25.4mm AR镀膜 400-700nm",
+    "brand": "Thorlabs",
+    "qty": 2.0,
+    "unit": "个",
+    "price": 680.0,
+    "submitter": "熊振",
+    "link": ""
+  }
+]

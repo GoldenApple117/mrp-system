@@ -2,6 +2,12 @@ import { createRouter, createWebHistory } from 'vue-router'
 
 const routes = [
   {
+    path: '/login',
+    name: 'Login',
+    component: () => import('@/views/Login.vue'),
+    meta: { noAuth: true },
+  },
+  {
     path: '/',
     redirect: '/dashboard',
   },
@@ -90,11 +96,28 @@ const routes = [
     name: 'Exceptions',
     component: () => import('@/views/ExceptionBoard.vue'),
   },
+  {
+    path: '/permissions',
+    name: 'Permissions',
+    component: () => import('@/views/PermissionList.vue'),
+  },
 ]
 
 const router = createRouter({
   history: createWebHistory(),
   routes,
+})
+
+// 路由守卫：未登录跳转登录页
+router.beforeEach((to, _from, next) => {
+  const token = localStorage.getItem('token')
+  if (to.meta.noAuth) {
+    // 已登录用户访问登录页 → 跳仪表板
+    if (token) return next('/dashboard')
+    return next()
+  }
+  if (!token) return next('/login')
+  next()
 })
 
 export default router

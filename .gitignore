@@ -36,3 +36,7 @@ uploads/*.xlsx
 # Temp
 *.log
 *.pid
+
+# Secrets
+backend/smtp_config.json
+backend/.env

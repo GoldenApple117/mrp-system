@@ -1,0 +1,482 @@
+{
+  "1": {
+    "total": 38,
+    "passed": 38,
+    "failed": 0,
+    "elapsed": 80.27,
+    "results": [
+      [
+        "PASS",
+        "[系统-健康检查] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[系统-定时器配置] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[物料-获取列表] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[物料-获取详情(id=59)] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[BOM-获取列表] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[库存-获取列表] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[库存-呆滞料预警] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[MPS-获取列表] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[销售-获取订单] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[MRP-执行运算] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[采购-获取订单] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[采购-获取全部订单] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[例外-获取列表] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[财务-获取概览] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[生产-获取列表] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[CRP-获取数据] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[检验-获取列表] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[费用-获取数据] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[工艺路线-获取列表] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[系统-数据导出] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[前端-入口页面] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[前端-路由(/materials)] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[前端-路由(/bom)] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[前端-路由(/inventory)] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[前端-路由(/mps)] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[前端-路由(/sales)] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[前端-路由(/mrp)] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[前端-路由(/purchase)] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[前端-路由(/production)] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[前端-路由(/finance)] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[前端-路由(/exceptions)] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[前端-路由(/reports)] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[前端-路由(/crp)] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[前端-路由(/inspection)] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[前端-路由(/cost)] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[前端-路由(/routings)] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[物料-更新名称] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[物料-恢复名称] OK (status=200)"
+      ]
+    ]
+  },
+  "2": {
+    "total": 38,
+    "passed": 38,
+    "failed": 0,
+    "elapsed": 80.36,
+    "results": [
+      [
+        "PASS",
+        "[系统-健康检查] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[系统-定时器配置] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[物料-获取列表] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[物料-获取详情(id=59)] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[BOM-获取列表] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[库存-获取列表] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[库存-呆滞料预警] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[MPS-获取列表] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[销售-获取订单] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[MRP-执行运算] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[采购-获取订单] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[采购-获取全部订单] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[例外-获取列表] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[财务-获取概览] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[生产-获取列表] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[CRP-获取数据] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[检验-获取列表] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[费用-获取数据] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[工艺路线-获取列表] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[系统-数据导出] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[前端-入口页面] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[前端-路由(/materials)] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[前端-路由(/bom)] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[前端-路由(/inventory)] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[前端-路由(/mps)] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[前端-路由(/sales)] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[前端-路由(/mrp)] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[前端-路由(/purchase)] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[前端-路由(/production)] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[前端-路由(/finance)] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[前端-路由(/exceptions)] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[前端-路由(/reports)] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[前端-路由(/crp)] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[前端-路由(/inspection)] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[前端-路由(/cost)] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[前端-路由(/routings)] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[物料-更新名称] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[物料-恢复名称] OK (status=200)"
+      ]
+    ]
+  },
+  "3": {
+    "total": 38,
+    "passed": 38,
+    "failed": 0,
+    "elapsed": 80.29,
+    "results": [
+      [
+        "PASS",
+        "[系统-健康检查] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[系统-定时器配置] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[物料-获取列表] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[物料-获取详情(id=59)] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[BOM-获取列表] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[库存-获取列表] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[库存-呆滞料预警] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[MPS-获取列表] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[销售-获取订单] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[MRP-执行运算] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[采购-获取订单] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[采购-获取全部订单] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[例外-获取列表] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[财务-获取概览] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[生产-获取列表] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[CRP-获取数据] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[检验-获取列表] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[费用-获取数据] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[工艺路线-获取列表] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[系统-数据导出] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[前端-入口页面] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[前端-路由(/materials)] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[前端-路由(/bom)] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[前端-路由(/inventory)] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[前端-路由(/mps)] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[前端-路由(/sales)] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[前端-路由(/mrp)] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[前端-路由(/purchase)] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[前端-路由(/production)] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[前端-路由(/finance)] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[前端-路由(/exceptions)] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[前端-路由(/reports)] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[前端-路由(/crp)] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[前端-路由(/inspection)] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[前端-路由(/cost)] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[前端-路由(/routings)] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[物料-更新名称] OK (status=200)"
+      ],
+      [
+        "PASS",
+        "[物料-恢复名称] OK (status=200)"
+      ]
+    ]
+  }
+}
