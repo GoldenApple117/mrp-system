@@ -44,10 +44,12 @@ def export_all_data(db: Session = Depends(get_db)):
 
 @router.post("/import")
 def import_all_data(data: dict, db: Session = Depends(get_db)):
-    """从JSON恢复全部数据（先清空再导入）"""
+    """从JSON导入数据。mode=replace 先清空再导入；mode=append 增量追加（默认）"""
     tables = data.get("tables", {})
     if not tables:
         raise HTTPException(status_code=400, detail="无效的数据格式")
+    
+    mode = data.get("mode", "append")  # append=增量 / replace=覆盖
 
     # SQLite需开启外键支持
     try:
@@ -56,31 +58,23 @@ def import_all_data(data: dict, db: Session = Depends(get_db)):
         pass
 
     count = 0
-    # 先清空所有业务表（保留 users 等系统表）
-    SKIP_TABLES = {"users", "permission_requests"}
-    inspector = inspect(engine)
-    all_tables = inspector.get_table_names()
     
-    for t in reversed(all_tables):
-        if t in SKIP_TABLES:
-            continue
-        try:
-            db.execute(text(f"DELETE FROM {t}"))
-        except Exception:
-            pass
+    if mode == "replace":
+        # 先清空所有业务表（保留 users 等系统表）
+        SKIP_TABLES = {"users", "permission_requests"}
+        inspector = inspect(engine)
+        all_tables = inspector.get_table_names()
+        for _ in range(2):
+            for t in reversed(all_tables):
+                if t in SKIP_TABLES:
+                    continue
+                try:
+                    db.execute(text(f"DELETE FROM {t}"))
+                except Exception:
+                    pass
+        db.flush()
 
-    db.flush()
-    
-    # 第二轮
-    for t in reversed(all_tables):
-        if t in SKIP_TABLES:
-            continue
-        try:
-            db.execute(text(f"DELETE FROM {t}"))
-        except Exception:
-            pass
-
-    # 再写入数据
+    # 写入数据（append模式自动去ID避免冲突）
     for table_name, rows in tables.items():
         if table_name.endswith("_count") or table_name.startswith("_"):
             continue
@@ -89,13 +83,19 @@ def import_all_data(data: dict, db: Session = Depends(get_db)):
         table = Base.metadata.tables[table_name]
         for row in rows:
             try:
-                db.execute(table.insert().values(**row))
+                if mode == "append":
+                    # 增量模式：去掉ID让数据库自动分配，防止主键冲突
+                    row_copy = {k: v for k, v in row.items() if k != "id"}
+                    db.execute(table.insert().values(**row_copy))
+                else:
+                    db.execute(table.insert().values(**row))
                 count += 1
             except Exception as e:
                 logger.warning(f"导入 {table_name} 行失败: {e}")
 
     db.commit()
-    return {"success": True, "message": f"已导入 {count} 条记录，共 {len(tables)} 张表"}
+    action = "追加" if mode == "append" else "覆盖导入"
+    return {"success": True, "message": f"已{action} {count} 条记录，共 {len(tables)} 张表"}
 
 
 # ====== MRP定时器 + 邮件通知 ======
