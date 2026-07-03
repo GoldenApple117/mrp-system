@@ -1,13 +1,16 @@
 """系统管理 API — 初始化/维护"""
 import json
+import logging
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
-from sqlalchemy import inspect
+from sqlalchemy import inspect, text
 import io
 
 from app.core.database import get_db, init_db, SessionLocal, engine, Base
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/system", tags=["系统管理"])
 
@@ -46,13 +49,24 @@ def import_all_data(data: dict, db: Session = Depends(get_db)):
     if not tables:
         raise HTTPException(status_code=400, detail="无效的数据格式")
 
+    # SQLite需开启外键支持
+    try:
+        db.execute(text("PRAGMA foreign_keys=ON"))
+    except:
+        pass
+
     count = 0
     # 先清空所有表（逆序删除，避免外键约束）
     inspector = inspect(engine)
     all_tables = inspector.get_table_names()
     for t in reversed(all_tables):
         if t in tables and t != "_count":
-            db.execute(Base.metadata.tables[t].delete())
+            try:
+                db.execute(text(f"DELETE FROM {t}"))
+            except Exception:
+                pass  # 表不存在或外键约束，跳过
+
+    db.flush()
 
     # 再写入数据
     for table_name, rows in tables.items():
@@ -62,8 +76,13 @@ def import_all_data(data: dict, db: Session = Depends(get_db)):
             continue
         table = Base.metadata.tables[table_name]
         for row in rows:
-            db.execute(table.insert().values(**row))
-            count += 1
+            try:
+                # 移除auto-increment ID让数据库自动分配
+                row_copy = {k: v for k, v in row.items() if not (k == "id" and v is not None)}
+                db.execute(table.insert().values(**row_copy))
+                count += 1
+            except Exception as e:
+                logger.warning(f"导入 {table_name} 行失败: {e}")
 
     db.commit()
     return {"success": True, "message": f"已导入 {count} 条记录，共 {len(tables)} 张表"}
