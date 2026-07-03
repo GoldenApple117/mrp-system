@@ -23,25 +23,19 @@ FRONTEND_DIST = os.path.join(os.path.dirname(BASE_DIR), "frontend", "dist")
 async def lifespan(app: FastAPI):
     """应用生命周期"""
     init_db()
-    # 启动定时MRP（从schedule.json读取设置）
+    # 启动定时MRP调度器
     try:
-        import json, os
-        from apscheduler.schedulers.asyncio import AsyncIOScheduler
-        from app.services.scheduler import auto_run_mrp
-        sched_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "schedule.json")
-        schedule = {"enabled": False, "hour": 6, "minute": 0}
-        try:
-            with open(sched_path) as f:
-                schedule = json.load(f)
-        except: pass
-        if schedule.get("enabled"):
-            scheduler = AsyncIOScheduler()
-            scheduler.add_job(auto_run_mrp, "cron", hour=schedule["hour"], minute=schedule["minute"], id="mrp_daily")
-            scheduler.start()
-            logger.info(f"⏰ 定时MRP已启动（每天{schedule['hour']:02d}:{schedule['minute']:02d}）")
+        from app.services.scheduler import start_scheduler
+        start_scheduler()
+        logger.info("⏰ MRP定时调度器已启动")
     except Exception as e:
         logger.warning(f"定时MRP启动失败: {e}")
     yield
+    # 关闭调度器
+    try:
+        from app.services.scheduler import shutdown_scheduler
+        shutdown_scheduler()
+    except: pass
 
 
 app = FastAPI(

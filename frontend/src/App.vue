@@ -80,7 +80,7 @@
       <div class="flex-shrink-0 border-t border-[var(--color-border-subtle)] p-2">
         <el-popover
           placement="right-start"
-          :width="220"
+          :width="240"
           trigger="click"
           :offset="8"
           popper-class="tools-popover"
@@ -109,12 +109,52 @@
               <div v-if="timerEnabled" class="flex items-center justify-between text-xs text-[var(--color-text-secondary)]">
                 <span>执行时间</span>
                 <div class="flex items-center gap-1">
-                  <el-input-number v-model="timerHour" :min="0" :max="23" size="small" controls-position="right" style="width:48px" @change="saveSchedule" />
-                  <span class="text-[var(--color-text-tertiary)]">:</span>
-                  <el-input-number v-model="timerMinute" :min="0" :max="59" size="small" controls-position="right" style="width:48px" @change="saveSchedule" />
+                  <input type="number" min="0" max="23" v-model.number="timerHour" @change="saveSchedule"
+                    class="timer-num-input" />
+                  <span class="text-[var(--color-text-tertiary)] font-bold">:</span>
+                  <input type="number" min="0" max="59" v-model.number="timerMinute" @change="saveSchedule"
+                    class="timer-num-input" />
                 </div>
               </div>
               <el-button size="small" class="w-full mt-2" @click="runMrpNow">立即执行 MRP</el-button>
+            </div>
+
+            <div class="border-t border-[var(--color-border-subtle)]"></div>
+
+            <!-- 邮件通知 -->
+            <div>
+              <div class="text-2xs text-[var(--color-text-tertiary)] uppercase tracking-wider font-semibold mb-2">邮件通知</div>
+              <div class="space-y-2">
+                <div class="flex items-center gap-2">
+                  <span class="text-2xs text-[var(--color-text-tertiary)] w-10 flex-shrink-0">收件</span>
+                  <input v-model="emailTo" placeholder="your@email.com"
+                    class="tool-text-input flex-1" />
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="text-2xs text-[var(--color-text-tertiary)] w-10 flex-shrink-0">服务器</span>
+                  <input v-model="emailHost" placeholder="smtp.example.com"
+                    class="tool-text-input flex-1" />
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="text-2xs text-[var(--color-text-tertiary)] w-10 flex-shrink-0">端口</span>
+                  <input v-model="emailPort" type="number" placeholder="587"
+                    class="tool-text-input" style="width:72px" />
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="text-2xs text-[var(--color-text-tertiary)] w-10 flex-shrink-0">用户名</span>
+                  <input v-model="emailUser" placeholder="user@example.com"
+                    class="tool-text-input flex-1" />
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="text-2xs text-[var(--color-text-tertiary)] w-10 flex-shrink-0">密码</span>
+                  <input v-model="emailPass" type="password" placeholder="授权码"
+                    class="tool-text-input flex-1" />
+                </div>
+              </div>
+              <div class="flex gap-2 mt-2">
+                <el-button size="small" class="flex-1 text-xs" @click="saveEmailConfig">保存配置</el-button>
+                <el-button size="small" class="flex-1 text-xs" @click="sendTestEmail">测试邮件</el-button>
+              </div>
             </div>
 
             <div class="border-t border-[var(--color-border-subtle)]"></div>
@@ -228,6 +268,7 @@ function handleGlobalKeydown(e) {
 onMounted(() => {
   window.addEventListener('keydown', handleGlobalKeydown)
   loadSchedule()
+  loadEmailConfig()
 })
 
 onBeforeUnmount(() => {
@@ -262,6 +303,66 @@ const runMrpNow = async () => {
     const d = await r.json()
     ElMessage[d.success ? 'success' : 'error'](d.message)
   } catch {}
+}
+
+// ====== 邮件配置 ======
+const emailTo = ref('')
+const emailHost = ref('')
+const emailPort = ref(587)
+const emailUser = ref('')
+const emailPass = ref('')
+
+async function loadEmailConfig() {
+  try {
+    const r = await fetch('/api/system/email-config')
+    const d = await r.json()
+    emailTo.value = d.to_email || ''
+    emailHost.value = d.host || ''
+    emailPort.value = d.port || 587
+    emailUser.value = d.username || ''
+    // password 返回 *** 脱敏，不清除已有值
+  } catch {}
+}
+
+async function saveEmailConfig() {
+  try {
+    const body = {
+      to_email: emailTo.value,
+      host: emailHost.value,
+      port: emailPort.value,
+      username: emailUser.value,
+      password: emailPass.value,
+      from_addr: emailUser.value,
+    }
+    const r = await fetch('/api/system/email-config', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+    const d = await r.json()
+    if (d.success) {
+      ElMessage.success('邮件配置已保存')
+      emailPass.value = ''  // 保存后清空密码框
+    }
+  } catch (e) {
+    ElMessage.error('保存失败')
+  }
+}
+
+async function sendTestEmail() {
+  if (!emailTo.value) {
+    ElMessage.warning('请先填写接收邮箱')
+    return
+  }
+  try {
+    const r = await fetch('/api/system/email-test', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to_email: emailTo.value }),
+    })
+    const d = await r.json()
+    ElMessage[d.success ? 'success' : 'error'](d.message)
+  } catch {
+    ElMessage.error('发送失败')
+  }
 }
 
 const handleExport = async () => {
@@ -352,5 +453,59 @@ const pageTitle = computed(() => {
   border-radius: var(--radius-md) !important;
   padding: 0 !important;
   box-shadow: var(--shadow-elevated) !important;
+  overflow: visible !important;
+}
+</style>
+
+<!-- ═══ 全局样式：Popover 脱离 #app-container，scoped 无法命中 ═══ -->
+<style>
+/* MRP 定时器弹出框 */
+.tools-popover {
+  background: var(--color-bg-overlay, #2d2d2d) !important;
+  border: 1px solid var(--color-border-default, #444) !important;
+  border-radius: 8px !important;
+  padding: 0 !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.45) !important;
+}
+/* 原生 input 数字输入框 — 完全可控，不依赖 Element Plus 样式 */
+.timer-num-input {
+  width: 56px;
+  height: 30px;
+  background: #888888 !important;
+  color: #ffffff !important;
+  border: 2px solid #aaaaaa !important;
+  border-radius: 5px !important;
+  text-align: center !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  outline: none !important;
+  -moz-appearance: textfield;
+}
+.timer-num-input::-webkit-inner-spin-button,
+.timer-num-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.timer-num-input:focus {
+  border-color: #4a9eff !important;
+  box-shadow: 0 0 0 2px rgba(74,158,255,0.3) !important;
+}
+/* 邮件配置文本输入框 */
+.tool-text-input {
+  height: 28px;
+  background: #5a5a5a !important;
+  color: #ffffff !important;
+  border: 1px solid #777 !important;
+  border-radius: 4px !important;
+  padding: 0 8px !important;
+  font-size: 12px !important;
+  outline: none !important;
+}
+.tool-text-input::placeholder {
+  color: #999 !important;
+}
+.tool-text-input:focus {
+  border-color: #4a9eff !important;
+  box-shadow: 0 0 0 2px rgba(74,158,255,0.3) !important;
 }
 </style>

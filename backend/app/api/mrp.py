@@ -51,10 +51,15 @@ def run_mrp_logic(db: Session, horizon_days: int = 90, time_fence_days: int = 7)
         BomHeader.status.in_(["生效", "草稿"])
     ).all()
 
+    # 3. 读取物料主数据（必须在BOM之前，供N+1优化用）
+    materials_raw = db.query(MaterialMaster).filter(MaterialMaster.is_active == True).all()
+
+    # 预加载物料索引，避免 N+1 查询
+    material_by_id = {m.id: m for m in materials_raw}
     bom_lines = []
     for bl in bom_lines_raw:
-        parent_mat = db.query(MaterialMaster).filter(MaterialMaster.id == bl.parent_item_id).first()
-        child_mat = db.query(MaterialMaster).filter(MaterialMaster.id == bl.item_id).first()
+        parent_mat = material_by_id.get(bl.parent_item_id)
+        child_mat = material_by_id.get(bl.item_id)
         if parent_mat and child_mat:
             bom_lines.append({
                 "parent_code": parent_mat.material_code,
@@ -66,8 +71,7 @@ def run_mrp_logic(db: Session, horizon_days: int = 90, time_fence_days: int = 7)
                 "substitute_for_id": bl.substitute_for_id,
             })
 
-    # 3. 读取物料主数据
-    materials_raw = db.query(MaterialMaster).filter(MaterialMaster.is_active == True).all()
+    # 3. 构建物料主数据字典
     material_masters = [
         {
             "code": m.material_code,
@@ -223,17 +227,14 @@ def convert_mrp_to_orders(data: dict, db: Session = Depends(get_db)):
     created_wo = 0
     errors = []
 
-    # 计算当天已生成的PR/WO数量，避免编号冲突
+    # 使用时间戳+序号确保编号唯一（seq从数据库实时读取，同一请求内自增）
+    from datetime import datetime
     today_str = date.today().strftime("%Y%m%d")
-    last_pr = db.query(PurchaseOrder).filter(
-        PurchaseOrder.po_number.like(f"PR-{today_str}-%")
-    ).order_by(PurchaseOrder.po_number.desc()).first()
-    last_wo = db.query(WorkOrder).filter(
-        WorkOrder.wo_number.like(f"WO-{today_str}-%")
-    ).order_by(WorkOrder.wo_number.desc()).first()
-
-    po_seq = int(last_pr.po_number.split("-")[-1]) + 1 if last_pr else 1
-    wo_seq = int(last_wo.wo_number.split("-")[-1]) + 1 if last_wo else 1
+    time_part = datetime.now().strftime("%H%M%S")
+    po_base = f"PR-{today_str}-{time_part}"
+    wo_base = f"WO-{today_str}-{time_part}"
+    po_seq = 0
+    wo_seq = 0
 
     for order in planned_orders:
         try:
@@ -246,12 +247,15 @@ def convert_mrp_to_orders(data: dict, db: Session = Depends(get_db)):
                 continue
 
             if order["order_type"] == "PURCHASE":
-                # 创建采购申请，同步物料主数据中的品牌/价格/提交人/链接
+                po_seq += 1
+                # 采购申请，同步物料主数据
                 unit_price = mat.reference_unit_price or 0
                 order_qty = order["quantity"]
+                # 查找物料默认供应商，无则留空
+                supplier_id = mat.default_supplier_id if hasattr(mat, 'default_supplier_id') and mat.default_supplier_id else None
                 po = PurchaseOrder(
-                    po_number=f"PR-{today_str}-{po_seq:04d}",
-                    supplier_id=1,
+                    po_number=f"{po_base}-{po_seq:04d}",
+                    supplier_id=supplier_id,
                     item_id=mat.id,
                     order_qty=order_qty,
                     unit_price=unit_price,
@@ -265,12 +269,12 @@ def convert_mrp_to_orders(data: dict, db: Session = Depends(get_db)):
                     supplier_link=mat.reference_link or "",
                 )
                 db.add(po)
-                po_seq += 1
                 created_po += 1
 
             elif order["order_type"] == "PRODUCTION":
+                wo_seq += 1
                 wo = WorkOrder(
-                    wo_number=f"WO-{today_str}-{wo_seq:04d}",
+                    wo_number=f"{wo_base}-{wo_seq:04d}",
                     item_id=mat.id,
                     plan_qty=order["quantity"],
                     start_date=date.fromisoformat(order["release_date"]),

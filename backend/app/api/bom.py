@@ -153,29 +153,32 @@ def update_bom_header(header_id: int, data: dict, db: Session = Depends(get_db))
         if key in data:
             setattr(header, key, data[key])
 
-    # 删除旧行
-    db.query(BomLine).filter(BomLine.bom_header_id == header_id).delete()
+    try:
+        # 仅当提供了 lines 参数时才重建行，避免误删
+        if "lines" in data:
+            db.query(BomLine).filter(BomLine.bom_header_id == header_id).delete()
+            for i, line_data in enumerate(data["lines"]):
+                line = BomLine(
+                    bom_header_id=header.id,
+                    parent_item_id=line_data.get("parent_item_id"),
+                    item_id=line_data["item_id"],
+                    quantity=line_data.get("quantity", 1),
+                    position=line_data.get("position", ""),
+                    is_substitute=line_data.get("is_substitute", False),
+                    substitute_for_id=line_data.get("substitute_for_id"),
+                    substitute_group=line_data.get("substitute_group", ""),
+                    scrap_rate=line_data.get("scrap_rate", 0),
+                    level=line_data.get("level", 0),
+                    sort_order=line_data.get("sort_order", i + 1),
+                    remark=line_data.get("remark", ""),
+                )
+                db.add(line)
 
-    # 重建行
-    for i, line_data in enumerate(data.get("lines", [])):
-        line = BomLine(
-            bom_header_id=header.id,
-            parent_item_id=line_data.get("parent_item_id"),
-            item_id=line_data["item_id"],
-            quantity=line_data.get("quantity", 1),
-            position=line_data.get("position", ""),
-            is_substitute=line_data.get("is_substitute", False),
-            substitute_for_id=line_data.get("substitute_for_id"),
-            substitute_group=line_data.get("substitute_group", ""),
-            scrap_rate=line_data.get("scrap_rate", 0),
-            level=line_data.get("level", 0),
-            sort_order=line_data.get("sort_order", i + 1),
-            remark=line_data.get("remark", ""),
-        )
-        db.add(line)
-
-    db.commit()
-    return {"success": True, "message": "BOM更新成功"}
+        db.commit()
+        return {"success": True, "message": "BOM更新成功"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"BOM更新失败: {str(e)}")
 
 
 @router.delete("/headers/{header_id}")

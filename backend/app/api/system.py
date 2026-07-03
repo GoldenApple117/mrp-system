@@ -69,39 +69,62 @@ def import_all_data(data: dict, db: Session = Depends(get_db)):
     return {"success": True, "message": f"已导入 {count} 条记录，共 {len(tables)} 张表"}
 
 
-# ====== 定时器设置 ======
+# ====== MRP定时器 + 邮件通知 ======
 
 @router.get("/schedule")
 def get_schedule():
-    """获取MRP定时器设置"""
-    import json, os
-    path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "schedule.json")
-    try:
-        with open(path) as f:
-            return json.load(f)
-    except:
-        return {"enabled": False, "hour": 6, "minute": 0}
+    """获取MRP定时器配置"""
+    from app.services.scheduler import get_config
+    return get_config()
 
 
 @router.put("/schedule")
 def update_schedule(data: dict):
-    """设置MRP定时器"""
-    import json, os
-    path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "schedule.json")
-    with open(path, "w") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-    return {"success": True, "message": "定时器已更新，下次重启生效"}
+    """更新MRP定时器（即时生效）"""
+    from app.services.scheduler import update_config
+    return {"success": True, "data": update_config(**data)}
 
 
 @router.post("/schedule/run-now")
 def run_mrp_now():
-    """立即执行一次MRP"""
+    """立即执行一次MRP（含自动转换PO）"""
     try:
-        from app.services.scheduler import auto_run_mrp
-        auto_run_mrp()
-        return {"success": True, "message": "MRP已执行"}
+        from app.services.scheduler import _run_mrp_job
+        _run_mrp_job()
+        from app.services.scheduler import get_config
+        cfg = get_config()
+        return {"success": True, "message": "MRP已执行", "result": cfg.get("last_result")}
     except Exception as e:
         return {"success": False, "message": str(e)}
+
+
+@router.get("/email-config")
+def get_email_config():
+    """获取邮件通知配置（密码脱敏）"""
+    from app.services.notifier import get_smtp_config
+    return get_smtp_config()
+
+
+@router.put("/email-config")
+def update_email_config(data: dict):
+    """更新邮件通知配置"""
+    from app.services.notifier import configure_smtp
+    cfg = configure_smtp(
+        host=data.get("host", ""),
+        port=data.get("port", 587),
+        username=data.get("username", ""),
+        password=data.get("password", ""),
+        from_addr=data.get("from_addr", ""),
+        to_email=data.get("to_email", ""),
+    )
+    return {"success": True, "data": cfg}
+
+
+@router.post("/email-test")
+def test_email(data: dict):
+    """发送测试邮件"""
+    from app.services.notifier import send_test_email
+    return send_test_email(data.get("to_email", ""))
 
 
 @router.post("/seed-demo")
