@@ -56,19 +56,25 @@ def import_all_data(data: dict, db: Session = Depends(get_db)):
         pass
 
     count = 0
-    # 先清空所有表（逆序，避免外键约束）
+    # 先清空所有业务表（保留 users 等系统表）
+    SKIP_TABLES = {"users", "permission_requests"}
     inspector = inspect(engine)
     all_tables = inspector.get_table_names()
+    
     for t in reversed(all_tables):
+        if t in SKIP_TABLES:
+            continue
         try:
             db.execute(text(f"DELETE FROM {t}"))
         except Exception:
-            pass  # 跳过有外键约束的表，交给下一轮处理
+            pass
 
     db.flush()
     
-    # 第二轮删除（有些表第一轮因外键无法删，子表清完后就可以了）
+    # 第二轮
     for t in reversed(all_tables):
+        if t in SKIP_TABLES:
+            continue
         try:
             db.execute(text(f"DELETE FROM {t}"))
         except Exception:
