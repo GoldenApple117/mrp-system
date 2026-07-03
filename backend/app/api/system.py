@@ -69,6 +69,41 @@ def import_all_data(data: dict, db: Session = Depends(get_db)):
     return {"success": True, "message": f"已导入 {count} 条记录，共 {len(tables)} 张表"}
 
 
+# ====== 定时器设置 ======
+
+@router.get("/schedule")
+def get_schedule():
+    """获取MRP定时器设置"""
+    import json, os
+    path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "schedule.json")
+    try:
+        with open(path) as f:
+            return json.load(f)
+    except:
+        return {"enabled": False, "hour": 6, "minute": 0}
+
+
+@router.put("/schedule")
+def update_schedule(data: dict):
+    """设置MRP定时器"""
+    import json, os
+    path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "schedule.json")
+    with open(path, "w") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    return {"success": True, "message": "定时器已更新，下次重启生效"}
+
+
+@router.post("/schedule/run-now")
+def run_mrp_now():
+    """立即执行一次MRP"""
+    try:
+        from app.services.scheduler import auto_run_mrp
+        auto_run_mrp()
+        return {"success": True, "message": "MRP已执行"}
+    except Exception as e:
+        return {"success": False, "message": str(e)}
+
+
 @router.post("/seed-demo")
 def seed_demo_api():
     """一键初始化全部演示数据"""

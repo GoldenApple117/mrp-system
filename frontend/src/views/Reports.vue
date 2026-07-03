@@ -1,57 +1,66 @@
 <template>
-  <div class="page-container">
-    <h3 style="margin-bottom:16px;font-size:16px">报表与分析</h3>
-    <el-row :gutter="16">
+  <div class="page-container space-y-4">
+    <div class="flex items-center justify-between">
+      <h3 class="text-[15px] font-semibold text-[var(--color-text-primary)]">报表与分析</h3>
+      <span class="text-xs text-[var(--color-text-tertiary)]">数据实时刷新</span>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
       <!-- 订单准时率 -->
-      <el-col :span="12" style="margin-bottom:16px">
-        <el-card>
-          <template #header>
-            <span style="font-weight:500">订单准时交付率 (OTD)</span>
-            <el-tag size="small" type="info" style="margin-left:8px">{{ otdRate }}%</el-tag>
-          </template>
-          <div ref="otdChart" style="height:300px"></div>
-          <div v-if="!otdData.length" style="text-align:center;color:#999;padding:40px 0">暂无订单数据</div>
-        </el-card>
-      </el-col>
+      <div class="stat-card">
+        <div class="flex items-center justify-between mb-3">
+          <h4 class="text-sm font-medium text-[var(--color-text-primary)]">订单准时交付率 (OTD)</h4>
+          <el-tag size="small" effect="dark" :type="otdRate >= 80 ? 'success' : otdRate >= 60 ? 'warning' : 'danger'">
+            {{ otdRate }}%
+          </el-tag>
+        </div>
+        <div v-if="otdData.length" ref="otdChart" style="height: 300px"></div>
+        <div v-else class="flex items-center justify-center h-[300px] text-xs text-[var(--color-text-tertiary)]">
+          暂无订单数据
+        </div>
+      </div>
 
       <!-- 库存概览 -->
-      <el-col :span="12" style="margin-bottom:16px">
-        <el-card>
-          <template #header><span style="font-weight:500">库存概览（按物料类型）</span></template>
-          <div ref="inventoryChart" style="height:300px"></div>
-          <div v-if="!invData.length" style="text-align:center;color:#999;padding:40px 0">暂无库存数据</div>
-        </el-card>
-      </el-col>
+      <div class="stat-card">
+        <h4 class="text-sm font-medium text-[var(--color-text-primary)] mb-3">库存概览（按物料类型）</h4>
+        <div v-if="invData.length" ref="inventoryChart" style="height: 300px"></div>
+        <div v-else class="flex items-center justify-center h-[300px] text-xs text-[var(--color-text-tertiary)]">
+          暂无库存数据
+        </div>
+      </div>
 
       <!-- 缺料统计 -->
-      <el-col :span="12" style="margin-bottom:16px">
-        <el-card>
-          <template #header><span style="font-weight:500">缺料/低库存物料</span></template>
-          <el-table :data="lowStockItems" stripe border size="small" max-height="260">
-            <el-table-column prop="material_code" label="物料编码" width="120" />
-            <el-table-column prop="material_name" label="物料型号" min-width="140" />
-            <el-table-column prop="on_hand" label="现有库存" width="90" />
-            <el-table-column prop="safety_stock" label="安全库存" width="90" />
-            <el-table-column prop="available" label="可用量" width="90" />
-            <el-table-column label="状态" width="80">
-              <template #default="{row}">
-                <el-tag :type="row.is_low?'danger':'success'" size="small">{{ row.is_low?'偏低':'正常' }}</el-tag>
-              </template>
-            </el-table-column>
-          </el-table>
-          <el-empty v-if="!lowStockItems.length" description="暂无低库存物料" />
-        </el-card>
-      </el-col>
+      <div class="stat-card">
+        <h4 class="text-sm font-medium text-[var(--color-text-primary)] mb-3 flex items-center gap-2">
+          <span class="w-1.5 h-1.5 rounded-full bg-[var(--color-danger)]"></span>
+          缺料 / 低库存物料
+        </h4>
+        <el-table :data="lowStockItems" stripe size="small" max-height="260" v-if="lowStockItems.length">
+          <el-table-column prop="material_code" label="物料编码" width="110" />
+          <el-table-column prop="material_name" label="物料型号" min-width="130" show-overflow-tooltip />
+          <el-table-column prop="on_hand" label="现有库存" width="80" align="center" />
+          <el-table-column prop="safety_stock" label="安全库存" width="80" align="center" />
+          <el-table-column prop="available" label="可用量" width="80" align="center" />
+          <el-table-column label="状态" width="75" align="center">
+            <template #default="{ row }">
+              <el-tag :type="row.is_low ? 'danger' : 'success'" size="small" effect="dark">
+                {{ row.is_low ? '偏低' : '正常' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+        </el-table>
+        <el-empty v-else description="暂无低库存物料" :image-size="60" />
+      </div>
 
       <!-- 工单状态 -->
-      <el-col :span="12" style="margin-bottom:16px">
-        <el-card>
-          <template #header><span style="font-weight:500">工单状态分布</span></template>
-          <div ref="woChart" style="height:300px"></div>
-          <div v-if="!woData.length" style="text-align:center;color:#999;padding:40px 0">暂无工单数据</div>
-        </el-card>
-      </el-col>
-    </el-row>
+      <div class="stat-card">
+        <h4 class="text-sm font-medium text-[var(--color-text-primary)] mb-3">工单状态分布</h4>
+        <div v-if="woData.length" ref="woChart" style="height: 300px"></div>
+        <div v-else class="flex items-center justify-center h-[300px] text-xs text-[var(--color-text-tertiary)]">
+          暂无工单数据
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -59,6 +68,7 @@
 import { ref, onMounted, nextTick } from 'vue'
 import * as echarts from 'echarts'
 import api from '@/api'
+import { darkChartOptions, chartColors, woStatusColors, materialTypeColors } from '@/utils/echarts-theme'
 
 const otdChart = ref(null)
 const inventoryChart = ref(null)
@@ -69,7 +79,7 @@ const invData = ref([])
 const woData = ref([])
 const otdRate = ref(0)
 
-/* ---- 缺料/低库存 ---- */
+// ====== 数据加载 ======
 async function fetchLowStock() {
   try {
     const res = await api.get('/inventory/summary')
@@ -77,7 +87,6 @@ async function fetchLowStock() {
   } catch { lowStockItems.value = [] }
 }
 
-/* ---- 工单状态分布 ---- */
 async function fetchWoData() {
   try {
     const res = await api.get('/production/orders', { params: { page_size: 1000 } })
@@ -86,12 +95,13 @@ async function fetchWoData() {
     for (const o of orders) {
       statusMap[o.status] = (statusMap[o.status] || 0) + 1
     }
-    const statusOrder = ['待下达','已下达','进行中','已完成','已关闭']
-    woData.value = statusOrder.map(s => ({ status: s, count: statusMap[s] || 0 })).filter(d => d.count > 0)
+    const statusOrder = ['待下达', '已下达', '进行中', '已完成', '已关闭']
+    woData.value = statusOrder
+      .map(s => ({ status: s, count: statusMap[s] || 0 }))
+      .filter(d => d.count > 0)
   } catch { woData.value = [] }
 }
 
-/* ---- 库存概览（按类型） ---- */
 async function fetchInvData() {
   try {
     const res = await api.get('/inventory/summary', { params: { page_size: 1000 } })
@@ -105,7 +115,6 @@ async function fetchInvData() {
   } catch { invData.value = [] }
 }
 
-/* ---- OTD 准时率 ---- */
 const today = new Date()
 today.setHours(0, 0, 0, 0)
 
@@ -149,58 +158,105 @@ async function fetchOtdData() {
   } catch { otdData.value = []; otdRate.value = 0 }
 }
 
-/* ---- 图表渲染 ---- */
-function renderCharts() {
-  if (otdData.value.length && otdChart.value) {
-    const c = echarts.init(otdChart.value)
-    c.setOption({
-      tooltip: { trigger: 'axis' },
-      legend: { data: ['按时完成', '逾期', '未完成'] },
-      xAxis: { type: 'category', data: otdData.value.map(d => d.week) },
-      yAxis: { type: 'value' },
-      series: [
-        { name: '按时完成', type: 'bar', stack: 'total', data: otdData.value.map(d => d.onTime), color: '#67c23a' },
-        { name: '逾期', type: 'bar', stack: 'total', data: otdData.value.map(d => d.overdue), color: '#f56c6c' },
-        { name: '未完成', type: 'bar', stack: 'total', data: otdData.value.map(d => d.incomplete), color: '#909399' },
-      ],
-    })
-  }
-
-  if (invData.value.length && inventoryChart.value) {
-    const c = echarts.init(inventoryChart.value)
-    const colors = { '原材料': '#409eff', '半成品': '#e6a23c', '零件': '#67c23a', '成品': '#f56c6c', '其他': '#909399' }
-    c.setOption({
-      tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
-      series: [{
-        type: 'pie', radius: ['40%', '70%'],
-        data: invData.value.map(d => ({ value: d.value, name: d.name, itemStyle: { color: colors[d.name] || '#909399' } })),
-        label: { formatter: '{b}\n{d}%' },
-      }],
-    })
-  }
-
-  if (woData.value.length && woChart.value) {
-    const c = echarts.init(woChart.value)
-    const colors = { '待下达': '#909399', '已下达': '#e6a23c', '进行中': '#409eff', '已完成': '#67c23a', '已关闭': '#f56c6c' }
-    c.setOption({
-      tooltip: { trigger: 'axis' },
-      xAxis: { type: 'category', data: woData.value.map(d => d.status) },
-      yAxis: { type: 'value' },
-      series: [{
-        type: 'bar',
-        data: woData.value.map(d => ({ value: d.count, itemStyle: { color: colors[d.status] || '#909399' } })),
-      }],
-    })
-  }
+// ====== 图表渲染（暗色主题） ======
+function renderOtdChart() {
+  if (!otdData.value.length || !otdChart.value) return
+  const c = echarts.init(otdChart.value)
+  c.setOption({
+    ...darkChartOptions({
+      legend: { data: ['按时完成', '逾期', '未完成'], bottom: 0, orient: 'horizontal' },
+      grid: { bottom: 40 },
+    }),
+    xAxis: {
+      type: 'category',
+      data: otdData.value.map(d => d.week),
+    },
+    yAxis: { type: 'value' },
+    legend: {
+      data: ['按时完成', '逾期', '未完成'],
+      bottom: 0,
+      textStyle: { color: '#888', fontSize: 11 },
+    },
+    series: [
+      { name: '按时完成', type: 'bar', stack: 'total', data: otdData.value.map(d => d.onTime),
+        itemStyle: { color: chartColors.green, borderRadius: [0, 0, 0, 0] }, barWidth: 28, emphasis: { itemStyle: { color: chartColors.green } } },
+      { name: '逾期', type: 'bar', stack: 'total', data: otdData.value.map(d => d.overdue),
+        itemStyle: { color: chartColors.red }, emphasis: { itemStyle: { color: chartColors.red } } },
+      { name: '未完成', type: 'bar', stack: 'total', data: otdData.value.map(d => d.incomplete),
+        itemStyle: { color: chartColors.gray }, emphasis: { itemStyle: { color: chartColors.gray } } },
+    ],
+  })
 }
 
+function renderInventoryChart() {
+  if (!invData.value.length || !inventoryChart.value) return
+  const c = echarts.init(inventoryChart.value)
+  c.setOption({
+    ...darkChartOptions(),
+    tooltip: {
+      trigger: 'item',
+      backgroundColor: '#242429',
+      borderColor: '#333',
+      textStyle: { color: '#ccc', fontSize: 12 },
+      formatter: '{b}: {c} ({d}%)',
+    },
+    legend: { bottom: 0, textStyle: { color: '#888', fontSize: 11 }, itemWidth: 8, itemHeight: 8 },
+    series: [{
+      type: 'pie',
+      radius: ['50%', '75%'],
+      center: ['50%', '45%'],
+      avoidLabelOverlap: false,
+      itemStyle: { borderColor: '#1a1a1e', borderWidth: 2 },
+      label: { show: false },
+      emphasis: { label: { show: true, fontSize: 14, fontWeight: 'bold', color: '#e8e8ed' } },
+      data: invData.value.map(d => ({
+        value: d.value,
+        name: d.name,
+        itemStyle: { color: materialTypeColors[d.name] || chartColors.gray },
+      })),
+    }],
+  })
+}
+
+function renderWoChart() {
+  if (!woData.value.length || !woChart.value) return
+  const c = echarts.init(woChart.value)
+  c.setOption({
+    ...darkChartOptions(),
+    xAxis: { type: 'category', data: woData.value.map(d => d.status) },
+    yAxis: { type: 'value' },
+    series: [{
+      type: 'bar',
+      barWidth: 28,
+      label: { show: true, position: 'top', color: '#a0a0a8', fontSize: 11 },
+      data: woData.value.map(d => ({
+        value: d.count,
+        itemStyle: {
+          color: woStatusColors[d.status] || '#6b7280',
+          borderRadius: [4, 4, 0, 0],
+        },
+      })),
+    }],
+  })
+}
+
+function renderAll() {
+  renderOtdChart()
+  renderInventoryChart()
+  renderWoChart()
+}
+
+// ====== 初始化 ======
 onMounted(async () => {
   await Promise.all([fetchLowStock(), fetchWoData(), fetchInvData(), fetchOtdData()])
   await nextTick()
-  renderCharts()
+  renderAll()
+
+  // 窗口 resize 时重绘
+  window.addEventListener('resize', renderAll)
 })
 </script>
 
 <style scoped>
-.page-container { background:#fff; padding:20px; border-radius:8px; }
+.page-container { padding: 0; }
 </style>

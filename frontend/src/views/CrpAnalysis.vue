@@ -119,5 +119,5 @@ async function calculateCrp() {
 </script>
 
 <style scoped>
-.page-container { background:#fff; padding:20px; border-radius:8px; }
+.page-container { padding: 0;; }
 </style>

@@ -238,7 +238,7 @@ onMounted(fetchData)
 </script>
 
 <style scoped>
-.page-container { background:#fff; padding:20px; border-radius:8px; }
+.page-container { padding: 0;; }
 .page-toolbar { display:flex; gap:12px; margin-bottom:16px; align-items:center; }
 .batch-bar { display:flex; align-items:center; padding:8px 12px; background:#fef0f0; border-radius:6px; margin-bottom:12px; gap:8px; }
 </style>

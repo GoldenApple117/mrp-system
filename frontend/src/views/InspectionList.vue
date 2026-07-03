@@ -292,6 +292,6 @@ onMounted(fetchData)
 </script>
 
 <style scoped>
-.page-container { background:#fff; padding:20px; border-radius:8px; }
+.page-container { padding: 0;; }
 .page-toolbar { display:flex; gap:12px; margin-bottom:16px; align-items:center; }
 </style>

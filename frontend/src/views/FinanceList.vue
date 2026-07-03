@@ -152,9 +152,9 @@ onMounted(fetchData)
 </script>
 
 <style scoped>
-.page-container { background:#fff; padding:20px; border-radius:8px }
+.page-container { padding: 0; }
 .page-toolbar { display:flex; gap:12px; margin-bottom:16px; align-items:center; flex-wrap:wrap }
-.stat-card { background:#fafbfc; border-radius:8px; padding:14px 18px; border:1px solid #ebeef5 }
+.stat-card { background:var(--color-bg-overlay); border-radius:8px; padding:14px 18px; border:1px solid #ebeef5 }
 .stat-label { font-size:13px; color:#909399; margin-bottom:6px }
 .stat-val { font-size:22px; font-weight:bold; color:#303133 }
 </style>
