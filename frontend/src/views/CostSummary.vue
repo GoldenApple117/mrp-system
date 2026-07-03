@@ -113,7 +113,7 @@ onMounted(fetchData)
 </script>
 
 <style scoped>
-.page-container { background:#fff; padding:20px; border-radius:8px; min-height:80vh }
+.page-container { padding: 0;; min-height:80vh }
 
 .project-card {
   border:1px solid #e4e7ed; border-radius:10px; margin-bottom:16px; overflow:hidden;
@@ -123,7 +123,7 @@ onMounted(fetchData)
 
 .project-header {
   display:flex; align-items:center; justify-content:space-between;
-  padding:16px 20px; cursor:pointer; background:#fafbfc;
+  padding:16px 20px; cursor:pointer; background:var(--color-bg-overlay);
   border-bottom:1px solid #ebeef5;
   user-select:none;
 }
@@ -138,7 +138,7 @@ onMounted(fetchData)
 
 .module-section {
   margin-bottom:16px; border:1px solid #f0f0f0; border-radius:8px;
-  padding:12px 14px; background:#fafbfc;
+  padding:12px 14px; background:var(--color-bg-overlay);
 }
 
 .module-header {

@@ -121,8 +121,14 @@ def material_tree(db: Session = Depends(get_db)):
             mod = db.query(MaterialMaster).filter(MaterialMaster.id == ml.item_id, MaterialMaster.level_type == "模块").first()
             if not mod: continue
             mod_bom = db.query(BomHeader).filter(BomHeader.product_id == mod.id).order_by(BomHeader.id.desc()).first()
-            if not mod_bom: continue
-            part_lines = db.query(BomLine).filter(BomLine.bom_header_id == mod_bom.id).order_by(BomLine.sort_order).all()
+            if mod_bom:
+                part_lines = db.query(BomLine).filter(BomLine.bom_header_id == mod_bom.id).order_by(BomLine.sort_order).all()
+            else:
+                # 模块无独立BOM头，零件直接挂在同一产品BOM头下
+                part_lines = db.query(BomLine).filter(
+                    BomLine.bom_header_id == proj_bom.id,
+                    BomLine.parent_item_id == mod.id
+                ).order_by(BomLine.sort_order).all()
             parts = []
             for pl in part_lines:
                 part = db.query(MaterialMaster).filter(MaterialMaster.id == pl.item_id, MaterialMaster.level_type == "零件").first()

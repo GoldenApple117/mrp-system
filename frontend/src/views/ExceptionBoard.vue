@@ -136,9 +136,9 @@ onMounted(fetchData)
 </script>
 
 <style scoped>
-.page-container { background:#fff; padding:20px; border-radius:8px }
+.page-container { padding: 0; }
 .page-toolbar { display:flex; gap:12px; margin-bottom:16px; align-items:center; flex-wrap:wrap }
-.stat-card { background:#fafbfc; border-radius:8px; padding:12px 16px; border:1px solid #ebeef5 }
+.stat-card { background:var(--color-bg-overlay); border-radius:8px; padding:12px 16px; border:1px solid #ebeef5 }
 .sl { font-size:13px; color:#909399; margin-bottom:4px }
 .sv { font-size:22px; font-weight:bold; color:#303133 }
 .batch-bar { display:flex; align-items:center; gap:8px; background:#f0f9eb; border:1px solid #b3e19d; padding:8px 14px; border-radius:6px; margin-bottom:12px }

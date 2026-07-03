@@ -249,7 +249,7 @@
         <el-tab-pane label="粘贴数据" name="paste">
           <div style="color:#666;font-size:13px;margin-bottom:8px;">
             请按以下格式粘贴数据（每行一条，逗号分隔）：<br>
-            <code style="background:#f5f5f5;padding:2px 6px;border-radius:4px;font-size:12px;">父物料编码,子物料编码,用量,位号</code>
+            <code style="background:#333;padding:2px 6px;border-radius:4px;font-size:12px;">父物料编码,子物料编码,用量,位号</code>
           </div>
           <el-input
             v-model="pasteData"
@@ -285,7 +285,7 @@
           <div v-if="procurementFiles.length" style="margin:8px 0;">
             <el-tag v-for="f in procurementFiles" :key="f.name" size="small" style="margin-right:6px;margin-bottom:4px;">{{ f.name }}</el-tag>
           </div>
-          <div v-if="procurementResult" style="margin-top:12px;border-radius:8px;padding:12px;background:#f6ffed;border:1px solid #b7eb8f;font-size:13px;white-space:pre-wrap;">{{ procurementResult }}</div>
+          <div v-if="procurementResult" style="margin-top:12px;border-radius:8px;padding:12px;background:#1a3a1a;border-color:#2d6b2d;font-size:13px;white-space:pre-wrap;">{{ procurementResult }}</div>
           <div v-if="procurementErrors && procurementErrors.length" style="margin-top:8px;max-height:120px;overflow-y:auto;">
             <p v-for="(e,i) in procurementErrors" :key="i" style="color:#e6a23c;font-size:12px;margin:2px 0;">⚠️ {{ e }}</p>
           </div>
@@ -765,14 +765,20 @@ onMounted(fetchData)
 </script>
 
 <style scoped>
-.page-container { background:#fff; padding:20px; border-radius:8px; }
+.page-container { padding: 0; }
 .page-toolbar { display:flex; gap:12px; margin-bottom:16px; align-items:center; }
 
-/* BOM三级折叠卡片样式 — 与库存管理页面统一 */
-.bom-proj-card { border:1px solid #e4e7ed; border-radius:8px; margin-bottom:12px; overflow:hidden }
-.bom-proj-header { display:flex; align-items:center; padding:12px 16px; background:#fafbfc; cursor:pointer; user-select:none; border-bottom:1px solid #ebeef5 }
-.bom-proj-header:hover { background:#f0f5ff }
-.bom-mod-card { border:1px solid #f0f0f0; border-radius:6px; margin:8px 0; overflow:hidden }
-.bom-mod-header { display:flex; align-items:center; padding:8px 12px; background:#fafbfc; cursor:pointer; user-select:none }
-.bom-mod-header:hover { background:#f5f7fa }
+/* BOM三级折叠卡片样式 */
+.bom-proj-card { border:1px solid var(--color-border-light); border-radius:var(--radius-md); margin-bottom:12px; overflow:hidden }
+.bom-proj-header { display:flex; align-items:center; padding:12px 16px; background:var(--color-bg-overlay); cursor:pointer; user-select:none; border-bottom:1px solid var(--color-border-subtle) }
+.bom-proj-header:hover { background:var(--color-bg-hover) }
+.bom-mod-card { border:1px solid var(--color-border-light); border-radius:var(--radius-sm); margin:8px 0; overflow:hidden }
+.bom-mod-header { display:flex; align-items:center; padding:8px 12px; background:var(--color-bg-raised); cursor:pointer; user-select:none }
+.bom-mod-header:hover { background:var(--color-bg-hover) }
+
+/* 导入对话框适配 */
+:deep(.cloud-guide-card) {
+  background: var(--color-bg-overlay) !important;
+  border-radius: var(--radius-md) !important;
+}
 </style>

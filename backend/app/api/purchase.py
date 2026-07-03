@@ -411,6 +411,7 @@ def sync_purchase_from_bom(data: dict, db: Session = Depends(get_db)):
             visited = set()
         items = []
         lines = db.query(BomLine).filter(
+            BomLine.bom_header_id == header.id,
             BomLine.parent_item_id == parent_id
         ).all()
         for line in lines:
@@ -425,6 +426,7 @@ def sync_purchase_from_bom(data: dict, db: Session = Depends(get_db)):
     # 先获取顶层物料下的直接子物料
     from app.models.material import MaterialMaster as MM
     top_children = db.query(BomLine).filter(
+        BomLine.bom_header_id == header.id,
         BomLine.parent_item_id == header.product_id
     ).all()
     
@@ -452,6 +454,7 @@ def sync_purchase_from_bom(data: dict, db: Session = Depends(get_db)):
         elif mat.level_type in ("模块", "产品"):
             # 展开子物料
             children = db.query(BomLine).filter(
+                BomLine.bom_header_id == header.id,
                 BomLine.parent_item_id == mat.id
             ).all()
             for child in children:

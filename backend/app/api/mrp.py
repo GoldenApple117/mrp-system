@@ -246,16 +246,23 @@ def convert_mrp_to_orders(data: dict, db: Session = Depends(get_db)):
                 continue
 
             if order["order_type"] == "PURCHASE":
-                # 创建采购申请
+                # 创建采购申请，同步物料主数据中的品牌/价格/提交人/链接
+                unit_price = mat.reference_unit_price or 0
+                order_qty = order["quantity"]
                 po = PurchaseOrder(
                     po_number=f"PR-{today_str}-{po_seq:04d}",
                     supplier_id=1,
                     item_id=mat.id,
-                    order_qty=order["quantity"],
+                    order_qty=order_qty,
+                    unit_price=unit_price,
+                    total_amount=round(unit_price * order_qty, 2),
                     due_date=date.fromisoformat(order["required_date"]),
                     status="申请",
                     source_type="MRP建议",
                     priority=order.get("level", 0),
+                    brand=mat.specification.split(" / ")[-1] if " / " in (mat.specification or "") else (mat.specification or ""),
+                    submitter=mat.reference_submitter or "",
+                    supplier_link=mat.reference_link or "",
                 )
                 db.add(po)
                 po_seq += 1

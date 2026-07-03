@@ -1,12 +1,24 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" class="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MRP II 物料需求计划系统</title>
+  <title>MRP II · 物料需求计划系统</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    /* 加载前防闪烁 */
+    html.dark { background: #0f0f11; }
+    body { opacity: 0; transition: opacity 0.15s ease; }
+    body.loaded { opacity: 1; }
+  </style>
 </head>
 <body>
   <div id="app"></div>
+  <script>
+    document.body.classList.add('loaded')
+  </script>
   <script type="module" src="/src/main.js"></script>
 </body>
 </html>

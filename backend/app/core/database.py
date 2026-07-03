@@ -5,9 +5,11 @@ from app.core.config import DATABASE_URL, DB_BACKEND
 
 engine_kwargs = {
     "echo": False,
-    "pool_size": 5,
-    "max_overflow": 10,
-    "pool_recycle": 3600,
+    "pool_size": 20,
+    "max_overflow": 20,
+    "pool_recycle": 1800,
+    "pool_pre_ping": True,
+    "pool_timeout": 10,
 }
 
 if "sqlite" in DATABASE_URL:

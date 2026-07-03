@@ -49,11 +49,12 @@
                     </div><span v-else style="color:#c0c4cc;font-size:11px">—</span>
                   </template>
                 </el-table-column>
-                <el-table-column label="订购" width="60" align="center"><template #default="{row}">{{ row.order_qty }}</template></el-table-column>
-                <el-table-column label="单价" width="70" align="right"><template #default="{row}"><span v-if="row.unit_price>0">¥{{ row.unit_price }}</span><span v-else style="color:#c0c4cc">—</span></template></el-table-column>
-                <el-table-column label="金额" width="80" align="right"><template #default="{row}"><span v-if="row.total_amount>0" style="color:#e6a23c;font-weight:bold">¥{{ row.total_amount }}</span><span v-else style="color:#c0c4cc">—</span></template></el-table-column>
-                <el-table-column label="提交人" width="60" prop="submitter" />
-                <el-table-column label="到/未" width="65" align="center"><template #default="{row}"><span style="color:#67c23a">{{ row.received_qty||0 }}</span>/<span style="color:#f56c6c">{{ (row.order_qty-(row.received_qty||0)).toFixed(0) }}</span></template></el-table-column>
+                <el-table-column label="订购" width="55" align="center"><template #default="{row}">{{ row.order_qty }}</template></el-table-column>
+                <el-table-column label="需求日" width="90" align="center"><template #default="{row}"><span v-if="row.due_date" :style="{color: new Date(row.due_date)<new Date()?'#f56c6c':'#606266'}">{{ row.due_date }}</span><span v-else style="color:#c0c4cc">—</span></template></el-table-column>
+                <el-table-column label="单价" width="65" align="right"><template #default="{row}"><span v-if="row.unit_price>0">¥{{ row.unit_price }}</span><span v-else style="color:#c0c4cc">—</span></template></el-table-column>
+                <el-table-column label="金额" width="75" align="right"><template #default="{row}"><span v-if="row.total_amount>0" style="color:#e6a23c;font-weight:bold">¥{{ row.total_amount }}</span><span v-else style="color:#c0c4cc">—</span></template></el-table-column>
+                <el-table-column label="提交人" width="55" prop="submitter" />
+                <el-table-column label="到/未" width="60" align="center"><template #default="{row}"><span style="color:#67c23a">{{ row.received_qty||0 }}</span>/<span style="color:#f56c6c">{{ (row.order_qty-(row.received_qty||0)).toFixed(0) }}</span></template></el-table-column>
                 <el-table-column label="状态" width="75"><template #default="{row}"><el-tag :type="row.status==='已下单'?'danger':row.status==='部分到货'?'warning':'success'" size="small">{{ row.status }}</el-tag></template></el-table-column>
                 <el-table-column label="操作" width="130" fixed="right">
                   <template #default="{row}">
@@ -206,12 +207,12 @@ onMounted(() => { loadGrouped(); fetchSuppliers() })
 </script>
 
 <style scoped>
-.page-container { background:#fff; padding:20px; border-radius:8px }
+.page-container { padding: 0; }
 .page-toolbar { display:flex; gap:12px; margin-bottom:16px; align-items:center; flex-wrap:wrap }
-.proj-card { border:1px solid #e4e7ed; border-radius:8px; margin-bottom:12px; overflow:hidden }
-.proj-header { display:flex; align-items:center; padding:12px 16px; background:#fafbfc; cursor:pointer; user-select:none; border-bottom:1px solid #ebeef5 }
-.proj-header:hover { background:#f0f5ff }
-.mod-card { border:1px solid #f0f0f0; border-radius:6px; margin:8px 0; overflow:hidden }
-.mod-header { display:flex; align-items:center; padding:8px 12px; background:#fafbfc; cursor:pointer; user-select:none }
-.mod-header:hover { background:#f5f7fa }
+.proj-card { border:1px solid var(--color-border-light); border-radius:var(--radius-md); margin-bottom:12px; overflow:hidden }
+.proj-header { display:flex; align-items:center; padding:12px 16px; background:var(--color-bg-overlay); cursor:pointer; user-select:none; border-bottom:1px solid var(--color-border-subtle) }
+.proj-header:hover { background:var(--color-bg-hover) }
+.mod-card { border:1px solid var(--color-border-light); border-radius:var(--radius-sm); margin:8px 0; overflow:hidden }
+.mod-header { display:flex; align-items:center; padding:8px 12px; background:var(--color-bg-raised); cursor:pointer; user-select:none }
+.mod-header:hover { background:var(--color-bg-hover) }
 </style>

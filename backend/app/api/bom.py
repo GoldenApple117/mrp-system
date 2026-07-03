@@ -204,12 +204,13 @@ def get_bom_tree(product_id: int, db: Session = Depends(get_db)):
         return {"tree": None, "message": "该物料没有BOM"}
 
     all_nodes = []
-    seen_headers = set()
+    seen_pairs = set()
 
     def expand(header_id: int, parent_item_id: int, depth: int, multiplier: float = 1):
-        if header_id in seen_headers:
+        pair = (header_id, parent_item_id)
+        if pair in seen_pairs:
             return
-        seen_headers.add(header_id)
+        seen_pairs.add(pair)
         lines = db.query(BomLine).filter(
             BomLine.bom_header_id == header_id,
             BomLine.parent_item_id == parent_item_id,
@@ -227,12 +228,14 @@ def get_bom_tree(product_id: int, db: Session = Depends(get_db)):
                 "scrap_rate": line.scrap_rate or 0,
             }
             all_nodes.append(node)
-            if child.level_type == "模块":
-                sub = db.query(BomHeader).filter(
-                    BomHeader.product_id == child.id
-                ).order_by(BomHeader.id.desc()).first()
-                if sub:
-                    expand(sub.id, child.id, depth + 1, line.quantity * multiplier)
+            # 递归展开：优先查找子物料独立BOM，其次继续当前BOM的深层子项
+            sub = db.query(BomHeader).filter(
+                BomHeader.product_id == child.id
+            ).order_by(BomHeader.id.desc()).first()
+            if sub:
+                expand(sub.id, child.id, depth + 1, line.quantity * multiplier)
+            else:
+                expand(header_id, child.id, depth + 1, line.quantity * multiplier)
 
     # 根节点
     all_nodes.insert(0, {

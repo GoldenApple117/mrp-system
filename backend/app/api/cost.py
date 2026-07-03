@@ -43,20 +43,21 @@ def cost_summary(db: Session = Depends(get_db)):
             if not module_mat or module_mat.level_type != "模块":
                 continue
 
-            # 找到该模块的 BOM
+            # 找到零件：优先独立模块BOM，其次当前产品BOM下的模块子行
+            parts_detail = []
+            module_total = 0
             mod_bom = db.query(BomHeader).filter(
                 BomHeader.product_id == module_mat.id
             ).order_by(BomHeader.id.desc()).first()
-            if not mod_bom:
-                continue
-
-            # 获取模块下所有零件
-            part_lines = db.query(BomLine).filter(
-                BomLine.bom_header_id == mod_bom.id
-            ).order_by(BomLine.sort_order).all()
-
-            parts_detail = []
-            module_total = 0
+            if mod_bom:
+                part_lines = db.query(BomLine).filter(
+                    BomLine.bom_header_id == mod_bom.id
+                ).order_by(BomLine.sort_order).all()
+            else:
+                part_lines = db.query(BomLine).filter(
+                    BomLine.bom_header_id == bom.id,
+                    BomLine.parent_item_id == module_mat.id
+                ).order_by(BomLine.sort_order).all()
 
             for pl in part_lines:
                 part_mat = db.query(MaterialMaster).filter(
@@ -78,7 +79,6 @@ def cost_summary(db: Session = Depends(get_db)):
                         "cost": round(cost, 2),
                     })
 
-            # 即使模块下没有定价的零件，只要模块名有意义就显示
             modules_detail.append({
                 "module_code": module_mat.material_code,
                 "module_name": module_mat.material_name,
