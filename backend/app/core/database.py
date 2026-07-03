@@ -92,3 +92,12 @@ def init_db():
             ), {"pw": hash_password("admin123")})
             conn.commit()
 
+        # v1.7 — 创建默认普通用户 user1（未授权，需申请权限）
+        result2 = conn.execute(text("SELECT id FROM users WHERE username='user1'"))
+        if not result2.fetchone():
+            conn.execute(text(
+                "INSERT INTO users (username, password_hash, role, is_approved) "
+                "VALUES ('user1', :pw, 'normal', 0)"
+            ), {"pw": hash_password("123456")})
+            conn.commit()
+

@@ -1,6 +1,7 @@
 """销售管理 API — 客户 + 销售订单"""
 from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from typing import Optional
 
@@ -10,6 +11,28 @@ from app.models.material import MaterialMaster
 from app.models.mps import MpsEntry
 
 router = APIRouter(prefix="/api/sales", tags=["销售管理"])
+
+
+class SalesOrderCreate(BaseModel):
+    """创建销售订单请求体"""
+    customer_id: int
+    item_id: int
+    order_qty: float = 1
+    unit_price: float = 0
+    delivery_date: str  # ISO format: 2026-09-01
+    priority: int = 0
+    remark: str = ""
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "customer_id": 1,
+                "item_id": 415,
+                "order_qty": 100,
+                "unit_price": 5000,
+                "delivery_date": "2026-09-01",
+            }
+        }
 
 
 # ====== 客户管理 ======
@@ -89,7 +112,7 @@ def list_sales_orders(
 
 
 @router.post("/orders")
-def create_sales_order(data: dict, db: Session = Depends(get_db)):
+def create_sales_order(data: SalesOrderCreate, db: Session = Depends(get_db)):
     """创建销售订单"""
     today_str = date.today().strftime("%Y%m%d")
     last = db.query(SalesOrder).filter(
@@ -100,16 +123,16 @@ def create_sales_order(data: dict, db: Session = Depends(get_db)):
 
     so = SalesOrder(
         order_number=order_number,
-        customer_id=data["customer_id"],
-        item_id=data["item_id"],
-        order_qty=data.get("order_qty", 1),
-        unit_price=data.get("unit_price", 0),
-        total_amount=(data.get("order_qty", 1) * data.get("unit_price", 0)),
-        delivery_date=date.fromisoformat(data["delivery_date"]) if isinstance(data["delivery_date"], str) else data["delivery_date"],
+        customer_id=data.customer_id,
+        item_id=data.item_id,
+        order_qty=data.order_qty,
+        unit_price=data.unit_price,
+        total_amount=data.order_qty * data.unit_price,
+        delivery_date=date.fromisoformat(data.delivery_date),
         ship_status="待出货",
         pay_status="未收款",
         status="进行中",
-        priority=data.get("priority", 0),
+        priority=data.priority,
         remark=data.get("remark", ""),
     )
     db.add(so)

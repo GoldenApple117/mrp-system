@@ -9,8 +9,8 @@ logger = logging.getLogger(__name__)
 # 全局单例
 _scheduler: BackgroundScheduler = None
 _config = {
-    "enabled": False,
-    "hour": 8,
+    "enabled": True,
+    "hour": 6,
     "minute": 0,
     "horizon_days": 90,
     "time_fence_days": 7,

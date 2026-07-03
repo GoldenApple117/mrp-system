@@ -223,6 +223,14 @@ def convert_mrp_to_orders(data: dict, db: Session = Depends(get_db)):
     生产建议 → 工单
     """
     planned_orders = data.get("planned_orders", [])
+    
+    if not planned_orders:
+        return {
+            "success": False,
+            "message": "没有待转换的计划订单，请先运行 MRP 运算",
+            "data": {"purchase_orders": 0, "work_orders": 0, "errors": []},
+        }
+    
     created_po = 0
     created_wo = 0
     errors = []
@@ -284,7 +292,6 @@ def convert_mrp_to_orders(data: dict, db: Session = Depends(get_db)):
                     priority=order.get("level", 0),
                 )
                 db.add(wo)
-                wo_seq += 1
                 created_wo += 1
 
         except Exception as e:
