@@ -89,9 +89,7 @@ def import_all_data(data: dict, db: Session = Depends(get_db)):
         table = Base.metadata.tables[table_name]
         for row in rows:
             try:
-                # 移除auto-increment ID让数据库自动分配
-                row_copy = {k: v for k, v in row.items() if not (k == "id" and v is not None)}
-                db.execute(table.insert().values(**row_copy))
+                db.execute(table.insert().values(**row))
                 count += 1
             except Exception as e:
                 logger.warning(f"导入 {table_name} 行失败: {e}")
