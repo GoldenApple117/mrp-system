@@ -135,10 +135,25 @@ def send_test_email(to_email: str):
     if not cf["host"]:
         return {"success": False, "message": "SMTP未配置，请先填写服务器信息"}
 
-    result = {"success": True, "total_orders": 0, "exceptions": 0, "auto_po": 0}
-    cf["to_email"] = to_email or cf["to_email"]
+    # 临时写入DB，确保send_mrp_notification能读到
+    from app.core.database import SessionLocal
+    from app.models.smtp_config import SmtpConfig
+    db = SessionLocal()
+    saved = ""
     try:
+        cfg = db.query(SmtpConfig).first()
+        if cfg:
+            saved = cfg.to_email
+            cfg.to_email = to_email
+            db.commit()
+
+        result = {"success": True, "total_orders": 0, "exceptions": 0, "auto_po": 0}
         sent = send_mrp_notification(result)
-        return {"success": sent, "message": "测试邮件已发送" if sent else "发送失败"}
+        return {"success": sent, "message": "测试邮件已发送" if sent else "发送失败，请检查授权码和服务器配置"}
     except Exception as e:
         return {"success": False, "message": str(e)}
+    finally:
+        if cfg and saved is not None:
+            cfg.to_email = saved
+            db.commit()
+        db.close()
