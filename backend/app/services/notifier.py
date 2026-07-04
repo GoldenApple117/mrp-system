@@ -33,12 +33,12 @@ def _get_or_create_config():
             db.add(cfg)
             db.commit()
             db.refresh(cfg)
-        # 环境变量覆盖凭据（Railway持久化，部署不丢）
-        cfg.host = os.getenv("SMTP_HOST", cfg.host or "")
-        cfg.port = int(os.getenv("SMTP_PORT", cfg.port or 587))
-        cfg.username = os.getenv("SMTP_USERNAME", cfg.username or "")
-        cfg.password = os.getenv("SMTP_PASSWORD", cfg.password or "")
-        cfg.from_addr = os.getenv("SMTP_FROM", cfg.from_addr or "")
+        # 环境变量覆盖（仅在设置了非空值时）
+        for attr, env in [("host","SMTP_HOST"),("port","SMTP_PORT"),("username","SMTP_USERNAME"),
+                          ("password","SMTP_PASSWORD"),("from_addr","SMTP_FROM")]:
+            val = os.getenv(env, "")
+            if val:
+                setattr(cfg, attr, int(val) if attr == "port" else val)
         return cfg
     finally:
         db.close()
