@@ -13,30 +13,30 @@
     <el-empty v-if="!loading &amp;&amp; tableData.length === 0" description="暂无生产工单" />
 
     <el-table :data="tableData" v-loading="loading" stripe border>
-      <el-table-column prop="wo_number" label="工单号" width="180" />
-      <el-table-column prop="material_code" label="物料编码" width="130" />
-      <el-table-column prop="material_name" label="物料名称" min-width="140" />
-      <el-table-column prop="plan_qty" label="计划量" width="80" />
-      <el-table-column label="进度" width="120">
+      <el-table-column prop="wo_number" label="工单号" width="170" show-overflow-tooltip />
+      <el-table-column prop="material_code" label="物料编码" width="120" show-overflow-tooltip />
+      <el-table-column prop="material_name" label="物料名称" min-width="130" show-overflow-tooltip />
+      <el-table-column prop="plan_qty" label="计划量" width="70" align="center" />
+      <el-table-column label="进度" width="100" align="center">
         <template #default="{row}">
-          <span>{{ row.completed_qty || 0 }} / {{ row.plan_qty }}</span>
-          <span v-if="row.rejected_qty" style="color:var(--el-color-danger);margin-left:4px">(-{{ row.rejected_qty }})</span>
+          <span>{{ row.completed_qty || 0 }}/{{ row.plan_qty }}</span>
+          <span v-if="row.rejected_qty" style="color:var(--el-color-danger)">(-{{ row.rejected_qty }})</span>
         </template>
       </el-table-column>
-      <el-table-column prop="labor_hours" label="工时(h)" width="80" />
-      <el-table-column prop="start_date" label="开始" width="110" />
-      <el-table-column prop="end_date" label="完成" width="110" />
-      <el-table-column label="状态" width="90">
+      <el-table-column prop="labor_hours" label="工时" width="65" align="center" />
+      <el-table-column prop="start_date" label="开始" width="100" show-overflow-tooltip />
+      <el-table-column prop="end_date" label="完成" width="100" show-overflow-tooltip />
+      <el-table-column label="状态" width="80" align="center">
         <template #default="{row}">
           <el-tag :type="woStatusTag(row.status)" size="small">{{ row.status }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="work_center_name" label="工作中心" width="110" />
-      <el-table-column label="操作" width="280" fixed="right">
+      <el-table-column prop="work_center_name" label="工作中心" width="100" show-overflow-tooltip />
+      <el-table-column label="操作" width="200" fixed="right">
         <template #default="{row}">
           <el-button v-if="row.status==='已下达'" link type="primary" size="small" @click="startOrder(row)">开工</el-button>
           <el-button v-if="row.status==='进行中'" link type="warning" size="small" @click="openReport(row)">报工</el-button>
-          <el-button v-if="row.status==='进行中'" link type="success" size="small" @click="completeOrder(row)">完工入库</el-button>
+          <el-button v-if="row.status==='进行中'" link type="success" size="small" @click="completeOrder(row)">完工</el-button>
           <el-button v-if="row.status==='待下达'" link type="danger" size="small" @click="deleteItem(row)">删除</el-button>
         </template>
       </el-table-column>
