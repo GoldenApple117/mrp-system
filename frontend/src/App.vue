@@ -138,7 +138,7 @@
                 </div>
                 <div class="flex items-center gap-2">
                   <span class="text-2xs text-[var(--color-text-tertiary)] w-10 flex-shrink-0">服务器</span>
-                  <input v-model="emailHost" placeholder="smtp.example.com"
+                  <input v-model="emailHost" placeholder="smtp.qq.com"
                     class="tool-text-input flex-1" />
                 </div>
                 <div class="flex items-center gap-2">
@@ -148,12 +148,12 @@
                 </div>
                 <div class="flex items-center gap-2">
                   <span class="text-2xs text-[var(--color-text-tertiary)] w-10 flex-shrink-0">用户名</span>
-                  <input v-model="emailUser" placeholder="user@example.com"
+                  <input v-model="emailUser" placeholder="2645174606@qq.com"
                     class="tool-text-input flex-1" />
                 </div>
                 <div class="flex items-center gap-2">
                   <span class="text-2xs text-[var(--color-text-tertiary)] w-10 flex-shrink-0">密码</span>
-                  <input v-model="emailPass" type="password" placeholder="授权码"
+                  <input v-model="emailPass" type="password" placeholder="QQ邮箱授权码"
                     class="tool-text-input flex-1" />
                 </div>
               </div>
