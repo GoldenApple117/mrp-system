@@ -117,10 +117,10 @@ def send_mrp_notification(result: dict):
         msg["From"] = cf["from_addr"]
         msg["To"] = to_email
         msg.attach(MIMEText(body, "html", "utf-8"))
-        server = smtplib.SMTP(cf["host"], int(cf["port"]), timeout=10)
+        server = smtplib.SMTP(cf["host"], int(cf["port"]), timeout=15)
         server.starttls()
         server.login(cf["username"], cf["password"])
-        server.sendmail(cf["from_addr"], to_email.split(","), msg.as_string())
+        server.sendmail(cf["from_addr"], [t.strip() for t in to_email.split(",")], msg.as_string())
         server.quit()
         logger.info(f"[通知] 邮件已发送至 {to_email}")
         return True
@@ -135,7 +135,7 @@ def send_test_email(to_email: str):
     if not cf["host"]:
         return {"success": False, "message": "SMTP未配置，请先填写服务器信息"}
 
-    # 临时写入DB，确保send_mrp_notification能读到
+    # 临时写入DB
     from app.core.database import SessionLocal
     from app.models.smtp_config import SmtpConfig
     db = SessionLocal()
@@ -151,7 +151,9 @@ def send_test_email(to_email: str):
         sent = send_mrp_notification(result)
         return {"success": sent, "message": "测试邮件已发送" if sent else "发送失败，请检查授权码和服务器配置"}
     except Exception as e:
-        return {"success": False, "message": str(e)}
+        err = str(e)
+        logger.error(f"[测试邮件] 异常: {err}")
+        return {"success": False, "message": f"发送失败: {err[:120]}"}
     finally:
         if cfg and saved is not None:
             cfg.to_email = saved
