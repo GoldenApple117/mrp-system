@@ -26,13 +26,32 @@ SMTP_CONFIG = {
 
 
 def _load_config():
-    """从JSON文件加载SMTP配置"""
+    """加载SMTP配置：环境变量 > JSON文件 > 默认值"""
+    # 1. 环境变量优先级最高（Railway持久化，部署不丢失）
+    env_map = {
+        "host": "SMTP_HOST",
+        "port": "SMTP_PORT",
+        "username": "SMTP_USERNAME",
+        "password": "SMTP_PASSWORD",
+        "from_addr": "SMTP_FROM",
+        "to_email": "SMTP_TO",
+    }
+    has_env = False
+    for key, env in env_map.items():
+        val = os.getenv(env, "")
+        if val:
+            SMTP_CONFIG[key] = int(val) if key == "port" else val
+            has_env = True
+    if has_env:
+        logger.info("[邮件] 已从环境变量加载SMTP配置")
+        return
+
+    # 2. JSON文件兜底（本地开发）
     if os.path.exists(_CFG_FILE):
         try:
             with open(_CFG_FILE, "r", encoding="utf-8") as f:
-                saved = json.load(f)
-                SMTP_CONFIG.update(saved)
-            logger.info("[邮件] 已加载SMTP配置")
+                SMTP_CONFIG.update(json.load(f))
+            logger.info("[邮件] 已从文件加载SMTP配置")
         except Exception as e:
             logger.warning(f"[邮件] 加载配置失败: {e}")
 

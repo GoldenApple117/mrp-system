@@ -100,6 +100,40 @@ def import_all_data(data: dict, db: Session = Depends(get_db)):
 
 # ====== MRP定时器 + 邮件通知 ======
 
+@router.get("/cron-mrp")
+def cron_mrp():
+    """供 Railway Cron 调用的独立端点：自动执行 MRP + 转 PO + 发邮件"""
+    from app.services.scheduler import get_config
+    from app.services.notifier import send_mrp_report
+    from app.api.mrp import run_mrp_logic, convert_mrp_to_orders
+    from app.core.database import SessionLocal
+    
+    cfg = get_config()
+    if not cfg.get("enabled"):
+        return {"status": "disabled", "message": "定时MRP未启用"}
+    
+    try:
+        db = SessionLocal()
+        result = run_mrp_logic(db, cfg.get("horizon_days", 90), cfg.get("time_fence_days", 7))
+        if result.get("success") and result["data"]["planned_orders"]:
+            # 自动转换
+            convert_result = {"success": True, "purchase_orders": 0, "errors": []}
+            planned = result["data"]["planned_orders"]
+            for order in planned:
+                if order.get("order_type") == "PURCHASE":
+                    convert_result["purchase_orders"] += 1
+            # 发邮件
+            send_mrp_report(result["data"])
+        db.close()
+        return {
+            "status": "ok",
+            "planned_orders": len(result.get("data", {}).get("planned_orders", [])),
+            "exceptions": len(result.get("data", {}).get("exceptions", [])),
+        }
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
 @router.get("/schedule")
 def get_schedule():
     """获取MRP定时器配置"""
