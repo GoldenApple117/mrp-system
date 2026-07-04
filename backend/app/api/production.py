@@ -1,13 +1,18 @@
-"""生产管理 API — 工单 + 工作中心 + 工艺路线"""
-from datetime import date
+"""生产管理 API — 工单 + 工作中心 + 工艺路线 + 报工"""
+from datetime import date, datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import Optional
 
 from app.core.database import get_db
-from app.models.order import WorkOrder
+from app.models.order import WorkOrder, WorkOrderMaterial
 from app.models.routing import WorkCenter, RoutingHeader, RoutingOperation
 from app.models.material import MaterialMaster
+from app.models.inventory import InventoryRecord, InventoryTransaction, Warehouse
+from app.models.bom import BomLine, BomHeader
+
+import logging
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/production", tags=["生产管理"])
 
@@ -42,8 +47,12 @@ def list_work_orders(
                 "material_name": o.item.material_name if o.item else "",
                 "unit": o.item.unit if o.item else "",
                 "plan_qty": o.plan_qty, "completed_qty": o.completed_qty,
+                "rejected_qty": getattr(o, 'rejected_qty', 0),
+                "labor_hours": getattr(o, 'labor_hours', 0),
                 "start_date": o.start_date.isoformat() if o.start_date else None,
                 "end_date": o.end_date.isoformat() if o.end_date else None,
+                "actual_start": o.actual_start.isoformat() if o.actual_start else None,
+                "actual_end": o.actual_end.isoformat() if o.actual_end else None,
                 "status": o.status, "work_center_id": o.work_center_id,
                 "work_center_name": o.work_center.center_name if o.work_center else "",
                 "priority": o.priority, "source_type": o.source_type,
@@ -59,7 +68,6 @@ def list_work_orders(
 @router.post("/orders")
 def create_work_order(data: dict, db: Session = Depends(get_db)):
     """创建生产工单"""
-    # 自动生成唯一单号
     if "wo_number" not in data or not data.get("wo_number"):
         today_str = date.today().strftime("%Y%m%d")
         last_wo = db.query(WorkOrder).filter(
@@ -137,6 +145,176 @@ def update_wo_status(order_id: int, data: dict, db: Session = Depends(get_db)):
     return {"success": True, "message": f"状态更新为: {wo.status}"}
 
 
+@router.post("/orders/{order_id}/start")
+def start_work_order(order_id: int, db: Session = Depends(get_db)):
+    """开工 — 自动领料 + 记录实际开工时间"""
+    wo = db.query(WorkOrder).filter(WorkOrder.id == order_id).first()
+    if not wo:
+        raise HTTPException(status_code=404, detail="工单不存在")
+    if wo.status != "已下达":
+        raise HTTPException(status_code=400, detail=f"当前状态({wo.status})不能开工，需先下达")
+
+    now = datetime.now()
+    wo.status = "进行中"
+    wo.actual_start = now
+
+    # 根据 BOM 自动生成物料需求并扣减库存
+    bom_lines = _get_bom_lines(db, wo.item_id)
+    if bom_lines:
+        for bl in bom_lines:
+            required = bl.quantity * wo.plan_qty
+            wom = db.query(WorkOrderMaterial).filter(
+                WorkOrderMaterial.work_order_id == wo.id,
+                WorkOrderMaterial.item_id == bl.item_id,
+            ).first()
+            if not wom:
+                wom = WorkOrderMaterial(
+                    work_order_id=wo.id,
+                    item_id=bl.item_id,
+                    required_qty=required,
+                    bom_line_id=bl.id,
+                )
+                db.add(wom)
+
+            # 扣减库存
+            inv = db.query(InventoryRecord).filter(
+                InventoryRecord.item_id == bl.item_id,
+            ).first()
+            if inv and inv.on_hand_qty >= required:
+                inv.on_hand_qty -= required
+                wom.issued_qty = required
+                db.add(InventoryTransaction(
+                    item_id=bl.item_id,
+                    warehouse_id=inv.warehouse_id,
+                    transaction_type="生产发料",
+                    quantity=-required,
+                    reference_no=wo.wo_number,
+                    operator="系统",
+                    remark=f"工单{wo.wo_number}自动领料",
+                ))
+
+    # 更新在制量
+    _update_on_production_qty(db, wo.item_id, wo.plan_qty)
+
+    db.commit()
+    issued_count = len(wo.materials) if hasattr(wo, 'materials') else 0
+    return {
+        "success": True,
+        "message": f"工单已开工，{issued_count}种物料已发料",
+        "actual_start": now.isoformat(),
+    }
+
+
+@router.post("/orders/{order_id}/report")
+def report_progress(order_id: int, data: dict, db: Session = Depends(get_db)):
+    """工单报工 — 完成数量、不合格数量、工时"""
+    wo = db.query(WorkOrder).filter(WorkOrder.id == order_id).first()
+    if not wo:
+        raise HTTPException(status_code=404, detail="工单不存在")
+    if wo.status not in ("进行中",):
+        raise HTTPException(status_code=400, detail=f"当前状态({wo.status})不能报工")
+
+    completed = data.get("completed_qty", 0)
+    rejected = data.get("rejected_qty", 0)
+    labor = data.get("labor_hours", 0)
+
+    if completed > 0:
+        wo.completed_qty = (wo.completed_qty or 0) + completed
+    if rejected > 0:
+        wo.rejected_qty = (wo.rejected_qty or 0) + rejected
+    if labor > 0:
+        wo.labor_hours = (wo.labor_hours or 0) + labor
+
+    db.commit()
+    return {
+        "success": True,
+        "message": f"报工完成",
+        "data": {
+            "completed_qty": wo.completed_qty,
+            "rejected_qty": wo.rejected_qty or 0,
+            "labor_hours": wo.labor_hours or 0,
+        },
+    }
+
+
+@router.post("/orders/{order_id}/complete")
+def complete_work_order(order_id: int, db: Session = Depends(get_db)):
+    """完工入库 — 良品入库 + 标记完成时间"""
+    wo = db.query(WorkOrder).filter(WorkOrder.id == order_id).first()
+    if not wo:
+        raise HTTPException(status_code=404, detail="工单不存在")
+    if wo.status != "进行中":
+        raise HTTPException(status_code=400, detail=f"当前状态({wo.status})不能完工")
+
+    now = datetime.now()
+    wo.status = "已完成"
+    wo.actual_end = now
+    if wo.completed_qty <= 0:
+        wo.completed_qty = wo.plan_qty
+
+    # 良品入库 (completed_qty - rejected_qty)
+    rejected = wo.rejected_qty or 0
+    good_qty = wo.completed_qty - rejected
+    if good_qty > 0:
+        # 找到该物料的库存记录或默认仓库
+        inv = db.query(InventoryRecord).filter(
+            InventoryRecord.item_id == wo.item_id,
+        ).first()
+        wh_id = inv.warehouse_id if inv else 1
+
+        # 增加库存
+        if inv:
+            inv.on_hand_qty += good_qty
+        else:
+            db.add(InventoryRecord(
+                item_id=wo.item_id,
+                warehouse_id=wh_id,
+                on_hand_qty=good_qty,
+            ))
+
+        # 记录库存流水
+        db.add(InventoryTransaction(
+            item_id=wo.item_id,
+            warehouse_id=wh_id,
+            transaction_type="生产入库",
+            quantity=good_qty,
+            reference_no=wo.wo_number,
+            operator="系统",
+            remark=f"工单{wo.wo_number}完工入库，良品{good_qty}，不合格{rejected}",
+        ))
+
+    # 减少在制量
+    _update_on_production_qty(db, wo.item_id, -wo.plan_qty)
+
+    db.commit()
+    return {
+        "success": True,
+        "message": f"完工入库完成：良品{good_qty}，不合格{rejected}，工时{wo.labor_hours or 0}h",
+        "actual_end": now.isoformat(),
+    }
+
+
+@router.get("/orders/{order_id}/materials")
+def get_order_materials(order_id: int, db: Session = Depends(get_db)):
+    """查看工单物料需求及发料情况"""
+    woms = db.query(WorkOrderMaterial).filter(
+        WorkOrderMaterial.work_order_id == order_id
+    ).all()
+    return {
+        "items": [
+            {
+                "id": w.id,
+                "material_code": w.item.material_code if w.item else "",
+                "material_name": w.item.material_name if w.item else "",
+                "unit": w.item.unit if w.item else "",
+                "required_qty": w.required_qty,
+                "issued_qty": w.issued_qty,
+            }
+            for w in woms
+        ]
+    }
+
+
 @router.delete("/orders/{order_id}")
 def delete_work_order(order_id: int, db: Session = Depends(get_db)):
     """删除工单"""
@@ -146,6 +324,24 @@ def delete_work_order(order_id: int, db: Session = Depends(get_db)):
         db.commit()
         return {"success": True}
     raise HTTPException(status_code=400, detail="只能删除'待下达'状态的工单")
+
+
+# ====== 内部辅助函数 ======
+
+def _get_bom_lines(db: Session, item_id: int):
+    """获取某物料 BOM 下一层的直接子物料"""
+    return db.query(BomLine).join(BomHeader).filter(
+        BomLine.parent_item_id == item_id
+    ).all()
+
+
+def _update_on_production_qty(db: Session, item_id: int, delta: float):
+    """更新在制量"""
+    inv = db.query(InventoryRecord).filter(
+        InventoryRecord.item_id == item_id
+    ).first()
+    if inv:
+        inv.on_production_qty = (inv.on_production_qty or 0) + delta
 
 
 # ====== 工作中心 ======

@@ -44,6 +44,8 @@ class WorkOrder(Base):
     end_date = Column(Date, nullable=False, comment="计划完成日期")
     actual_start = Column(DateTime, nullable=True, comment="实际开始")
     actual_end = Column(DateTime, nullable=True, comment="实际完成")
+    rejected_qty = Column(Float, default=0, comment="不合格数量")
+    labor_hours = Column(Float, default=0, comment="累计工时")
     status = Column(String(20), default="待下达", comment="状态：待下达/已下达/进行中/已完成/已关闭")
     work_center_id = Column(Integer, ForeignKey("work_center.id"), nullable=True)
     routing_id = Column(Integer, ForeignKey("routing_header.id"), nullable=True)
@@ -57,3 +59,19 @@ class WorkOrder(Base):
     item = relationship("MaterialMaster", lazy="selectin")
     work_center = relationship("WorkCenter", lazy="selectin")
     routing = relationship("RoutingHeader", lazy="selectin")
+    materials = relationship("WorkOrderMaterial", lazy="selectin", cascade="all, delete-orphan")
+
+
+class WorkOrderMaterial(Base):
+    """工单物料需求 — 记录每个工单需要的原材料及其发料/消耗情况"""
+    __tablename__ = "work_order_material"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    work_order_id = Column(Integer, ForeignKey("work_order.id"), nullable=False)
+    item_id = Column(Integer, ForeignKey("material_master.id"), nullable=False)
+    required_qty = Column(Float, nullable=False, default=0, comment="需求数量")
+    issued_qty = Column(Float, default=0, comment="已发料数量")
+    bom_line_id = Column(Integer, ForeignKey("bom_line.id"), nullable=True)
+    created_at = Column(DateTime, default=datetime.now)
+
+    item = relationship("MaterialMaster", lazy="selectin")

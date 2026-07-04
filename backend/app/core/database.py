@@ -70,6 +70,19 @@ def init_db():
             "ALTER TABLE supplier ADD COLUMN purchase_link VARCHAR(1000) DEFAULT ''",
             # v1.7 — 权限系统
             "ALTER TABLE users ADD COLUMN is_approved INTEGER DEFAULT 1",
+            # v1.9 — 生产报工模块
+            "ALTER TABLE work_order ADD COLUMN rejected_qty FLOAT DEFAULT 0",
+            "ALTER TABLE work_order ADD COLUMN labor_hours FLOAT DEFAULT 0",
+            # v1.9 — 工单物料需求表
+            """CREATE TABLE IF NOT EXISTS work_order_material (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                work_order_id INTEGER NOT NULL REFERENCES work_order(id),
+                item_id INTEGER NOT NULL REFERENCES material_master(id),
+                required_qty FLOAT DEFAULT 0,
+                issued_qty FLOAT DEFAULT 0,
+                bom_line_id INTEGER REFERENCES bom_line(id),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )""",
         ]
         for stmt in migration_stmts:
             try:
