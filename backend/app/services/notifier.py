@@ -130,32 +130,40 @@ def send_mrp_notification(result: dict):
 
 
 def send_test_email(to_email: str):
-    """发送测试邮件"""
+    """发送测试邮件（返回详细错误信息用于诊断）"""
     cf = get_full_config()
     if not cf["host"]:
         return {"success": False, "message": "SMTP未配置，请先填写服务器信息"}
 
-    # 临时写入DB
-    from app.core.database import SessionLocal
-    from app.models.smtp_config import SmtpConfig
-    db = SessionLocal()
-    saved = ""
-    try:
-        cfg = db.query(SmtpConfig).first()
-        if cfg:
-            saved = cfg.to_email
-            cfg.to_email = to_email
-            db.commit()
+    subject = "[MRP] 邮件功能测试"
+    body = f"""<html><body style="font-family:Arial,sans-serif;color:#333;">
+<h2>MRP II 系统邮件测试</h2><p>这是一封自动测试邮件。如果您收到此邮件，说明邮件通知功能配置正确。</p>
+<p>发送时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+<p style="color:#999;font-size:12px;">MRP II 系统自动发送</p></body></html>"""
 
-        result = {"success": True, "total_orders": 0, "exceptions": 0, "auto_po": 0}
-        sent = send_mrp_notification(result)
-        return {"success": sent, "message": "测试邮件已发送" if sent else "发送失败，请检查授权码和服务器配置"}
+    try:
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"] = cf["from_addr"]
+        msg["To"] = to_email
+        msg.attach(MIMEText(body, "html", "utf-8"))
+
+        logger.info(f"[测试邮件] 连接 {cf['host']}:{cf['port']}, 用户={cf['username']}")
+        server = smtplib.SMTP(cf["host"], int(cf["port"]), timeout=15)
+        server.set_debuglevel(1)  # 输出SMTP会话详情
+        server.ehlo()
+        if cf.get("use_tls", True):
+            server.starttls()
+            server.ehlo()
+        logger.info(f"[测试邮件] 正在登录...")
+        server.login(cf["username"], cf["password"])
+        logger.info(f"[测试邮件] 登录成功，正在发送至 {to_email}...")
+        server.sendmail(cf["from_addr"], [to_email], msg.as_string())
+        server.quit()
+        logger.info(f"[测试邮件] 发送成功！")
+        return {"success": True, "message": "测试邮件已发送，请查收"}
     except Exception as e:
         err = str(e)
-        logger.error(f"[测试邮件] 异常: {err}")
-        return {"success": False, "message": f"发送失败: {err[:120]}"}
-    finally:
-        if cfg and saved is not None:
-            cfg.to_email = saved
-            db.commit()
-        db.close()
+        logger.error(f"[测试邮件] 发送失败: {err}")
+        # 返回详细错误以便诊断
+        return {"success": False, "message": f"SMTP错误: {err}"}
