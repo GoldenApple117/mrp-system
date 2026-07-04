@@ -208,6 +208,20 @@ def seed_demo_api():
         return {"success": False, "message": f"❌ 初始化失败: {str(e)}"}
 
 
+@router.get("/health/pip")
+def health_check_pip():
+    """健康检查：列出已安装的关键包"""
+    import importlib, sys
+    pkgs = ["openpyxl", "pandas", "fastapi", "sqlalchemy", "pymysql", "pydantic"]
+    result = {"python": sys.version}
+    for p in pkgs:
+        try:
+            m = importlib.import_module(p)
+            result[p] = getattr(m, "__version__", "installed")
+        except ImportError:
+            result[p] = "NOT_INSTALLED"
+    return result
+
 @router.get("/dashboard/modules")
 def get_module_inventory(db=Depends(get_db)):
     """仪表盘：按模块统计库存，每个项目模块地位平等"""
@@ -248,23 +262,30 @@ def get_module_inventory(db=Depends(get_db)):
 # ====== Excel 导出 ======
 def _make_excel_response(rows: list, filename: str):
     """生成 Excel 文件并返回 StreamingResponse"""
-    from openpyxl import Workbook
-    wb = Workbook()
-    ws = wb.active
-    ws.title = filename[:31]
-    if rows:
-        headers = list(rows[0].keys())
-        ws.append(headers)
-        for row in rows:
-            ws.append([str(row.get(h, "")) for h in headers])
-    buf = io.BytesIO()
-    wb.save(buf)
-    buf.seek(0)
-    return StreamingResponse(
-        buf,
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f"attachment; filename={filename}.xlsx"},
-    )
+    import traceback, sys
+    try:
+        from openpyxl import Workbook
+        wb = Workbook()
+        ws = wb.active
+        ws.title = filename[:31]
+        if rows:
+            headers = list(rows[0].keys())
+            ws.append(headers)
+            for row in rows:
+                ws.append([str(row.get(h, "")) for h in headers])
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        return StreamingResponse(
+            buf,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f"attachment; filename={filename}.xlsx"},
+        )
+    except Exception as e:
+        err_msg = f"Excel export error (type={type(e).__name__}): {str(e)}\n"
+        err_msg += f"Python: {sys.version}\n"
+        err_msg += f"Traceback: {traceback.format_exc()}"
+        return {"error": err_msg, "python_version": sys.version}
 
 
 @router.get("/export-excel/materials")
