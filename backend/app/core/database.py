@@ -73,14 +73,14 @@ def init_db():
             # v1.9 — 生产报工模块
             "ALTER TABLE work_order ADD COLUMN rejected_qty FLOAT DEFAULT 0",
             "ALTER TABLE work_order ADD COLUMN labor_hours FLOAT DEFAULT 0",
-            # v1.9 — 工单物料需求表
+            # v1.9 — 工单物料需求表 (兼容SQLite和MySQL)
             """CREATE TABLE IF NOT EXISTS work_order_material (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                work_order_id INTEGER NOT NULL REFERENCES work_order(id),
-                item_id INTEGER NOT NULL REFERENCES material_master(id),
+                id INTEGER PRIMARY KEY,
+                work_order_id INTEGER NOT NULL,
+                item_id INTEGER NOT NULL,
                 required_qty FLOAT DEFAULT 0,
                 issued_qty FLOAT DEFAULT 0,
-                bom_line_id INTEGER REFERENCES bom_line(id),
+                bom_line_id INTEGER,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )""",
         ]
