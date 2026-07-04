@@ -289,12 +289,21 @@ def convert_mrp_to_orders(data: dict = None, db: Session = Depends(get_db)):
                 # 采购申请，同步物料主数据
                 unit_price = mat.reference_unit_price or 0
                 order_qty = order["quantity"]
-                # 查找物料默认供应商，无则使用第一个供应商
+                # 查找物料默认供应商，无则使用第一个供应商（如无则自动创建）
                 supplier_id = mat.default_supplier_id if hasattr(mat, 'default_supplier_id') and mat.default_supplier_id else None
                 if not supplier_id:
                     from app.models.supplier import Supplier
                     first_sup = db.query(Supplier).first()
-                    supplier_id = first_sup.id if first_sup else 1
+                    if not first_sup:
+                        first_sup = Supplier(
+                            supplier_code="DEF-SUP",
+                            supplier_name="默认供应商",
+                            contact_person="系统自动创建",
+                            contact_phone="00000000",
+                        )
+                        db.add(first_sup)
+                        db.flush()
+                    supplier_id = first_sup.id
                 po = PurchaseOrder(
                     po_number=f"{po_base}-{po_seq:04d}",
                     supplier_id=supplier_id,
