@@ -147,19 +147,42 @@ def update_wo_status(order_id: int, data: dict, db: Session = Depends(get_db)):
 
 @router.post("/orders/{order_id}/start")
 def start_work_order(order_id: int, db: Session = Depends(get_db)):
-    """开工 — 自动领料 + 记录实际开工时间"""
+    """开工 — 缺料检查 + 自动领料 + 记录实际开工时间"""
     wo = db.query(WorkOrder).filter(WorkOrder.id == order_id).first()
     if not wo:
         raise HTTPException(status_code=404, detail="工单不存在")
     if wo.status != "已下达":
         raise HTTPException(status_code=400, detail=f"当前状态({wo.status})不能开工，需先下达")
 
+    # 0. 缺料检查
+    bom_lines = _get_bom_lines(db, wo.item_id)
+    shortages = []
+    if bom_lines:
+        for bl in bom_lines:
+            req = bl.quantity * wo.plan_qty
+            inv = db.query(InventoryRecord).filter(InventoryRecord.item_id == bl.item_id).first()
+            on_hand = inv.on_hand_qty if inv else 0
+            if on_hand < req:
+                shortages.append({
+                    "material_code": bl.item.material_code if bl.item else "",
+                    "material_name": bl.item.material_name if bl.item else "",
+                    "required": req,
+                    "on_hand": on_hand,
+                    "shortage": req - on_hand,
+                })
+
+    if shortages:
+        return {
+            "success": False,
+            "message": f"缺料{len(shortages)}种，无法开工",
+            "shortages": shortages[:20],
+        }
+
     now = datetime.now()
     wo.status = "进行中"
     wo.actual_start = now
 
     # 根据 BOM 自动生成物料需求并扣减库存
-    bom_lines = _get_bom_lines(db, wo.item_id)
     if bom_lines:
         for bl in bom_lines:
             required = bl.quantity * wo.plan_qty
@@ -329,10 +352,29 @@ def delete_work_order(order_id: int, db: Session = Depends(get_db)):
 # ====== 内部辅助函数 ======
 
 def _get_bom_lines(db: Session, item_id: int):
-    """获取某物料 BOM 下一层的直接子物料"""
-    return db.query(BomLine).join(BomHeader).filter(
-        BomLine.parent_item_id == item_id
-    ).all()
+    """获取某物料 BOM 的全部零件层子物料（穿透模块层）"""
+    from app.models.material import MaterialMaster
+    all_parts = []
+    visited = set()
+    
+    def expand(parent_id, multiplier=1.0):
+        direct = db.query(BomLine).filter(BomLine.parent_item_id == parent_id).all()
+        for bl in direct:
+            child = db.query(MaterialMaster).filter(MaterialMaster.id == bl.item_id).first()
+            qty = bl.quantity * multiplier
+            
+            if child and child.level_type == "模块":
+                # 模块层：穿透继续展开
+                expand(bl.item_id, qty)
+            else:
+                # 零件层或产品层：收集
+                if (parent_id, bl.item_id) not in visited:
+                    visited.add((parent_id, bl.item_id))
+                    bl.quantity = qty  # 累积用量
+                    all_parts.append(bl)
+    
+    expand(item_id)
+    return all_parts
 
 
 def _update_on_production_qty(db: Session, item_id: int, delta: float):

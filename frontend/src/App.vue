@@ -211,6 +211,11 @@
           MRP 运算
         </router-link>
 
+        <!-- 导出Excel -->
+        <button
+          class="flex items-center gap-1 h-7 px-2.5 rounded text-xs bg-transparent text-[var(--color-text-tertiary)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-secondary)] border border-[var(--color-border-subtle)] transition-all duration-150 cursor-pointer"
+          @click="quickExport">{{ exportLoading ? '导出中...' : '📥 Excel导出' }}</button>
+
         <!-- 系统状态 -->
         <div class="flex items-center gap-1.5 text-xs text-[var(--color-success-text)]">
           <span class="w-1.5 h-1.5 rounded-full bg-[var(--color-success)] shadow-[0_0_4px_var(--color-success)]"></span>
@@ -245,7 +250,16 @@
 
       <!-- 内容区 -->
       <main class="flex-1 overflow-y-auto bg-[var(--color-bg-base)] p-5 relative">
-        <router-view />
+        <!-- 页面标题 -->
+        <div class="mb-4">
+          <h1 class="text-lg font-semibold text-[var(--color-text-primary)]">{{ pageTitle }}</h1>
+          <p class="text-xs text-[var(--color-text-tertiary)] mt-0.5">{{ pageSubtitle }}</p>
+        </div>
+        <router-view v-slot="{ Component }">
+          <transition name="page-fade" mode="out-in">
+            <component :is="Component" />
+          </transition>
+        </router-view>
         <PermissionOverlay />
       </main>
     </div>
@@ -271,6 +285,38 @@ const auth = useAuthStore()
 const isCollapse = ref(false)
 const importFileRef = ref(null)
 const searchPaletteRef = ref(null)
+const exportLoading = ref(false)
+
+// ====== 快速导出 ======
+async function quickExport() {
+  const routeName = route.path.replace('/', '') || 'dashboard'
+  const entityMap = {
+    'materials': '/api/system/export-excel/materials',
+    'bom': '/api/system/export-excel/bom',
+    'inventory': '/api/system/export-excel/inventory',
+    'production': '/api/system/export-excel/work-orders',
+  }
+  const url = entityMap[routeName]
+  if (!url) {
+    ElMessage.info('当前页面暂无导出功能，点击"数据管理→导出"导出全部JSON')
+    return
+  }
+  exportLoading.value = true
+  try {
+    const token = localStorage.getItem('token') || ''
+    const resp = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } })
+    if (!resp.ok) throw new Error(resp.statusText)
+    const blob = await resp.blob()
+    const blobUrl = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = blobUrl
+    a.download = routeName + '.xlsx'
+    a.click()
+    URL.revokeObjectURL(blobUrl)
+    ElMessage.success('导出完成')
+  } catch { ElMessage.error('导出失败') }
+  finally { setTimeout(() => exportLoading.value = false, 1000) }
+}
 
 // ====== 键盘快捷键 ======
 function handleGlobalKeydown(e) {
@@ -490,10 +536,34 @@ const pageTitle = computed(() => {
   }
   return map[route.path] || 'MRP II 物料需求计划系统'
 })
+
+const pageSubtitle = computed(() => {
+  const map = {
+    '/dashboard': '系统概览与关键指标',
+    '/materials': '查看与管理所有物料基础数据',
+    '/bom': '维护产品物料清单与组成结构',
+    '/inventory': '实时库存监控与出入库操作',
+    '/mps': '主生产计划制定与批量管理',
+    '/sales': '销售订单跟踪与客户管理',
+    '/mrp': '执行物料需求计划计算',
+    '/purchase': '采购订单管理与供应商跟踪',
+    '/production': '生产工单派发与进度跟踪',
+    '/routings': '定义产品制造的工序流程',
+    '/reports': 'OTD、库存、工单等数据报表',
+    '/crp': '产能负荷分析与瓶颈识别',
+    '/inspection': '来料检验与库存盘点',
+    '/finance': '财务收款与出货管理',
+    '/cost': '项目费用汇总与分析',
+    '/exceptions': '例外事件监控与处理',
+    '/suppliers': '供应商信息维护',
+    '/permissions': '用户权限申请与审批',
+  }
+  return map[route.path] || ''
+})
 </script>
 
 <style scoped>
-/* ── 过渡动画 ── */
+/* ── 侧边栏过渡 ── */
 .logo-text-enter-active,
 .logo-text-leave-active {
   transition: opacity 0.15s ease;
@@ -501,6 +571,91 @@ const pageTitle = computed(() => {
 .logo-text-enter-from,
 .logo-text-leave-to {
   opacity: 0;
+}
+
+/* ── 侧边栏导航项收起优化 ── */
+aside :deep(nav .truncate) {
+  transition: opacity 0.2s ease;
+}
+</style>
+
+<!-- ═══ 全局样式 ═══ -->
+<style>
+/* ── 页面切换动画 ── */
+.page-fade-enter-active,
+.page-fade-leave-active {
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.page-fade-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+.page-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+/* ── el-table 暗色增强 ── */
+.el-table {
+  --el-table-bg-color: transparent;
+  --el-table-tr-bg-color: transparent;
+  --el-table-header-bg-color: var(--color-bg-overlay, rgba(255,255,255,0.03));
+  --el-table-row-hover-bg-color: var(--color-bg-hover, rgba(255,255,255,0.04));
+  --el-table-border-color: var(--color-border-light, rgba(255,255,255,0.06));
+  --el-table-text-color: var(--color-text-primary, #e8ecf1);
+  --el-table-header-text-color: var(--color-text-secondary, #94a3b8);
+}
+.el-table th.el-table__cell {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-bottom: 2px solid var(--color-border-default, rgba(255,255,255,0.08));
+}
+.el-table .el-table__row:hover > td {
+  background: var(--color-bg-hover, rgba(255,255,255,0.04)) !important;
+  box-shadow: inset 0 0 0 1px var(--color-accent-muted, rgba(59,130,246,0.1));
+}
+.el-table--striped .el-table__body tr.el-table__row--striped td {
+  background: var(--color-bg-overlay, rgba(255,255,255,0.015)) !important;
+}
+
+/* ── 分页暗色 ── */
+.el-pagination {
+  --el-pagination-bg-color: transparent;
+  --el-pagination-text-color: var(--color-text-secondary);
+  --el-pagination-button-bg-color: var(--color-bg-overlay);
+  --el-pagination-hover-color: var(--color-accent);
+}
+.el-pagination button,
+.el-pagination .el-pager li {
+  color: var(--color-text-secondary) !important;
+  background: var(--color-bg-overlay) !important;
+  border-radius: 6px !important;
+}
+.el-pagination button:hover,
+.el-pagination .el-pager li:hover {
+  color: var(--color-accent) !important;
+}
+.el-pagination .el-pager li.is-active {
+  background: var(--color-accent) !important;
+  color: #fff !important;
+}
+
+/* ── 对话框暗色覆盖 ── */
+.el-dialog {
+  --el-dialog-bg-color: var(--color-bg-raised, #141826);
+  --el-dialog-title-font-size: 16px;
+  border: 1px solid var(--color-border-light);
+  border-radius: 14px;
+  box-shadow: 0 16px 64px rgba(0,0,0,0.5);
+}
+.el-dialog__header {
+  border-bottom: 1px solid var(--color-border-subtle);
+  padding: 18px 24px 14px;
+}
+.el-dialog__body {
+  padding: 20px 24px;
 }
 
 /* ── 工具弹出框 ── */
@@ -528,9 +683,9 @@ const pageTitle = computed(() => {
 .timer-num-input {
   width: 56px;
   height: 30px;
-  background: #888888 !important;
-  color: #ffffff !important;
-  border: 2px solid #aaaaaa !important;
+  background: var(--color-bg-overlay, #2d2d2d) !important;
+  color: var(--color-text-primary, #e8ecf1) !important;
+  border: 1px solid var(--color-border-default, #444) !important;
   border-radius: 5px !important;
   text-align: center !important;
   font-size: 15px !important;
@@ -544,25 +699,25 @@ const pageTitle = computed(() => {
   margin: 0;
 }
 .timer-num-input:focus {
-  border-color: #4a9eff !important;
-  box-shadow: 0 0 0 2px rgba(74,158,255,0.3) !important;
+  border-color: var(--color-accent, #3b82f6) !important;
+  box-shadow: 0 0 0 2px rgba(59,130,246,0.3) !important;
 }
 /* 邮件配置文本输入框 */
 .tool-text-input {
   height: 28px;
-  background: #5a5a5a !important;
-  color: #ffffff !important;
-  border: 1px solid #777 !important;
+  background: var(--color-bg-overlay, #2d2d2d) !important;
+  color: var(--color-text-primary, #e8ecf1) !important;
+  border: 1px solid var(--color-border-default, #444) !important;
   border-radius: 4px !important;
   padding: 0 8px !important;
   font-size: 12px !important;
   outline: none !important;
 }
 .tool-text-input::placeholder {
-  color: #999 !important;
+  color: var(--color-text-disabled, #666) !important;
 }
 .tool-text-input:focus {
-  border-color: #4a9eff !important;
-  box-shadow: 0 0 0 2px rgba(74,158,255,0.3) !important;
+  border-color: var(--color-accent, #3b82f6) !important;
+  box-shadow: 0 0 0 2px rgba(59,130,246,0.3) !important;
 }
 </style>

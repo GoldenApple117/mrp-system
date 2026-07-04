@@ -10,6 +10,8 @@
       </el-select>
     </div>
 
+    <el-empty v-if="!loading &amp;&amp; tableData.length === 0" description="暂无生产工单" />
+
     <el-table :data="tableData" v-loading="loading" stripe border>
       <el-table-column prop="wo_number" label="工单号" width="180" />
       <el-table-column prop="material_code" label="物料编码" width="130" />

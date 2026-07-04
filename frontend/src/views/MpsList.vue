@@ -15,6 +15,8 @@
       <el-button size="small" @click="selectedIds = []">取消选择</el-button>
     </div>
 
+    <el-empty v-if="!loading &amp;&amp; tableData.length === 0" description="暂无 MPS 主计划，请先创建" />
+
     <el-table :data="tableData" v-loading="loading" stripe border
       @selection-change="(rows) => selectedIds = rows.map(r => r.id)">
       <el-table-column type="selection" width="50" />

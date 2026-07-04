@@ -13,8 +13,8 @@
     <!-- 汇总卡片 -->
     <el-row :gutter="16" style="margin-bottom:16px">
       <el-col :span="6"><div class="stat-card"><div class="stat-label">总应收</div><div class="stat-val">¥{{ formatMoney(summary.total_amount) }}</div></div></el-col>
-      <el-col :span="6"><div class="stat-card" style="border-left:3px solid #67c23a"><div class="stat-label">已到账</div><div class="stat-val" style="color:#67c23a">¥{{ formatMoney(summary.total_paid) }}</div></div></el-col>
-      <el-col :span="6"><div class="stat-card" style="border-left:3px solid #f56c6c"><div class="stat-label">未到账</div><div class="stat-val" style="color:#f56c6c">¥{{ formatMoney(summary.total_pending) }}</div></div></el-col>
+      <el-col :span="6"><div class="stat-card" style="border-left:3px solid var(--color-success)"><div class="stat-label">已到账</div><div class="stat-val" style="color:var(--color-success)">¥{{ formatMoney(summary.total_paid) }}</div></div></el-col>
+      <el-col :span="6"><div class="stat-card" style="border-left:3px solid var(--color-danger)"><div class="stat-label">未到账</div><div class="stat-val" style="color:var(--color-danger)">¥{{ formatMoney(summary.total_pending) }}</div></div></el-col>
       <el-col :span="6"><div class="stat-card"><div class="stat-label">记录数</div><div class="stat-val">{{ total }}</div></div></el-col>
     </el-row>
 
@@ -24,10 +24,10 @@
       <el-table-column prop="customer_name" label="客户" width="120" />
       <el-table-column prop="product_name" label="产品" min-width="120" show-overflow-tooltip />
       <el-table-column label="订单 出货/总量" width="100" align="center">
-        <template #default="{row}"><span style="color:#67c23a">{{ row.shipped_qty }}</span><span style="color:#999">/</span>{{ row.order_qty }}</template>
+        <template #default="{row}"><span style="color:var(--color-success)">{{ row.shipped_qty }}</span><span style="color:var(--color-text-tertiary)">/</span>{{ row.order_qty }}</template>
       </el-table-column>
       <el-table-column label="收款金额" width="120" align="right">
-        <template #default="{row}"><span style="font-weight:bold;color:#409eff">¥{{ formatMoney(row.amount) }}</span></template>
+        <template #default="{row}"><span style="font-weight:bold;color:var(--color-accent)">¥{{ formatMoney(row.amount) }}</span></template>
       </el-table-column>
       <el-table-column label="收款日期" width="120" align="center">
         <template #default="{row}">{{ row.payment_date || '—' }}</template>
@@ -154,7 +154,7 @@ onMounted(fetchData)
 <style scoped>
 .page-container { padding: 0; }
 .page-toolbar { display:flex; gap:12px; margin-bottom:16px; align-items:center; flex-wrap:wrap }
-.stat-card { background:var(--color-bg-overlay); border-radius:8px; padding:14px 18px; border:1px solid #ebeef5 }
-.stat-label { font-size:13px; color:#909399; margin-bottom:6px }
-.stat-val { font-size:22px; font-weight:bold; color:#303133 }
+.stat-card { background:var(--color-bg-overlay); border-radius:8px; padding:14px 18px; border:1px solid var(--color-border-light) }
+.stat-label { font-size:13px; color:var(--color-text-tertiary); margin-bottom:6px }
+.stat-val { font-size:22px; font-weight:bold; color:var(--color-text-primary) }
 </style>

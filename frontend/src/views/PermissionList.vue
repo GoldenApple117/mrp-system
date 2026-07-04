@@ -25,8 +25,8 @@
       <el-table-column label="操作" width="160" fixed="right">
         <template #default="{ row }">
           <template v-if="row.status === 'pending'">
-            <el-button type="success" size="small" @click="approve(row.id)">同意</el-button>
-            <el-button type="danger" size="small" @click="reject(row.id)">拒绝</el-button>
+            <el-button type="success" size="small" :loading="approvingId === row.id" @click="approve(row.id)">同意</el-button>
+            <el-button type="danger" size="small" :loading="rejectingId === row.id" @click="reject(row.id)">拒绝</el-button>
           </template>
           <span v-else class="text-xs text-[var(--color-text-tertiary)]">-</span>
         </template>
@@ -42,6 +42,8 @@ import api from '@/api'
 
 const requests = ref([])
 const loading = ref(false)
+const approvingId = ref(null)
+const rejectingId = ref(null)
 
 onMounted(fetchList)
 
@@ -56,23 +58,35 @@ async function fetchList() {
 }
 
 async function approve(id) {
+  approvingId.value = id
   try {
     const res = await api.put(`/permissions/approve/${id}`)
     ElMessage.success(res.message)
     fetchList()
-  } catch {}
+  } catch {} finally {
+    approvingId.value = null
+  }
 }
 
 async function reject(id) {
+  rejectingId.value = id
   try {
     await ElMessageBox.confirm('确定拒绝该申请？', '确认', { type: 'warning' })
     const res = await api.put(`/permissions/reject/${id}`)
     ElMessage.success(res.message)
     fetchList()
-  } catch {}
+  } catch {} finally {
+    rejectingId.value = null
+  }
 }
 
 function statusType(s) { return { pending: 'warning', approved: 'success', rejected: 'danger' }[s] || 'info' }
 function statusLabel(s) { return { pending: '审批中', approved: '已授权', rejected: '已拒绝' }[s] || s }
 function formatTime(t) { return t ? new Date(t).toLocaleString('zh-CN') : '' }
 </script>
+
+<style scoped>
+.perm-page {
+  padding: 0;
+}
+</style>

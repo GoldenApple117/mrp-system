@@ -177,15 +177,31 @@ class MrpCalculator:
                             planned_releases[item_code][tb_str] += gross
                     continue
 
-                # ── 产品层物料：不参与MRP运算，跳过 ──
+                # ── 产品层物料：生成生产工单建议，同时穿透传递需求 ──
                 if item_level_type == "产品":
-                    # 产品的毛需求来自MPS，但产品本身不创建计划订单
-                    # 产品的需求已在Step 2输入，由模块层承接传递
-                    # 只需将产品层的毛需求转为下达量传递给下层
+                    # 从工艺路线自动计算提前期（如果存在），否则用物料主数据手工值
+                    calc_lead_time = mat.get("lead_time", 0)
+                    route = mat.get("_routing")
+                    if route:
+                        total_hours = route.get("total_setup", 0) + route.get("total_run", 0)
+                        eff = max(route.get("efficiency", 85), 50) / 100  # 效率
+                        hours_per_day = 8
+                        calc_lead_time = max(1, round(total_hours / (eff * hours_per_day)))
+                    # 产品的毛需求来自MPS，需要生成PRODUCTION工单来制造
                     for tb in time_buckets:
                         tb_str = tb.isoformat()
                         gross = gross_requirements.get(item_code, {}).get(tb_str, 0)
                         if gross > 0:
+                            release_date = tb - timedelta(days=calc_lead_time)
+                            planned_orders.append({
+                                "item_code": item_code,
+                                "level": level,
+                                "order_type": "PRODUCTION",
+                                "release_date": release_date.isoformat(),
+                                "required_date": tb_str,
+                                "quantity": gross,
+                                "parent_code": "",
+                            })
                             planned_releases[item_code][tb_str] += gross
                     continue
 

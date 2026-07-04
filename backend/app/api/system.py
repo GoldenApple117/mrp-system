@@ -243,3 +243,220 @@ def get_module_inventory(db=Depends(get_db)):
 
     result.sort(key=lambda x: x["total_qty"], reverse=True)
     return result
+
+
+# ====== Excel 导出 ======
+def _make_excel_response(rows: list, filename: str):
+    """生成 Excel 文件并返回 StreamingResponse"""
+    from openpyxl import Workbook
+    wb = Workbook()
+    ws = wb.active
+    ws.title = filename[:31]
+    if rows:
+        headers = list(rows[0].keys())
+        ws.append(headers)
+        for row in rows:
+            ws.append([str(row.get(h, "")) for h in headers])
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}.xlsx"},
+    )
+
+
+@router.get("/export-excel/materials")
+def export_materials_excel(db: Session = Depends(get_db)):
+    """导出物料表为 Excel"""
+    from app.models.material import MaterialMaster
+    rows = db.query(MaterialMaster).all()
+    data = [{"物料编码": r.material_code, "物料名称": r.material_name,
+             "物料类型": r.material_type, "层级": r.level_type,
+             "单位": r.unit, "提前期(天)": r.lead_time,
+             "安全库存": r.safety_stock, "批量规则": r.lot_size_rule,
+             "是否外购": "是" if r.is_purchased else "否",
+             "损耗率(%)": r.scrap_rate} for r in rows]
+    return _make_excel_response(data, "物料主数据")
+
+
+@router.get("/export-excel/inventory")
+def export_inventory_excel(db: Session = Depends(get_db)):
+    """导出库存表为 Excel"""
+    from app.models.inventory import InventoryRecord
+    rows = db.query(InventoryRecord).all()
+    data = [{"物料编码": r.item.material_code if r.item else "",
+             "物料名称": r.item.material_name if r.item else "",
+             "仓库": r.warehouse.warehouse_name if r.warehouse else "",
+             "库位": r.location_code, "现有库存": r.on_hand_qty,
+             "已分配": r.allocated_qty, "已预留": r.reserved_qty,
+             "在途": r.on_order_qty, "在制": r.on_production_qty,
+             "可用量": r.on_hand_qty - r.allocated_qty - r.reserved_qty if hasattr(r, 'allocated_qty') else r.on_hand_qty}
+            for r in rows]
+    return _make_excel_response(data, "库存数据")
+
+
+@router.get("/export-excel/work-orders")
+def export_work_orders_excel(db: Session = Depends(get_db)):
+    """导出工单表为 Excel"""
+    from app.models.order import WorkOrder
+    rows = db.query(WorkOrder).all()
+    data = [{"工单号": r.wo_number, "物料编码": r.item.material_code if r.item else "",
+             "物料名称": r.item.material_name if r.item else "",
+             "计划产量": r.plan_qty, "完成数": r.completed_qty,
+             "不合格": getattr(r, 'rejected_qty', 0),
+             "工时(h)": getattr(r, 'labor_hours', 0),
+             "开始": r.start_date.isoformat() if r.start_date else "",
+             "完成": r.end_date.isoformat() if r.end_date else "",
+             "状态": r.status,
+             "工作中心": r.work_center.center_name if r.work_center else "",
+             "来源": r.source_type} for r in rows]
+    return _make_excel_response(data, "生产工单")
+
+
+@router.get("/export-excel/bom")
+def export_bom_excel(db: Session = Depends(get_db)):
+    """导出BOM表为 Excel"""
+    from app.models.bom import BomLine, BomHeader
+    from app.models.material import MaterialMaster
+    lines = db.query(BomLine).all()
+    data = []
+    for l in lines:
+        parent = db.query(MaterialMaster).filter(MaterialMaster.id == l.parent_item_id).first()
+        child = db.query(MaterialMaster).filter(MaterialMaster.id == l.item_id).first()
+        bom_header = db.query(BomHeader).filter(BomHeader.id == l.bom_header_id).first()
+        data.append({
+            "BOM编号": bom_header.bom_code if bom_header else "",
+            "父物料编码": parent.material_code if parent else "",
+            "父物料名称": parent.material_name if parent else "",
+            "子物料编码": child.material_code if child else "",
+            "子物料名称": child.material_name if child else "",
+            "单位用量": l.quantity, "位号": l.position,
+            "层级": l.level, "损耗率(%)": l.scrap_rate,
+        })
+    return _make_excel_response(data, "BOM清单")
+
+
+# ====== BOM 完整性校验 ======
+@router.get("/bom-check")
+def check_bom_integrity(db: Session = Depends(get_db)):
+    """BOM完整性校验：循环引用、缺失物料、孤儿物料"""
+    from app.models.bom import BomLine, BomHeader
+    from app.models.material import MaterialMaster
+    from app.services.bom_exploder import BomExploder
+
+    issues = []
+
+    # 1. 所有 BOM 行中的物料必须存在于 material_master
+    all_materials = {m.id: m for m in db.query(MaterialMaster).all()}
+    all_lines = db.query(BomLine).all()
+    for l in all_lines:
+        if l.parent_item_id and l.parent_item_id not in all_materials:
+            issues.append({"type": "缺失父物料", "detail": f"BOM行#{l.id}: parent_item_id={l.parent_item_id} 不存在"})
+        if l.item_id not in all_materials:
+            issues.append({"type": "缺失子物料", "detail": f"BOM行#{l.id}: item_id={l.item_id} 不存在"})
+
+    # 2. 计算高低码，检查循环引用
+    try:
+        from app.services.mrp_calculator import MrpCalculator
+        calc = MrpCalculator(db_session=db)
+        llc_map = calc._compute_llc(db, list(all_materials.keys()))
+    except Exception as e:
+        issues.append({"type": "循环引用", "detail": str(e)[:200]})
+
+    # 3. 检查是否有物料没有关联 BOM（零件级、无子物料的是正常的）
+    items_with_children = set()
+    for l in all_lines:
+        if l.parent_item_id:
+            items_with_children.add(l.parent_item_id)
+    
+    orphan_products = []
+    for mid, mat in all_materials.items():
+        if mat.level_type in ("产品", "模块") and mid not in items_with_children:
+            orphan_products.append(mat.material_code)
+
+    if orphan_products:
+        issues.append({"type": "产品/模块无BOM", "detail": f"无BOM: {', '.join(orphan_products[:10])}"})
+
+    # 4. 统计
+    return {
+        "total_issues": len(issues),
+        "issues": issues,
+        "summary": {
+            "total_materials": len(all_materials),
+            "total_bom_lines": len(all_lines),
+            "products_with_bom": len([h for h in db.query(BomHeader).all()]),
+        },
+    }
+
+
+# ====== Dashboard 增强 ======
+@router.get("/dashboard/alerts")
+def dashboard_alerts(db: Session = Depends(get_db)):
+    """Dashboard告警卡片：安全库存预警、逾期工单、呆滞料"""
+    from app.models.material import MaterialMaster
+    from app.models.inventory import InventoryRecord
+    from app.models.order import WorkOrder
+
+    alerts = []
+
+    # 1. 安全库存预警（库存低于安全库存）
+    mats = db.query(MaterialMaster).all()
+    low_stock = []
+    for mat in mats:
+        if not mat.safety_stock or mat.safety_stock <= 0:
+            continue
+        inv = db.query(InventoryRecord).filter(InventoryRecord.item_id == mat.id).first()
+        on_hand = inv.on_hand_qty if inv else 0
+        if on_hand < mat.safety_stock:
+            low_stock.append({
+                "material_code": mat.material_code,
+                "material_name": mat.material_name,
+                "on_hand": on_hand,
+                "safety_stock": mat.safety_stock,
+                "gap": mat.safety_stock - on_hand,
+            })
+    if low_stock:
+        alerts.append({"type": "warning", "title": "安全库存预警",
+                        "count": len(low_stock),
+                        "detail": f"{len(low_stock)}种物料低于安全库存",
+                        "items": low_stock[:5]})
+
+    # 2. 逾期工单
+    today = datetime.now().date()
+    overdue = db.query(WorkOrder).filter(
+        WorkOrder.end_date < today,
+        WorkOrder.status.in_(["已下达", "进行中"])
+    ).all()
+    if overdue:
+        alerts.append({"type": "danger", "title": "逾期工单",
+                        "count": len(overdue),
+                        "detail": f"{len(overdue)}个工单已超期",
+                        "items": [{"wo": o.wo_number, "due": o.end_date.isoformat()} for o in overdue[:5]]})
+
+    # 3. 呆滞料预警（30天无变动且库存>0）
+    import datetime as _dt
+    cutoff = _dt.datetime.now() - _dt.timedelta(days=30)
+    slow_moving = db.query(InventoryRecord).filter(
+        InventoryRecord.on_hand_qty > 0,
+        InventoryRecord.last_count_date < cutoff if hasattr(InventoryRecord, 'last_count_date') and InventoryRecord.last_count_date else True
+    ).limit(5).all()
+    if slow_moving:
+        alerts.append({"type": "info", "title": "呆滞料预警",
+                        "count": len(slow_moving),
+                        "detail": "长期未变动物料",
+                        "items": [{"code": s.item.material_code if s.item else "", "qty": s.on_hand_qty} for s in slow_moving]})
+
+    # 4. 今日待办
+    from app.models.bom import BomHeader
+    pending = db.query(WorkOrder).filter(
+        WorkOrder.status.in_(["待下达", "已下达"])
+    ).count()
+
+    return {
+        "alerts": alerts,
+        "pending_orders": pending,
+        "total_materials": len(mats),
+        "total_bom": db.query(BomHeader).count(),
+    }

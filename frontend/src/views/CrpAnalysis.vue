@@ -16,6 +16,9 @@
       </el-row>
     </el-card>
 
+    <el-empty v-if="!loading &amp;&amp; !summary" description="暂无产能数据，请先运行 MRP 运算" />
+
+    <template v-if="summary">
     <!-- 摘要 -->
     <el-row :gutter="16" v-if="summary" style="margin-bottom:16px">
       <el-col :span="6">
@@ -81,6 +84,7 @@
         </el-table-column>
       </el-table>
     </el-card>
+  </template>
   </div>
 </template>
 

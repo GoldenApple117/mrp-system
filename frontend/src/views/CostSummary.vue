@@ -29,13 +29,13 @@
             <!-- 模块明细 -->
             <div v-for="mod in project.modules" :key="mod.module_code" class="module-section">
               <div class="module-header">
-                <span style="font-weight:600;color:#333">{{ mod.module_name }}</span>
-                <span style="color:#999;font-size:12px">{{ mod.part_count }} 项有定价</span>
-                <span style="color:#e6a23c;font-weight:bold;font-size:15px">¥{{ formatMoney(mod.total) }}</span>
+                <span style="font-weight:600;color:var(--color-text-primary)">{{ mod.module_name }}</span>
+                <span style="color:var(--color-text-tertiary);font-size:12px">{{ mod.part_count }} 项有定价</span>
+                <span style="color:var(--color-warning);font-weight:bold;font-size:15px">¥{{ formatMoney(mod.total) }}</span>
               </div>
 
               <!-- 模块进度条 -->
-              <div style="height:4px;background:#f0f0f0;border-radius:2px;margin:4px 0 8px">
+              <div style="height:4px;background:var(--color-bg-overlay);border-radius:2px;margin:4px 0 8px">
                 <div :style="{width: percent(mod.total, project.project_total) + '%', height:'100%', background: progressColor(mod.total, project.project_total), borderRadius:'2px', transition:'width 0.6s'}" />
               </div>
 
@@ -50,7 +50,7 @@
                 <el-table-column prop="quantity" label="数量" width="70" align="center" />
                 <el-table-column label="金额" width="100" align="right">
                   <template #default="{row}">
-                    <span style="font-weight:bold;color:#e6a23c">¥{{ formatMoney(row.cost) }}</span>
+                    <span style="font-weight:bold;color:var(--color-warning)">¥{{ formatMoney(row.cost) }}</span>
                   </template>
                 </el-table-column>
               </el-table>
@@ -89,9 +89,9 @@ function percent(part, total) {
 
 function progressColor(part, total) {
   const p = percent(part, total)
-  if (p > 50) return '#409eff'
-  if (p > 20) return '#e6a23c'
-  return '#67c23a'
+  if (p > 50) return 'var(--color-accent)'
+  if (p > 20) return 'var(--color-warning)'
+  return 'var(--color-success)'
 }
 
 async function fetchData() {
@@ -116,28 +116,28 @@ onMounted(fetchData)
 .page-container { padding: 0;; min-height:80vh }
 
 .project-card {
-  border:1px solid #e4e7ed; border-radius:10px; margin-bottom:16px; overflow:hidden;
+  border:1px solid var(--color-border-light); border-radius:10px; margin-bottom:16px; overflow:hidden;
   transition: box-shadow 0.2s;
 }
-.project-card:hover { box-shadow:0 2px 12px rgba(0,0,0,0.06) }
+.project-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.3) }
 
 .project-header {
   display:flex; align-items:center; justify-content:space-between;
   padding:16px 20px; cursor:pointer; background:var(--color-bg-overlay);
-  border-bottom:1px solid #ebeef5;
+  border-bottom:1px solid var(--color-border-light);
   user-select:none;
 }
-.project-header:hover { background:#f0f5ff }
+.project-header:hover { background:var(--color-bg-hover) }
 
 .project-total {
-  font-size:22px; font-weight:bold; color:#409eff;
+  font-size:22px; font-weight:bold; color:var(--color-accent);
   font-family:'Segoe UI', monospace;
 }
 
 .project-body { padding:16px 20px 20px }
 
 .module-section {
-  margin-bottom:16px; border:1px solid #f0f0f0; border-radius:8px;
+  margin-bottom:16px; border:1px solid var(--color-border-light); border-radius:8px;
   padding:12px 14px; background:var(--color-bg-overlay);
 }
 

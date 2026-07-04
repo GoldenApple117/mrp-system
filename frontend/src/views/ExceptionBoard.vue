@@ -16,9 +16,9 @@
 
     <!-- 汇总卡片 -->
     <el-row :gutter="16" style="margin-bottom:16px">
-      <el-col :span="4"><div class="stat-card" style="border-left:3px solid #909399"><div class="sl">未处理</div><div class="sv">{{ summary.unresolved }}</div></div></el-col>
-      <el-col :span="4"><div class="stat-card" style="border-left:3px solid #f56c6c"><div class="sl">错误</div><div class="sv" style="color:#f56c6c">{{ summary.errors }}</div></div></el-col>
-      <el-col :span="4"><div class="stat-card" style="border-left:3px solid #e6a23c"><div class="sl">警告</div><div class="sv" style="color:#e6a23c">{{ summary.warnings }}</div></div></el-col>
+      <el-col :span="4"><div class="stat-card" style="border-left:3px solid var(--color-text-tertiary)"><div class="sl">未处理</div><div class="sv">{{ summary.unresolved }}</div></div></el-col>
+      <el-col :span="4"><div class="stat-card" style="border-left:3px solid var(--color-danger)"><div class="sl">错误</div><div class="sv" style="color:var(--color-danger)">{{ summary.errors }}</div></div></el-col>
+      <el-col :span="4"><div class="stat-card" style="border-left:3px solid var(--color-warning)"><div class="sl">警告</div><div class="sv" style="color:var(--color-warning)">{{ summary.warnings }}</div></div></el-col>
       <el-col :span="4" v-for="t in summary.by_type" :key="t.type">
         <div class="stat-card" :style="{borderLeft:'3px solid '+typeColor(t.type)}">
           <div class="sl">{{ summary.type_labels?.[t.type] || t.type }}</div>
@@ -84,7 +84,7 @@ const summary = reactive({
 })
 
 function typeColor(t) {
-  return {SHORTAGE:'#f56c6c',OVERDUE_ORDER:'#e6a23c',SAFETY_STOCK_ALERT:'#409eff',SUBSTITUTE:'#67c23a'}[t]||'#909399'
+  return {SHORTAGE:'var(--color-danger)',OVERDUE_ORDER:'var(--color-warning)',SAFETY_STOCK_ALERT:'var(--color-accent)',SUBSTITUTE:'var(--color-success)'}[t]||'var(--color-text-tertiary)'
 }
 
 async function fetchData() {
@@ -138,8 +138,8 @@ onMounted(fetchData)
 <style scoped>
 .page-container { padding: 0; }
 .page-toolbar { display:flex; gap:12px; margin-bottom:16px; align-items:center; flex-wrap:wrap }
-.stat-card { background:var(--color-bg-overlay); border-radius:8px; padding:12px 16px; border:1px solid #ebeef5 }
-.sl { font-size:13px; color:#909399; margin-bottom:4px }
-.sv { font-size:22px; font-weight:bold; color:#303133 }
-.batch-bar { display:flex; align-items:center; gap:8px; background:#f0f9eb; border:1px solid #b3e19d; padding:8px 14px; border-radius:6px; margin-bottom:12px }
+.stat-card { background:var(--color-bg-overlay); border-radius:8px; padding:12px 16px; border:1px solid var(--color-border-light) }
+.sl { font-size:13px; color:var(--color-text-tertiary); margin-bottom:4px }
+.sv { font-size:22px; font-weight:bold; color:var(--color-text-primary) }
+.batch-bar { display:flex; align-items:center; gap:8px; background:var(--color-success-muted); border:1px solid var(--color-success-light); padding:8px 14px; border-radius:6px; margin-bottom:12px }
 </style>

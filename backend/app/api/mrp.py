@@ -14,6 +14,9 @@ from app.services.mrp_calculator import MrpCalculator
 
 router = APIRouter(prefix="/api/mrp", tags=["MRP运算"])
 
+# 缓存最近一次 MRP 运行结果（内存缓存，服务器重启后清空）
+_last_mrp_result = None
+
 
 def run_mrp_logic(db: Session, horizon_days: int = 90, time_fence_days: int = 7) -> dict:
     """
@@ -86,6 +89,23 @@ def run_mrp_logic(db: Session, horizon_days: int = 90, time_fence_days: int = 7)
         }
         for m in materials_raw
     ]
+
+    # 3b. 为产品物料附加工艺路线数据（用于自动计算提前期）
+    from app.models.routing import RoutingHeader
+    routings = {r.item_id: r for r in db.query(RoutingHeader).filter(RoutingHeader.is_active == True).all()}
+    for mm in material_masters:
+        if mm["level_type"] == "产品":
+            m_id = next((m.id for m in materials_raw if m.material_code == mm["code"]), None)
+            route = routings.get(m_id) if m_id else None
+            if route and route.operations:
+                total_setup = sum(op.setup_time or 0 for op in route.operations)
+                total_run = sum(op.run_time_per_unit or 0 for op in route.operations)
+                avg_eff = sum(op.work_center.efficiency or 85 for op in route.operations if op.work_center) / max(len(route.operations), 1)
+                mm["_routing"] = {
+                    "total_setup": total_setup,
+                    "total_run": total_run,
+                    "efficiency": avg_eff,
+                }
 
     # 4. 读取库存快照
     inventory_records = db.query(InventoryRecord).all()
@@ -207,22 +227,26 @@ def run_mrp_logic(db: Session, horizon_days: int = 90, time_fence_days: int = 7)
 @router.post("/run")
 def run_mrp(data: dict, db: Session = Depends(get_db)):
     """执行MRP运算（API入口）"""
+    global _last_mrp_result
     horizon_days = data.get("horizon_days", 90)
     time_fence_days = data.get("time_fence_days", 7)
     result = run_mrp_logic(db, horizon_days, time_fence_days)
     if not result.get("success"):
         return result
+    # 缓存结果供 convert-to-orders 使用
+    _last_mrp_result = result.get("data", {}).get("planned_orders", [])
     return result
 
 
 @router.post("/convert-to-orders")
-def convert_mrp_to_orders(data: dict, db: Session = Depends(get_db)):
+def convert_mrp_to_orders(data: dict = None, db: Session = Depends(get_db)):
     """
     将MRP计划建议转换为实际订单
-    采购建议 → 采购申请(PR)
-    生产建议 → 工单
+    优先使用请求中传入的 planned_orders，否则自动使用最近一次 MRP 运算结果
     """
-    planned_orders = data.get("planned_orders", [])
+    global _last_mrp_result
+    data = data or {}
+    planned_orders = data.get("planned_orders", []) or _last_mrp_result or []
     
     if not planned_orders:
         return {
@@ -234,6 +258,12 @@ def convert_mrp_to_orders(data: dict, db: Session = Depends(get_db)):
     created_po = 0
     created_wo = 0
     errors = []
+
+    # 自动缓存模式下限制转换数量（避免超时），前端可传完整列表覆盖
+    max_auto = 200
+    if not data.get("planned_orders") and len(planned_orders) > max_auto:
+        errors.append(f"计划订单过多({len(planned_orders)}条)，自动转换仅处理前{max_auto}条。如需全部转换请通过前端页面操作。")
+        planned_orders = planned_orders[:max_auto]
 
     # 使用时间戳+序号确保编号唯一（seq从数据库实时读取，同一请求内自增）
     from datetime import datetime
@@ -259,8 +289,12 @@ def convert_mrp_to_orders(data: dict, db: Session = Depends(get_db)):
                 # 采购申请，同步物料主数据
                 unit_price = mat.reference_unit_price or 0
                 order_qty = order["quantity"]
-                # 查找物料默认供应商，无则留空
+                # 查找物料默认供应商，无则使用第一个供应商
                 supplier_id = mat.default_supplier_id if hasattr(mat, 'default_supplier_id') and mat.default_supplier_id else None
+                if not supplier_id:
+                    from app.models.supplier import Supplier
+                    first_sup = db.query(Supplier).first()
+                    supplier_id = first_sup.id if first_sup else 1
                 po = PurchaseOrder(
                     po_number=f"{po_base}-{po_seq:04d}",
                     supplier_id=supplier_id,
@@ -281,6 +315,13 @@ def convert_mrp_to_orders(data: dict, db: Session = Depends(get_db)):
 
             elif order["order_type"] == "PRODUCTION":
                 wo_seq += 1
+                # 自动关联工艺路线和工作中心
+                from app.models.routing import RoutingHeader
+                routing = db.query(RoutingHeader).filter(
+                    RoutingHeader.item_id == mat.id, RoutingHeader.is_active == True
+                ).first()
+                wc_id = routing.operations[0].work_center_id if routing and routing.operations else None
+                
                 wo = WorkOrder(
                     wo_number=f"{wo_base}-{wo_seq:04d}",
                     item_id=mat.id,
@@ -290,6 +331,8 @@ def convert_mrp_to_orders(data: dict, db: Session = Depends(get_db)):
                     status="待下达",
                     source_type="MRP建议",
                     priority=order.get("level", 0),
+                    routing_id=routing.id if routing else None,
+                    work_center_id=wc_id,
                 )
                 db.add(wo)
                 created_wo += 1

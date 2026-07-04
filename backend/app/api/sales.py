@@ -133,7 +133,7 @@ def create_sales_order(data: SalesOrderCreate, db: Session = Depends(get_db)):
         pay_status="未收款",
         status="进行中",
         priority=data.priority,
-        remark=data.get("remark", ""),
+        remark=data.remark or "",
     )
     db.add(so)
     db.commit()
@@ -210,4 +210,63 @@ def sales_order_to_mps(order_id: int, db: Session = Depends(get_db)):
     return {
         "success": True,
         "message": f"已生成MPS计划: {so.item.material_name if so.item else ''} x{so.order_qty} @ {so.delivery_date}",
+    }
+
+
+@router.post("/orders/{order_id}/ship")
+def ship_sales_order(order_id: int, data: dict = None, db: Session = Depends(get_db)):
+    """销售出库 — 从成品库存扣减并更新出货状态"""
+    from app.models.inventory import InventoryRecord, InventoryTransaction
+    from datetime import datetime
+
+    so = db.query(SalesOrder).filter(SalesOrder.id == order_id).first()
+    if not so:
+        raise HTTPException(status_code=404, detail="订单不存在")
+    if so.ship_status == "已出货":
+        raise HTTPException(status_code=400, detail="该订单已出货")
+
+    data = data or {}
+    ship_qty = data.get("shipped_qty", so.order_qty - (so.shipped_qty or 0))
+
+    # 查成品库存
+    inv = db.query(InventoryRecord).filter(InventoryRecord.item_id == so.item_id).first()
+    if not inv or inv.on_hand_qty < ship_qty:
+        raise HTTPException(
+            status_code=400,
+            detail=f"库存不足：需求{ship_qty}，可用{inv.on_hand_qty if inv else 0}"
+        )
+
+    # 扣减库存
+    inv.on_hand_qty -= ship_qty
+
+    # 记录流水
+    db.add(InventoryTransaction(
+        item_id=so.item_id,
+        warehouse_id=inv.warehouse_id,
+        transaction_type="销售出库",
+        quantity=-ship_qty,
+        reference_no=so.order_number,
+        operator="系统",
+        remark=f"订单{so.order_number}出货{ship_qty}，客户{so.customer.customer_name if so.customer else ''}",
+    ))
+
+    # 更新订单
+    so.shipped_qty = (so.shipped_qty or 0) + ship_qty
+    if so.shipped_qty >= so.order_qty:
+        so.ship_status = "已出货"
+        so.status = "已完成"
+    else:
+        so.ship_status = "部分出货"
+
+    db.commit()
+
+    return {
+        "success": True,
+        "message": f"出货{ship_qty}，库存剩余{inv.on_hand_qty}，订单状态{so.ship_status}",
+        "data": {
+            "shipped_qty": so.shipped_qty,
+            "order_qty": so.order_qty,
+            "ship_status": so.ship_status,
+            "remaining_stock": inv.on_hand_qty,
+        }
     }

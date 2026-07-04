@@ -38,18 +38,18 @@
         </el-table-column>
         <el-table-column label="数量" width="85" align="center">
           <template #default="{row}">
-            <span @click="showEdit(row)" style="cursor:pointer;text-decoration:underline dashed #409eff">{{ row.order_qty }}</span>
+            <span @click="showEdit(row)" style="cursor:pointer;text-decoration:underline dashed var(--color-accent, #409eff)">{{ row.order_qty }}</span>
           </template>
         </el-table-column>
         <el-table-column label="出货状态" width="130" align="center">
           <template #default="{row}">
-            <span style="color:#67c23a">{{ row.shipped_qty || 0 }}</span>/{{ row.order_qty }}
+            <span style="color:var(--color-success, #67c23a)">{{ row.shipped_qty || 0 }}</span>/{{ row.order_qty }}
             <el-tag :type="row.ship_status==='全部出货'?'success':row.ship_status==='部分出货'?'warning':'danger'" size="small" style="margin-left:4px">{{ row.ship_status }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column label="收款状态" width="130" align="center">
           <template #default="{row}">
-            <span style="color:#409eff">¥{{ formatMoney(row.paid_amount) }}</span>/¥{{ formatMoney(row.total_amount) }}
+            <span style="color:var(--color-accent, #409eff)">¥{{ formatMoney(row.paid_amount) }}</span>/¥{{ formatMoney(row.total_amount) }}
             <el-tag :type="row.pay_status==='全部收款'?'success':row.pay_status==='部分收款'?'warning':'danger'" size="small" style="margin-left:4px">{{ row.pay_status }}</el-tag>
           </template>
         </el-table-column>
@@ -343,11 +343,11 @@ onMounted(() => { fetchData(); fetchCustomers() })
 .page-toolbar { display:flex; gap:12px; margin-bottom:16px; align-items:center; }
 .batch-bar {
   display:flex; align-items:center; gap:8px;
-  background:#f0f9ff; border:1px solid #a0cfff; padding:8px 14px; border-radius:6px; margin-bottom:12px;
+  background:var(--color-accent-muted, rgba(59,130,246,0.06)); border:1px solid var(--color-accent, #a0cfff); padding:8px 14px; border-radius:6px; margin-bottom:12px;
 }
-:deep(.row-pending) { background-color:#fdf6ec !important; }
-:deep(.row-making) { background-color:#ecf5ff !important; }
-:deep(.row-shipped) { background-color:#f0f9eb !important; }
-:deep(.row-done) { background-color:#f4f4f5 !important; }
-:deep(.row-cancel) { background-color:#fef0f0 !important; text-decoration:line-through; }
+:deep(.row-pending) { background-color:var(--color-warning-muted, rgba(234,179,8,0.08)) !important; }
+:deep(.row-making) { background-color:var(--color-accent-muted, rgba(59,130,246,0.06)) !important; }
+:deep(.row-shipped) { background-color:var(--color-success-muted, rgba(34,197,94,0.06)) !important; }
+:deep(.row-done) { background-color:var(--color-bg-overlay, rgba(255,255,255,0.03)) !important; }
+:deep(.row-cancel) { background-color:var(--color-danger-muted, rgba(239,68,68,0.06)) !important; text-decoration:line-through; }
 </style>

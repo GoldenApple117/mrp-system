@@ -46,6 +46,23 @@
       />
     </div>
 
+    <!-- ══════════ 预警卡片 ══════════ -->
+    <div v-if="dashAlerts.length > 0" class="grid grid-cols-3 gap-3">
+      <div v-for="a in dashAlerts" :key="a.title"
+        class="flex items-center gap-3 rounded-lg p-3 cursor-pointer bg-[var(--color-bg-overlay)] border border-[var(--color-border-subtle)]"
+        @click="$router.push(a.type==='danger'?'/production':a.type==='warning'?'/inventory':'/mrp')">
+        <component :is="a.type==='danger'?'WarningFilled':a.type==='warning'?'Box':'Setting'" style="font-size:20px" />
+        <div class="flex-1 min-w-0">
+          <div class="text-xs text-[var(--color-text-primary)] font-semibold">{{ a.title }}</div>
+          <div class="text-2xs text-[var(--color-text-tertiary)] truncate">{{ a.detail }}</div>
+        </div>
+        <span class="text-lg font-bold"
+          :class="a.type==='danger'?'text-[var(--color-danger)]':a.type==='warning'?'text-[var(--color-warning)]':'text-[var(--color-accent)]'">
+          {{ a.count }}
+        </span>
+      </div>
+    </div>
+
     <!-- ══════════ 快捷操作 + 最近概况 ══════════ -->
     <div class="grid grid-cols-3 gap-4">
       <!-- 快捷操作 -->
@@ -177,7 +194,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch, nextTick } from 'vue'
+import { ref, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
+import { darkChartOptions } from '@/utils/echarts-theme'
 import { useRoute } from 'vue-router'
 import * as echarts from 'echarts'
 import api from '@/api'
@@ -211,6 +229,7 @@ const woChart = ref(null)
 const invData = ref([])
 const woData = ref([])
 const lowStockItems = ref([])
+const dashAlerts = ref([])
 
 // ====== 数据加载 ======
 async function loadDashboard() {
@@ -222,6 +241,7 @@ async function loadDashboard() {
       loadInventory(),
       loadWorkOrders(),
       loadTimer(),
+      loadAlerts(),
     ])
   } finally {
     loading.value = false
@@ -288,6 +308,13 @@ async function loadInventory() {
   }
 }
 
+async function loadAlerts() {
+  try {
+    const res = await api.get('/system/dashboard/alerts')
+    dashAlerts.value = res.alerts || []
+  } catch { dashAlerts.value = [] }
+}
+
 async function loadWorkOrders() {
   try {
     const res = await api.get('/production/orders', { params: { page_size: 1000 } })
@@ -322,28 +349,30 @@ function renderInventoryChart() {
   const values = invData.value.map(d => d.value)
   const colors = ['#3b82f6', '#8b5cf6', '#22c55e', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899', '#14b8a6']
 
+  const theme = darkChartOptions({
+    grid: { left: 100, right: 40, top: 8, bottom: 8 },
+  })
+
   chart.setOption({
+    ...theme,
     tooltip: {
+      ...theme.tooltip,
       trigger: 'axis',
-      backgroundColor: '#1a1a1e',
-      borderColor: '#333',
-      textStyle: { color: '#ccc', fontSize: 12 },
       formatter: (params) => {
         const d = invData.value[params[0].dataIndex]
         return `${d.name}<br/>库存总量: ${d.value}<br/>物料数: ${d.count}`
       },
     },
-    grid: { left: 100, right: 40, top: 8, bottom: 8 },
     xAxis: {
       type: 'value',
+      axisLabel: theme.yAxis.axisLabel,
       splitLine: { lineStyle: { color: '#2a2a2e' } },
-      axisLabel: { color: '#888', fontSize: 11 },
     },
     yAxis: {
       type: 'category',
       data: names,
-      axisLine: { lineStyle: { color: '#333' } },
-      axisLabel: { color: '#ccc', fontSize: 12 },
+      axisLine: theme.xAxis.axisLine,
+      axisLabel: { ...theme.xAxis.axisLabel, fontSize: 12 },
       inverse: true,
     },
     series: [{
@@ -365,30 +394,31 @@ function renderInventoryChart() {
       },
     }],
   })
-  window.addEventListener('resize', () => chart.resize())
+
+  chart._resizeHandler = () => chart.resize()
+  window.addEventListener('resize', chart._resizeHandler)
 }
 
 function renderWoChart() {
   if (!woChart.value || !woData.value.length) return
   const chart = echarts.init(woChart.value)
+
+  const theme = darkChartOptions()
+
   chart.setOption({
+    ...theme,
     tooltip: {
+      ...theme.tooltip,
       trigger: 'axis',
-      backgroundColor: '#1a1a1e',
-      borderColor: '#333',
-      textStyle: { color: '#ccc', fontSize: 12 },
     },
-    grid: { left: 8, right: 16, top: 8, bottom: 24 },
     xAxis: {
+      ...theme.xAxis,
       type: 'category',
       data: woData.value.map(d => d.name),
-      axisLine: { lineStyle: { color: '#333' } },
-      axisLabel: { color: '#888', fontSize: 11 },
     },
     yAxis: {
+      ...theme.yAxis,
       type: 'value',
-      splitLine: { lineStyle: { color: '#2a2a2e' } },
-      axisLabel: { color: '#888', fontSize: 11 },
     },
     series: [{
       type: 'bar',
@@ -408,7 +438,9 @@ function renderWoChart() {
       },
     }],
   })
-  window.addEventListener('resize', () => chart.resize())
+
+  chart._resizeHandler = () => chart.resize()
+  window.addEventListener('resize', chart._resizeHandler)
 }
 
 // ====== 路由切换时重新加载 ======
@@ -420,6 +452,19 @@ watch(() => route.path, (newPath) => {
 
 onMounted(() => {
   loadDashboard()
+})
+
+onBeforeUnmount(() => {
+  ;[inventoryChart.value, woChart.value].forEach(el => {
+    if (!el) return
+    const instance = echarts.getInstanceByDom(el)
+    if (instance) {
+      if (instance._resizeHandler) {
+        window.removeEventListener('resize', instance._resizeHandler)
+      }
+      instance.dispose()
+    }
+  })
 })
 </script>
 

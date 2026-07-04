@@ -4,6 +4,8 @@
       <el-button type="primary" @click="showDialog(null)"><el-icon><Plus /></el-icon> 新建工艺路线</el-button>
     </div>
 
+    <el-empty v-if="!loading &amp;&amp; tableData.length === 0" description="暂无工艺路线数据" />
+
     <el-table :data="tableData" v-loading="loading" stripe border @row-click="showDetail">
       <el-table-column prop="routing_code" label="工艺编码" width="150" />
       <el-table-column prop="material_code" label="物料编码" width="130" />
@@ -75,7 +77,7 @@
     </el-dialog>
 
     <!-- 详情弹窗 -->
-    <el-dialog v-model="detailVisible" title="工艺路线详情" width="700px">
+    <el-dialog v-model="detailVisible" title="工艺路线详情" width="700px" v-loading="!detailData">
       <template v-if="detailData">
         <el-descriptions :column="2" border size="small">
           <el-descriptions-item label="工艺编码">{{ detailData.header.routing_code }}</el-descriptions-item>
@@ -90,13 +92,14 @@
           <el-table-column label="排队(min)" prop="queue_time" width="100" />
         </el-table>
       </template>
-      <div v-else style="text-align:center;padding:40px;color:#999">加载中...</div>
+      <div v-else style="text-align:center;padding:40px;color:#999"><el-icon class="is-loading"><Loading /></el-icon> 加载中...</div>
     </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { Loading } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import api from '@/api'
 
