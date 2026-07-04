@@ -18,7 +18,7 @@ COPY --from=frontend /build/frontend/dist ./frontend/dist
 # 复制后端代码
 COPY backend/ ./backend/
 
-# 安装后端依赖
+# 安装后端依赖 (v2 - ensure openpyxl installed)
 RUN pip install --no-cache-dir -r backend/requirements.txt
 
 # 健康检查
