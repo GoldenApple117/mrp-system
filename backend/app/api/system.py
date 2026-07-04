@@ -276,10 +276,12 @@ def _make_excel_response(rows: list, filename: str):
         buf = io.BytesIO()
         wb.save(buf)
         buf.seek(0)
+        from urllib.parse import quote
+        safe_name = quote(f"{filename}.xlsx")
         return StreamingResponse(
             buf,
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={"Content-Disposition": f"attachment; filename={filename}.xlsx"},
+            headers={"Content-Disposition": f"attachment; filename*=UTF-8''{safe_name}"},
         )
     except Exception as e:
         err_msg = f"Excel export error (type={type(e).__name__}): {str(e)}\n"
