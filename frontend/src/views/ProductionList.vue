@@ -26,13 +26,13 @@
       <el-table-column prop="labor_hours" label="工时" width="65" align="center" />
       <el-table-column prop="start_date" label="开始" width="100" show-overflow-tooltip />
       <el-table-column prop="end_date" label="完成" width="100" show-overflow-tooltip />
-      <el-table-column label="状态" width="80" align="center">
+      <el-table-column label="状态" width="90" align="center">
         <template #default="{row}">
           <el-tag :type="woStatusTag(row.status)" size="small">{{ row.status }}</el-tag>
         </template>
       </el-table-column>
       <el-table-column prop="work_center_name" label="工作中心" width="100" show-overflow-tooltip />
-      <el-table-column label="操作" width="200" fixed="right">
+      <el-table-column label="操作" width="210">
         <template #default="{row}">
           <el-button v-if="row.status==='已下达'" link type="primary" size="small" @click="startOrder(row)">开工</el-button>
           <el-button v-if="row.status==='进行中'" link type="warning" size="small" @click="openReport(row)">报工</el-button>
@@ -257,4 +257,6 @@ onMounted(fetchData)
 <style scoped>
 .page-container { padding: 0; }
 .page-toolbar { display:flex; gap:12px; margin-bottom:16px; align-items:center; }
+/* 允许表格在列宽总和小于容器时自然滚动，避免固定列与相邻列重叠 */
+:deep(.el-table__body-wrapper) { overflow-x: auto; }
 </style>
