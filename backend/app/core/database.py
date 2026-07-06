@@ -86,6 +86,9 @@ def init_db():
                 alembic_cmd.upgrade(alembic_cfg, "head")
                 logger.info("Alembic 迁移执行成功")
 
+            # create_all 补充 Alembic 未覆盖的新表/列（如 WorkOrderReport、unit_cost 等）
+            Base.metadata.create_all(bind=engine)
+
             # MySQL: 确保 mrp_run_record 的 JSON 列足够大
             with engine.connect() as conn:
                 for col in ["planned_orders_json", "summary_json"]:
@@ -97,6 +100,25 @@ def init_db():
                         logger.info(f"mrp_run_record.{col} 已扩展为 LONGTEXT")
                     except Exception:
                         conn.rollback()
+
+            # 新增列：work_order_material.unit_cost / total_cost
+            try:
+                conn.execute(text(
+                    "ALTER TABLE work_order_material ADD COLUMN unit_cost FLOAT DEFAULT 0"
+                ))
+                conn.commit()
+                logger.info("work_order_material.unit_cost 已添加")
+            except Exception:
+                conn.rollback()
+
+            try:
+                conn.execute(text(
+                    "ALTER TABLE work_order_material ADD COLUMN total_cost FLOAT DEFAULT 0"
+                ))
+                conn.commit()
+                logger.info("work_order_material.total_cost 已添加")
+            except Exception:
+                conn.rollback()
         except Exception as e:
             logger.warning(f"Alembic 迁移失败（{e}），回退到 create_all")
             Base.metadata.create_all(bind=engine)
