@@ -44,38 +44,62 @@ def get_db():
 def init_db():
     """初始化数据库表
 
-    优先尝试 Alembic 升级（推荐方式）。若 Alembic 不可用或初次运行，
-    则使用 create_all + 遗留迁移语句作为兜底。
+    - SQLite 本地开发：直接用 create_all（Alembic 的 MySQL 迁移脚本不兼容）
+    - MySQL 生产环境：优先 Alembic，失败则回退到 create_all
     """
-    # 尝试 Alembic 迁移（优先方案）
-    try:
-        from alembic.config import Config
-        from alembic import command as alembic_cmd
-        import os
-        alembic_cfg_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
-            os.path.abspath(__file__)))), "alembic.ini")
-        if os.path.exists(alembic_cfg_path):
-            alembic_cfg = Config(alembic_cfg_path)
-            alembic_cmd.upgrade(alembic_cfg, "head")
-            logger.info("Alembic 迁移执行成功")
+    import os
+    is_sqlite = "sqlite" in DATABASE_URL
 
-        # 无论如何，确保 mrp_run_record 的 JSON 列足够大（TEXT→LONGTEXT）
-        # 生产环境 MRP 结果 JSON (~135KB) 超出 TEXT(65KB) 限制
-        with engine.connect() as conn:
-            for col in ["planned_orders_json", "summary_json"]:
-                try:
-                    conn.execute(text(
-                        f"ALTER TABLE mrp_run_record MODIFY COLUMN {col} LONGTEXT"
-                    ))
-                    conn.commit()
-                    logger.info(f"mrp_run_record.{col} 已扩展为 LONGTEXT")
-                except Exception:
-                    conn.rollback()  # 可能是表不存在或已经是 LONGTEXT
-    except Exception as e:
-        logger.warning(f"Alembic 迁移失败（{e}），回退到 create_all + 遗留迁移")
-
-        # 遗留路径：create_all + 裸 SQL 迁移
+    if is_sqlite:
+        # SQLite: 直接用 create_all，Alembic 迁移中的 MySQL DDL 不兼容
+        logger.info("SQLite 模式：直接使用 create_all")
         Base.metadata.create_all(bind=engine)
+
+        # 确保默认用户存在（admin + user1）
+        from app.core.security import hash_password
+        from app.models.user import User
+        from sqlalchemy import text as sa_text
+        with SessionLocal() as seed_db:
+            if not seed_db.query(User).filter(User.username == "admin").first():
+                seed_db.add(User(
+                    username="admin", password_hash=hash_password("admin123"),
+                    role="admin", is_approved=True,
+                ))
+                seed_db.commit()
+                logger.info("✅ 已创建默认管理员: admin / admin123")
+            if not seed_db.query(User).filter(User.username == "user1").first():
+                seed_db.add(User(
+                    username="user1", password_hash=hash_password("123456"),
+                    role="normal", is_approved=False,
+                ))
+                seed_db.commit()
+                logger.info("✅ 已创建默认用户: user1 / 123456")
+    else:
+        # MySQL 生产环境：优先 Alembic
+        try:
+            from alembic.config import Config
+            from alembic import command as alembic_cmd
+            alembic_cfg_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
+                os.path.abspath(__file__)))), "alembic.ini")
+            if os.path.exists(alembic_cfg_path):
+                alembic_cfg = Config(alembic_cfg_path)
+                alembic_cmd.upgrade(alembic_cfg, "head")
+                logger.info("Alembic 迁移执行成功")
+
+            # MySQL: 确保 mrp_run_record 的 JSON 列足够大
+            with engine.connect() as conn:
+                for col in ["planned_orders_json", "summary_json"]:
+                    try:
+                        conn.execute(text(
+                            f"ALTER TABLE mrp_run_record MODIFY COLUMN {col} LONGTEXT"
+                        ))
+                        conn.commit()
+                        logger.info(f"mrp_run_record.{col} 已扩展为 LONGTEXT")
+                    except Exception:
+                        conn.rollback()
+        except Exception as e:
+            logger.warning(f"Alembic 迁移失败（{e}），回退到 create_all")
+            Base.metadata.create_all(bind=engine)
 
         # 迁移：补齐新增的列（不破坏已有数据）
         # 每条 ALTER TABLE 单独 try/except，避免一条失败阻塞后续

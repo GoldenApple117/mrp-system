@@ -62,6 +62,24 @@ class WorkOrder(Base):
     materials = relationship("WorkOrderMaterial", lazy="selectin", cascade="all, delete-orphan")
 
 
+class WorkOrderReport(Base):
+    """工单报工记录 — 每次报工独立记录，保留报工历史"""
+    __tablename__ = "work_order_report"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    work_order_id = Column(Integer, ForeignKey("work_order.id"), nullable=False, comment="工单ID")
+    wo_number = Column(String(50), default="", comment="工单号（冗余，方便查询）")
+    report_time = Column(DateTime, default=datetime.now, comment="报工时间")
+    completed_qty = Column(Float, default=0, comment="本次完成数量")
+    rejected_qty = Column(Float, default=0, comment="本次不合格数量")
+    labor_hours = Column(Float, default=0, comment="本次工时")
+    operator = Column(String(50), default="", comment="操作人")
+    remark = Column(String(500), default="", comment="备注")
+    created_at = Column(DateTime, default=datetime.now)
+
+    work_order = relationship("WorkOrder", lazy="selectin")
+
+
 class WorkOrderMaterial(Base):
     """工单物料需求 — 记录每个工单需要的原材料及其发料/消耗情况"""
     __tablename__ = "work_order_material"
@@ -71,6 +89,8 @@ class WorkOrderMaterial(Base):
     item_id = Column(Integer, ForeignKey("material_master.id"), nullable=False)
     required_qty = Column(Float, nullable=False, default=0, comment="需求数量")
     issued_qty = Column(Float, default=0, comment="已发料数量")
+    unit_cost = Column(Float, default=0, comment="物料单价")
+    total_cost = Column(Float, default=0, comment="物料总成本(unit_cost * issued_qty)")
     bom_line_id = Column(Integer, ForeignKey("bom_line.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.now)
 

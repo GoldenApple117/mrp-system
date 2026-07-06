@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from typing import Optional
 
 from app.core.database import get_db
-from app.models.order import WorkOrder, WorkOrderMaterial
+from app.models.order import WorkOrder, WorkOrderMaterial, WorkOrderReport
 from app.models.routing import WorkCenter, RoutingHeader, RoutingOperation
 from app.models.material import MaterialMaster
 from app.models.inventory import InventoryRecord, InventoryTransaction, Warehouse
@@ -230,17 +230,23 @@ def start_work_order(order_id: int, db: Session = Depends(get_db)):
 
 @router.post("/orders/{order_id}/report")
 def report_progress(order_id: int, data: dict, db: Session = Depends(get_db)):
-    """工单报工 — 完成数量、不合格数量、工时"""
+    """工单报工 — 记录每次报工详情，累计到工单"""
     wo = db.query(WorkOrder).filter(WorkOrder.id == order_id).first()
     if not wo:
         raise HTTPException(status_code=404, detail="工单不存在")
     if wo.status not in ("进行中",):
         raise HTTPException(status_code=400, detail=f"当前状态({wo.status})不能报工")
 
-    completed = data.get("completed_qty", 0)
-    rejected = data.get("rejected_qty", 0)
-    labor = data.get("labor_hours", 0)
+    completed = float(data.get("completed_qty", 0))
+    rejected = float(data.get("rejected_qty", 0))
+    labor = float(data.get("labor_hours", 0))
+    operator = data.get("operator", "")
+    remark = data.get("remark", "")
 
+    if completed <= 0 and rejected <= 0 and labor <= 0:
+        raise HTTPException(status_code=422, detail="请至少填报一项数据")
+
+    # 累计到工单
     if completed > 0:
         wo.completed_qty = (wo.completed_qty or 0) + completed
     if rejected > 0:
@@ -248,34 +254,156 @@ def report_progress(order_id: int, data: dict, db: Session = Depends(get_db)):
     if labor > 0:
         wo.labor_hours = (wo.labor_hours or 0) + labor
 
+    # 保存报工记录（独立记录，保留历史）
+    report = WorkOrderReport(
+        work_order_id=wo.id,
+        wo_number=wo.wo_number,
+        completed_qty=completed,
+        rejected_qty=rejected,
+        labor_hours=labor,
+        operator=operator or "系统",
+        remark=remark or "",
+    )
+    db.add(report)
+
     db.commit()
+
     return {
         "success": True,
-        "message": f"报工完成",
+        "message": f"报工完成：良品+{completed}，不合格{rejected}，工时{labor}h",
         "data": {
+            "report_id": report.id,
             "completed_qty": wo.completed_qty,
             "rejected_qty": wo.rejected_qty or 0,
             "labor_hours": wo.labor_hours or 0,
+            "total_reports": db.query(WorkOrderReport).filter(
+                WorkOrderReport.work_order_id == wo.id).count(),
+        },
+    }
+
+
+@router.get("/orders/{order_id}/reports")
+def get_order_reports(order_id: int, db: Session = Depends(get_db)):
+    """工单报工历史"""
+    reports = db.query(WorkOrderReport).filter(
+        WorkOrderReport.work_order_id == order_id
+    ).order_by(WorkOrderReport.report_time.desc()).all()
+    return {
+        "items": [
+            {
+                "id": r.id,
+                "report_time": r.report_time.isoformat() if r.report_time else None,
+                "completed_qty": r.completed_qty,
+                "rejected_qty": r.rejected_qty,
+                "labor_hours": r.labor_hours,
+                "operator": r.operator or "",
+                "remark": r.remark or "",
+            }
+            for r in reports
+        ],
+        "total": len(reports),
+    }
+
+
+@router.get("/orders/{order_id}/readiness")
+def check_order_readiness(order_id: int, db: Session = Depends(get_db)):
+    """检查工单完工就绪状态 — 物料是否全部领完、报工是否完成"""
+    wo = db.query(WorkOrder).filter(WorkOrder.id == order_id).first()
+    if not wo:
+        raise HTTPException(status_code=404, detail="工单不存在")
+
+    checks = []
+
+    # 检查物料
+    materials = db.query(WorkOrderMaterial).filter(
+        WorkOrderMaterial.work_order_id == wo.id
+    ).all()
+    if materials:
+        unfinished_mats = [m for m in materials if (m.issued_qty or 0) < m.required_qty]
+        if unfinished_mats:
+            checks.append({
+                "name": "物料领料",
+                "status": "WARNING",
+                "detail": f"{len(unfinished_mats)}/{len(materials)} 种物料未领完",
+                "items": [
+                    {"code": m.item.material_code if m.item else "", "name": m.item.material_name if m.item else "",
+                     "required": m.required_qty, "issued": m.issued_qty or 0}
+                    for m in unfinished_mats[:5]
+                ],
+            })
+        else:
+            checks.append({"name": "物料领料", "status": "OK", "detail": "全部领完"})
+    else:
+        checks.append({"name": "物料领料", "status": "OK", "detail": "无物料需求"})
+
+    # 检查报工
+    total_reports = db.query(WorkOrderReport).filter(
+        WorkOrderReport.work_order_id == wo.id
+    ).count()
+    if wo.completed_qty and wo.completed_qty >= wo.plan_qty:
+        checks.append({"name": "报工进度", "status": "OK",
+                       "detail": f"已完成 {wo.completed_qty}/{wo.plan_qty}，报工{total_reports}次"})
+    else:
+        checks.append({"name": "报工进度", "status": "INFO",
+                       "detail": f"已完成 {wo.completed_qty or 0}/{wo.plan_qty}，报工{total_reports}次"})
+
+    # 综合判断
+    can_complete = all(c["status"] == "OK" for c in checks)
+    completion_blockers = [c for c in checks if c["status"] != "OK"]
+
+    return {
+        "wo_number": wo.wo_number,
+        "status": wo.status,
+        "can_complete": can_complete,
+        "checks": checks,
+        "summary": {
+            "plan_qty": wo.plan_qty,
+            "completed_qty": wo.completed_qty or 0,
+            "rejected_qty": wo.rejected_qty or 0,
+            "labor_hours": wo.labor_hours or 0,
+            "total_reports": total_reports,
+            "material_count": len(materials),
         },
     }
 
 
 @router.post("/orders/{order_id}/complete")
-def complete_work_order(order_id: int, db: Session = Depends(get_db)):
-    """完工入库 — 良品入库 + 标记完成时间"""
+def complete_work_order(order_id: int, data: dict = None, db: Session = Depends(get_db)):
+    """完工入库 — 良品入库 + 标记完成时间
+    可选传 force=true 跳过就绪检查
+    """
     wo = db.query(WorkOrder).filter(WorkOrder.id == order_id).first()
     if not wo:
         raise HTTPException(status_code=404, detail="工单不存在")
     if wo.status != "进行中":
         raise HTTPException(status_code=400, detail=f"当前状态({wo.status})不能完工")
 
+    data = data or {}
+    force = data.get("force", False)
+
+    # 就绪检查（除非 force）
+    if not force:
+        materials = db.query(WorkOrderMaterial).filter(
+            WorkOrderMaterial.work_order_id == wo.id
+        ).all()
+        unfinished_mats = [m for m in materials if (m.issued_qty or 0) < m.required_qty]
+        if unfinished_mats:
+            return {
+                "success": False,
+                "message": f"有 {len(unfinished_mats)} 种物料未领完，请先领料或传 force=true 强制完工",
+                "unfinished_materials": [
+                    {"code": m.item.material_code if m.item else "",
+                     "name": m.item.material_name if m.item else "",
+                     "required": m.required_qty, "issued": m.issued_qty or 0}
+                    for m in unfinished_mats[:10]
+                ],
+            }
+
     now = datetime.now()
     wo.status = "已完成"
     wo.actual_end = now
     if wo.completed_qty <= 0:
         wo.completed_qty = wo.plan_qty
-
-    # 良品入库 (completed_qty - rejected_qty)
     rejected = wo.rejected_qty or 0
     good_qty = wo.completed_qty - rejected
     if good_qty > 0:
@@ -378,6 +506,12 @@ def issue_material_to_work_order(order_id: int, data: dict, db: Session = Depend
     # 扣减库存
     inv.on_hand_qty -= issue_qty
     wom.issued_qty = (wom.issued_qty or 0) + issue_qty
+
+    # 记录物料单价与总成本
+    unit_price = (wom.item.reference_unit_price if wom.item else 0) or 0
+    if wom.unit_cost == 0 and unit_price > 0:
+        wom.unit_cost = unit_price
+    wom.total_cost = (wom.issued_qty or 0) * (wom.unit_cost or 0)
 
     # 记录流水
     db.add(InventoryTransaction(
@@ -625,3 +759,108 @@ def create_routing(data: dict, db: Session = Depends(get_db)):
 
     db.commit()
     return {"success": True, "data": {"id": routing.id}}
+
+
+# ====== 成本配置 ======
+
+# 默认人工费率（元/小时）
+_DEFAULT_LABOR_RATE = 45.0
+_labor_rate: float = _DEFAULT_LABOR_RATE
+
+
+@router.get("/cost-rates")
+def get_cost_rates():
+    """获取成本费率"""
+    return {
+        "labor_rate_per_hour": _labor_rate,
+        "unit": "元/小时",
+    }
+
+
+@router.put("/cost-rates")
+def update_cost_rates(data: dict):
+    """更新成本费率"""
+    global _labor_rate
+    if "labor_rate_per_hour" in data:
+        _labor_rate = max(0, float(data["labor_rate_per_hour"]))
+    return {"success": True, "message": f"人工费率已更新: {_labor_rate}元/小时"}
+
+
+# ====== 工单成本核算 ======
+
+@router.get("/orders/{order_id}/cost")
+def get_order_cost(order_id: int, db: Session = Depends(get_db)):
+    """工单成本核算 — 物料成本 + 人工成本 + 对比标准成本"""
+    wo = db.query(WorkOrder).filter(WorkOrder.id == order_id).first()
+    if not wo:
+        raise HTTPException(status_code=404, detail="工单不存在")
+
+    # 1. 物料成本（实际领料 * 单价）
+    materials = db.query(WorkOrderMaterial).filter(
+        WorkOrderMaterial.work_order_id == wo.id
+    ).all()
+
+    material_items = []
+    actual_material_cost = 0.0
+    standard_material_cost = 0.0
+
+    for m in materials:
+        unit_price = m.unit_cost or (m.item.reference_unit_price if m.item else 0) or 0
+        issued = m.issued_qty or 0
+        required = m.required_qty or 0
+
+        actual_cost = unit_price * issued
+        standard_cost = unit_price * required
+        actual_material_cost += actual_cost
+        standard_material_cost += standard_cost
+
+        material_items.append({
+            "material_code": m.item.material_code if m.item else "",
+            "material_name": m.item.material_name if m.item else "",
+            "unit_price": unit_price,
+            "required_qty": required,
+            "issued_qty": issued,
+            "actual_cost": actual_cost,
+            "standard_cost": standard_cost,
+        })
+
+    # 2. 人工成本（累计工时 * 费率）
+    labor_hours = wo.labor_hours or 0
+    labor_cost = labor_hours * _labor_rate
+
+    # 3. 汇总
+    actual_total = actual_material_cost + labor_cost
+    standard_total = standard_material_cost + labor_cost  # 标准工时用实际工时替代
+
+    # 产出成本（分摊到良品）
+    good_qty = (wo.completed_qty or 0) - (wo.rejected_qty or 0)
+    unit_actual_cost = round(actual_total / good_qty, 2) if good_qty > 0 else 0
+
+    return {
+        "wo_number": wo.wo_number,
+        "status": wo.status,
+        "product_name": wo.item.material_name if wo.item else "",
+        "plan_qty": wo.plan_qty,
+        "completed_qty": wo.completed_qty or 0,
+        "rejected_qty": wo.rejected_qty or 0,
+        "good_qty": good_qty,
+        "labor_hours": labor_hours,
+        "cost_rates": {
+            "labor_rate_per_hour": _labor_rate,
+        },
+        "material_costs": {
+            "items": material_items,
+            "actual_total": round(actual_material_cost, 2),
+            "standard_total": round(standard_material_cost, 2),
+        },
+        "labor_cost": round(labor_cost, 2),
+        "summary": {
+            "actual_material_cost": round(actual_material_cost, 2),
+            "labor_cost": round(labor_cost, 2),
+            "actual_total": round(actual_total, 2),
+            "standard_total": round(standard_total, 2),
+            "variance": round(actual_total - standard_total, 2),
+            "variance_pct": round((actual_total - standard_total) / standard_total * 100, 1) if standard_total > 0 else 0,
+            "unit_actual_cost": unit_actual_cost,
+        },
+    }

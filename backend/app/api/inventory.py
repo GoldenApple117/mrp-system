@@ -306,3 +306,81 @@ def create_warehouse(data: dict, db: Session = Depends(get_db)):
     db.add(wh)
     db.commit()
     return {"success": True, "data": {"id": wh.id}}
+
+
+@router.get("/abc-analysis")
+def abc_analysis(db: Session = Depends(get_db)):
+    """库存ABC分析 — 按金额自动分类
+
+    A类(70%): 高价值，高频盘点
+    B类(20%): 中等价值，定期盘点
+    C类(10%): 低价值，简化盘点
+    """
+    # 获取所有库存记录及其物料单价
+    results = db.query(
+        InventoryRecord, MaterialMaster
+    ).join(
+        MaterialMaster, InventoryRecord.item_id == MaterialMaster.id
+    ).filter(
+        InventoryRecord.on_hand_qty > 0
+    ).all()
+
+    items = []
+    total_value = 0
+    for inv, mat in results:
+        unit_price = (mat.reference_unit_price or 0)
+        value = inv.on_hand_qty * unit_price
+        total_value += value
+        items.append({
+            "material_code": mat.material_code,
+            "material_name": mat.material_name,
+            "specification": mat.specification or "",
+            "on_hand": inv.on_hand_qty,
+            "unit_price": unit_price,
+            "stock_value": round(value, 2),
+        })
+
+    # 按库存金额降序排列
+    items.sort(key=lambda x: x["stock_value"], reverse=True)
+
+    # 累积占比 → ABC分类
+    cumulative = 0
+    a_items, b_items, c_items = [], [], []
+    for item in items:
+        cumulative += item["stock_value"]
+        pct = cumulative / total_value * 100 if total_value > 0 else 0
+        item["cumulative_pct"] = round(pct, 1)
+        if pct <= 70:
+            item["abc_class"] = "A"
+            a_items.append(item)
+        elif pct <= 90:
+            item["abc_class"] = "B"
+            b_items.append(item)
+        else:
+            item["abc_class"] = "C"
+            c_items.append(item)
+
+    def summarize(items_list, abc_class):
+        return {
+            "class": abc_class,
+            "count": len(items_list),
+            "total_value": round(sum(i["stock_value"] for i in items_list), 2),
+            "value_pct": round(sum(i["stock_value"] for i in items_list) / total_value * 100, 1) if total_value > 0 else 0,
+            "items": items_list[:20],  # 只返回前20条明细
+            "more": max(0, len(items_list) - 20),
+        }
+
+    return {
+        "total_items": len(items),
+        "total_stock_value": round(total_value, 2),
+        "categories": {
+            "A": summarize(a_items, "A"),
+            "B": summarize(b_items, "B"),
+            "C": summarize(c_items, "C"),
+        },
+        "recommendations": {
+            "A": "高频盘点（每月）、精确记录、重点关注",
+            "B": "定期盘点（季度）、常规管理",
+            "C": "简化盘点（年度）、宽松管理",
+        },
+    }

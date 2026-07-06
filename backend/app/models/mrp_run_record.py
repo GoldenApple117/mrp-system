@@ -1,6 +1,8 @@
-"""MRP运行记录 — 替代全局变量缓存，持久化到数据库"""
-from sqlalchemy import Column, Integer, String, DateTime
-from sqlalchemy.dialects.mysql import LONGTEXT
+"""MRP运行记录 — 替代全局变量缓存，持久化到数据库
+注：生产环境(MySQL)需将 planned_orders_json/summary_json 改为 LONGTEXT
+   以支持超过 65KB 的 JSON 数据。本地开发(SQLite)用 Text 即可。
+"""
+from sqlalchemy import Column, Integer, String, DateTime, Text
 from app.core.database import Base
 from datetime import datetime
 import json
@@ -12,8 +14,8 @@ class MrpRunRecord(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     run_id = Column(String(50), unique=True, nullable=False, comment="MRP运行批次ID")
-    planned_orders_json = Column(LONGTEXT, default="[]", comment="计划订单列表(JSON)")
-    summary_json = Column(LONGTEXT, default="{}", comment="运算摘要(JSON)")
+    planned_orders_json = Column(Text, default="[]", comment="计划订单列表(JSON)")
+    summary_json = Column(Text, default="{}", comment="运算摘要(JSON)")
     created_at = Column(DateTime, default=datetime.now, comment="运算时间")
 
     @property

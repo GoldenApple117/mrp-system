@@ -4,7 +4,6 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func, text
 import logging
-from sqlalchemy.dialects.mysql import LONGTEXT
 
 from app.core.database import get_db
 from app.models.material import MaterialMaster
@@ -261,6 +260,117 @@ def run_mrp(data: dict, db: Session = Depends(get_db)):
             "message": str(e),
             "traceback": traceback.format_exc(),
         }
+
+
+@router.post("/batch-merge")
+def batch_merge_planned_orders(data: dict, db: Session = Depends(get_db)):
+    """采购计划批量合并 — 同物料不同日期需求合并/按周合并/按供应商合并
+
+    合并策略选项:
+    - weekly: 按周合并（默认）
+    - monthly: 按月合并
+    - supplier: 按供应商合并
+    - none: 不合并（只排序）
+    """
+    from collections import defaultdict
+    from app.models.material import MaterialMaster
+
+    strategy = data.get("strategy", "weekly")
+    planned_orders = data.get("planned_orders", [])
+
+    # 如果没有传入，从最近一次MRP结果读取
+    if not planned_orders:
+        last = db.query(MrpRunRecord).order_by(MrpRunRecord.id.desc()).first()
+        if not last:
+            return {"success": False, "message": "没有MRP结果，请先运行MRP运算"}
+        planned_orders = last.planned_orders
+
+    if not planned_orders:
+        return {"success": False, "message": "没有待合并的计划订单"}
+
+    # 只处理采购类（PURCHASE）
+    purchase_orders = [o for o in planned_orders if o.get("order_type") == "PURCHASE"]
+    if not purchase_orders:
+        return {"success": False, "message": "没有采购类计划订单需要合并"}
+
+    # 按物料编码分组
+    groups = defaultdict(list)
+    for po in purchase_orders:
+        groups[po["item_code"]].append(po)
+
+    merged = []
+    merge_details = []
+
+    for item_code, orders in groups.items():
+        mat = db.query(MaterialMaster).filter(
+            MaterialMaster.material_code == item_code
+        ).first()
+        lot_size = mat.lot_size_qty if mat and mat.lot_size_qty else 0
+        min_qty = mat.min_order_qty if mat else 0
+        max_qty = mat.max_order_qty if mat else 999999
+
+        if strategy == "weekly":
+            # 按ISO周合并
+            week_groups = defaultdict(list)
+            for o in orders:
+                import datetime
+                d = datetime.date.fromisoformat(o["required_date"])
+                week_key = f"{d.isocalendar()[0]}-W{d.isocalendar()[1]:02d}"
+                week_groups[week_key].append(o)
+            for wk, wk_orders in sorted(week_groups.items()):
+                total_qty = sum(o["quantity"] for o in wk_orders)
+                # 应用批量规则
+                if lot_size > 0 and total_qty < lot_size:
+                    total_qty = lot_size
+                if min_qty > 0 and total_qty < min_qty:
+                    total_qty = min_qty
+                if max_qty > 0 and total_qty > max_qty:
+                    total_qty = max_qty
+                merged.append({
+                    "item_code": item_code,
+                    "material_name": o["material_name"],
+                    "merged_qty": total_qty,
+                    "original_count": len(wk_orders),
+                    "week": wk,
+                    "earliest_date": min(o["required_date"] for o in wk_orders),
+                    "latest_date": max(o["required_date"] for o in wk_orders),
+                })
+
+        elif strategy == "supplier":
+            # 按供应商 + 日期合并（简单汇总）
+            total_qty = sum(o["quantity"] for o in orders)
+            if lot_size > 0 and total_qty < lot_size:
+                total_qty = lot_size
+            merged.append({
+                "item_code": item_code,
+                "material_name": orders[0]["material_name"],
+                "merged_qty": total_qty,
+                "original_count": len(orders),
+                "earliest_date": min(o["required_date"] for o in orders),
+                "latest_date": max(o["required_date"] for o in orders),
+            })
+
+        else:  # none
+            for o in orders:
+                merged.append({
+                    "item_code": o["item_code"],
+                    "material_name": o["material_name"],
+                    "merged_qty": o["quantity"],
+                    "original_count": 1,
+                    "required_date": o["required_date"],
+                })
+
+    return {
+        "success": True,
+        "strategy": strategy,
+        "summary": {
+            "original_count": len(purchase_orders),
+            "merged_count": len(merged),
+            "reduction": len(purchase_orders) - len(merged),
+            "reduction_pct": round((len(purchase_orders) - len(merged)) / len(purchase_orders) * 100, 1),
+        },
+        "merged_orders": merged[:100],  # 最多返回100条
+    }
 
 
 @router.post("/convert-to-orders")

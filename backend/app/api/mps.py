@@ -142,3 +142,83 @@ def delete_mps(entry_id: int, db: Session = Depends(get_db)):
         db.delete(entry)
         db.commit()
     return {"success": True}
+
+
+@router.get("/atp")
+def calculate_atp(db: Session = Depends(get_db)):
+    """ATP 可承诺量 — 当前可用库存 + 计划产出 - 已承诺订单"""
+    from app.models.material import MaterialMaster
+    from app.models.inventory import InventoryRecord
+    from app.models.order import PurchaseOrder, WorkOrder
+    from app.models.mps import MpsEntry
+    from datetime import date
+
+    today = date.today()
+
+    # 获取所有成品物料
+    products = db.query(MaterialMaster).filter(
+        MaterialMaster.level_type == "产品"
+    ).all()
+
+    results = []
+    for prod in products:
+        # 当前库存
+        inv = db.query(InventoryRecord).filter(
+            InventoryRecord.item_id == prod.id
+        ).first()
+        on_hand = inv.on_hand_qty if inv else 0
+
+        # 计划产出（MPS未来30天）
+        mps_qty = db.query(func.coalesce(func.sum(MpsEntry.quantity), 0)).filter(
+            MpsEntry.item_id == prod.id,
+            MpsEntry.plan_date >= today,
+            MpsEntry.status == "进行中",
+        ).scalar() or 0
+
+        # 在途采购（未来30天）
+        po_qty = db.query(func.coalesce(func.sum(PurchaseOrder.order_qty - func.coalesce(PurchaseOrder.received_qty, 0)), 0)).filter(
+            PurchaseOrder.item_id == prod.id,
+            PurchaseOrder.due_date >= today,
+            PurchaseOrder.status.in_(["已下单", "部分收货"]),
+        ).scalar() or 0
+
+        # 在制工单（未来30天）
+        wo_qty = db.query(func.coalesce(func.sum(WorkOrder.plan_qty - func.coalesce(WorkOrder.completed_qty, 0)), 0)).filter(
+            WorkOrder.item_id == prod.id,
+            WorkOrder.status.in_(["已下达", "进行中"]),
+        ).scalar() or 0
+
+        # 已承诺（未出货销售订单）
+        from app.models.sales import SalesOrder
+        committed = db.query(func.coalesce(func.sum(SalesOrder.order_qty - func.coalesce(SalesOrder.shipped_qty, 0)), 0)).filter(
+            SalesOrder.item_id == prod.id,
+            SalesOrder.ship_status.in_(["待出货", "部分出货"]),
+        ).scalar() or 0
+
+        available = on_hand + mps_qty + po_qty + wo_qty - committed
+
+        results.append({
+            "material_id": prod.id,
+            "material_code": prod.material_code,
+            "material_name": prod.material_name,
+            "on_hand": on_hand,
+            "mps_planned": mps_qty,
+            "po_in_transit": po_qty,
+            "wo_in_progress": wo_qty,
+            "total_supply": on_hand + mps_qty + po_qty + wo_qty,
+            "committed": committed,
+            "atp": available,
+            "atp_label": f"可承诺 {available}" if available >= 0 else f"超卖 {abs(available)}",
+        })
+
+    results.sort(key=lambda x: x["atp"])
+
+    return {
+        "items": results,
+        "total": len(results),
+        "summary": {
+            "products_with_stock": len([r for r in results if r["atp"] >= 0]),
+            "over_sold": len([r for r in results if r["atp"] < 0]),
+            "total_atp": sum(r["atp"] for r in results),
+        },
+    }

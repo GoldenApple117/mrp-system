@@ -645,3 +645,74 @@ def sync_purchase_from_bom(data: dict, db: Session = Depends(get_db)):
             "total_parts_found": len(all_parts),
         },
     }
+
+
+@router.get("/supplier-performance")
+def supplier_performance(db: Session = Depends(get_db)):
+    """供应商交付绩效 — 按时交付率 + 质量合格率"""
+    from app.models.supplier import Supplier
+    from app.models.order import PurchaseOrder
+    from app.models.inventory import InventoryTransaction
+    from datetime import date
+
+    suppliers = db.query(Supplier).filter(Supplier.is_active == True).all()
+    today = date.today()
+    results = []
+
+    for sup in suppliers:
+        pos = db.query(PurchaseOrder).filter(
+            PurchaseOrder.supplier_id == sup.id,
+            PurchaseOrder.status.in_(["已下单", "部分收货", "已完成"]),
+        ).all()
+
+        total_orders = len(pos)
+        if total_orders == 0:
+            continue
+
+        on_time = 0
+        total_received = 0
+        total_rejected = 0
+
+        for po in pos:
+            received = po.received_qty or 0
+            if received > 0:
+                total_received += received
+                if received >= po.order_qty or po.status == "已完成":
+                    on_time += 1
+
+            rejected = 0
+            txns = db.query(InventoryTransaction).filter(
+                InventoryTransaction.reference_no == po.po_number,
+                InventoryTransaction.transaction_type == "质检不合格",
+            ).all()
+            for t in txns:
+                rejected += abs(t.quantity) if t.quantity else 0
+            total_rejected += rejected
+
+        on_time_rate = round(on_time / total_orders * 100, 1) if total_orders > 0 else 0
+        quality_rate = round((total_received - total_rejected) / total_received * 100, 1) if total_received > 0 else 0
+
+        results.append({
+            "supplier_id": sup.id,
+            "supplier_code": sup.supplier_code,
+            "supplier_name": sup.supplier_name,
+            "total_orders": total_orders,
+            "on_time_orders": on_time,
+            "on_time_rate": on_time_rate,
+            "total_received": total_received,
+            "total_rejected": total_rejected,
+            "quality_rate": quality_rate,
+            "performance_score": round(on_time_rate * 0.5 + quality_rate * 0.5, 1),
+        })
+
+    results.sort(key=lambda x: x["performance_score"], reverse=True)
+
+    return {
+        "items": results,
+        "total_suppliers": len(results),
+        "summary": {
+            "avg_on_time_rate": round(sum(r["on_time_rate"] for r in results) / len(results), 1) if results else 0,
+            "avg_quality_rate": round(sum(r["quality_rate"] for r in results) / len(results), 1) if results else 0,
+            "avg_score": round(sum(r["performance_score"] for r in results) / len(results), 1) if results else 0,
+        },
+    }
