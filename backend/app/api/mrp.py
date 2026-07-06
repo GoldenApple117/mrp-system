@@ -3,6 +3,7 @@ from datetime import date, datetime
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
+import logging
 
 from app.core.database import get_db
 from app.models.material import MaterialMaster
@@ -12,6 +13,8 @@ from app.models.mps import MpsEntry
 from app.models.order import PurchaseOrder, WorkOrder
 from app.models.mrp_run_record import MrpRunRecord
 from app.services.mrp_calculator import MrpCalculator
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/mrp", tags=["MRP运算"])
 
@@ -29,15 +32,18 @@ def run_mrp_logic(db: Session, horizon_days: int = 90, time_fence_days: int = 7)
         MpsEntry.plan_date >= date.today()
     ).all()
 
-    mps_entries = [
-        {
+    mps_entries = []
+    for e in mps_entries_raw:
+        if not e.item:
+            logger.warning(f"MPS#{e.id}: 关联物料为空，跳过")
+            continue
+        if e.item.level_type != "产品":
+            continue
+        mps_entries.append({
             "item_code": e.item.material_code,
             "plan_date": e.plan_date,
             "quantity": e.quantity,
-        }
-        for e in mps_entries_raw
-        if e.item and e.item.level_type == "产品"
-    ]
+        })
 
     if not mps_entries:
         return {

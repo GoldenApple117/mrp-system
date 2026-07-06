@@ -57,9 +57,17 @@ def list_mps(
 @router.post("")
 def create_mps(data: dict, db: Session = Depends(get_db)):
     """新增MPS计划"""
+    # 兼容两种字段名：item_id（后端标准）和 product_id（前端/外部常用）
+    item_id = data.get("item_id") or data.get("product_id")
+    if not item_id:
+        raise HTTPException(status_code=422, detail="缺少物料ID (item_id / product_id)")
+    plan_date_raw = data.get("plan_date") or data.get("start_date")
+    if not plan_date_raw:
+        raise HTTPException(status_code=422, detail="缺少计划日期 (plan_date / start_date)")
+
     entry = MpsEntry(
-        item_id=data["item_id"],
-        plan_date=date.fromisoformat(data["plan_date"]) if isinstance(data["plan_date"], str) else data["plan_date"],
+        item_id=item_id,
+        plan_date=date.fromisoformat(plan_date_raw) if isinstance(plan_date_raw, str) else plan_date_raw,
         quantity=data["quantity"],
         source_type=data.get("source_type", "手动"),
         source_id=data.get("source_id", ""),
