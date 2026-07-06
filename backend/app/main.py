@@ -46,10 +46,12 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS
+# CORS — 开发环境放开 localhost，生产环境由前端同源代理或 Railway 处理
+import os
+_cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:8000")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[o.strip() for o in _cors_origins.split(",") if o.strip()],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

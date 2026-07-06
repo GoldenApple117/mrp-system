@@ -40,3 +40,23 @@ uploads/*.xlsx
 # Secrets
 backend/smtp_config.json
 backend/.env
+
+# MySQL local data & config (local dev only)
+mysql-data/
+mysql-config/
+
+# Binary installers (should not be in git)
+*.zip
+*.msi
+*.exe
+*.msix
+*.appx
+*.appxbundle
+
+# Python virtual env
+venv/
+env/
+ENV/
+
+# Logs
+*.log

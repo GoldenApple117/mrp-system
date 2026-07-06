@@ -364,7 +364,7 @@ async function loadSchedule() {
     timerEnabled.value = d.enabled
     timerHour.value = d.hour
     timerMinute.value = d.minute
-  } catch {}
+  } catch (e) { console.error('[MRP] 加载定时器失败', e) }
 }
 
 const timerEnabled = ref(false)
@@ -384,7 +384,7 @@ const runMrpNow = async () => {
     const r = await fetch('/api/system/schedule/run-now', { method: 'POST' })
     const d = await r.json()
     ElMessage[d.success ? 'success' : 'error'](d.message)
-  } catch {}
+  } catch (e) { if (e !== 'cancel') console.error('[MRP] 手动执行MRP失败', e) }
 }
 
 function handleLogout() {
@@ -409,7 +409,7 @@ async function loadEmailConfig() {
     emailPort.value = d.port || 587
     emailUser.value = d.username || ''
     // password 返回 *** 脱敏，不清除已有值
-  } catch {}
+  } catch (e) { console.error('[MRP] 加载邮件配置失败', e) }
 }
 
 async function saveEmailConfig() {
@@ -463,7 +463,7 @@ async function fetchPendingCount() {
     })
     const d = await r.json()
     pendingCount.value = d.count || 0
-  } catch {}
+  } catch (e) { console.error('[MRP] 加载待审批数失败', e) }
 }
 
 const handleExport = async () => {

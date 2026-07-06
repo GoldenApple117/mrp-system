@@ -10,12 +10,10 @@ from app.models.bom import BomHeader, BomLine
 from app.models.inventory import InventoryRecord
 from app.models.mps import MpsEntry
 from app.models.order import PurchaseOrder, WorkOrder
+from app.models.mrp_run_record import MrpRunRecord
 from app.services.mrp_calculator import MrpCalculator
 
 router = APIRouter(prefix="/api/mrp", tags=["MRP运算"])
-
-# 缓存最近一次 MRP 运行结果（内存缓存，服务器重启后清空）
-_last_mrp_result = None
 
 
 def run_mrp_logic(db: Session, horizon_days: int = 90, time_fence_days: int = 7) -> dict:
@@ -227,14 +225,25 @@ def run_mrp_logic(db: Session, horizon_days: int = 90, time_fence_days: int = 7)
 @router.post("/run")
 def run_mrp(data: dict, db: Session = Depends(get_db)):
     """执行MRP运算（API入口）"""
-    global _last_mrp_result
-    horizon_days = data.get("horizon_days", 90)
-    time_fence_days = data.get("time_fence_days", 7)
+    horizon_days = max(1, min(data.get("horizon_days", 90), 365))
+    time_fence_days = max(0, min(data.get("time_fence_days", 7), 30))
     result = run_mrp_logic(db, horizon_days, time_fence_days)
     if not result.get("success"):
         return result
-    # 缓存结果供 convert-to-orders 使用
-    _last_mrp_result = result.get("data", {}).get("planned_orders", [])
+
+    # 持久化到数据库，替代全局变量缓存
+    mrp_data = result.get("data", {})
+    run_id = f"MRP-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+    record = MrpRunRecord(
+        run_id=run_id,
+        planned_orders=mrp_data.get("planned_orders", []),
+        summary=mrp_data.get("summary", {}),
+    )
+    db.add(record)
+    db.commit()
+
+    # 在返回结果中附带 run_id 供前端消费
+    result["data"]["run_id"] = run_id
     return result
 
 
@@ -242,18 +251,21 @@ def run_mrp(data: dict, db: Session = Depends(get_db)):
 def convert_mrp_to_orders(data: dict = None, db: Session = Depends(get_db)):
     """
     将MRP计划建议转换为实际订单
-    优先使用请求中传入的 planned_orders，否则自动使用最近一次 MRP 运算结果
+    优先使用请求中传入的 planned_orders，否则从数据库读取最近一次 MRP 运算结果
     """
-    global _last_mrp_result
     data = data or {}
-    planned_orders = data.get("planned_orders", []) or _last_mrp_result or []
-    
+    planned_orders = data.get("planned_orders", [])
+
+    # 如果前端没传 planned_orders，从数据库读取最近一次结果
     if not planned_orders:
-        return {
-            "success": False,
-            "message": "没有待转换的计划订单，请先运行 MRP 运算",
-            "data": {"purchase_orders": 0, "work_orders": 0, "errors": []},
-        }
+        last_record = db.query(MrpRunRecord).order_by(MrpRunRecord.id.desc()).first()
+        if not last_record:
+            return {
+                "success": False,
+                "message": "没有待转换的计划订单，请先运行 MRP 运算",
+                "data": {"purchase_orders": 0, "work_orders": 0, "errors": []},
+            }
+        planned_orders = last_record.planned_orders
     
     created_po = 0
     created_wo = 0

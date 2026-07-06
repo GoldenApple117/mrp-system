@@ -300,7 +300,7 @@ async function batchToMps() {
   await ElMessageBox.confirm(`将 ${selectedIds.value.length} 个订单转为MPS计划？`, '批量生成MPS', { type: 'info' })
   let count = 0
   for (const id of selectedIds.value) {
-    try { await api.post(`/sales/orders/${id}/to-mps`); count++ } catch {}
+    try { await api.post(`/sales/orders/${id}/to-mps`); count++ } catch (e) { console.error('[MRP] 转MPS失败', e) }
   }
   ElMessage.success(`已生成 ${count} 个MPS计划`)
   selectedIds.value = []
@@ -311,7 +311,7 @@ async function batchDeleteSO() {
   await ElMessageBox.confirm(`确定删除 ${selectedIds.value.length} 个订单？`, '批量删除', { type: 'warning' })
   let count = 0
   for (const id of selectedIds.value) {
-    try { await api.delete(`/sales/orders/${id}`); count++ } catch {}
+    try { await api.delete(`/sales/orders/${id}`); count++ } catch (e) { console.error('[MRP] 删除订单失败', e) }
   }
   ElMessage.success(`已删除 ${count} 个订单`)
   selectedIds.value = []

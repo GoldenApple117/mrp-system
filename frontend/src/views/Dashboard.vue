@@ -338,7 +338,7 @@ async function loadTimer() {
     timerEnabled.value = d.enabled
     timerHour.value = d.hour
     timerMinute.value = d.minute
-  } catch {}
+  } catch (e) { console.error('[MRP] 加载定时器配置失败', e) }
 }
 
 // ====== 图表渲染 ======

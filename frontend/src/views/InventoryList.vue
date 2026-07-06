@@ -406,7 +406,7 @@ async function batchUpdateSafetyStock() {
     selectedIds.value = []
     batchSafetyStock.value = null
     loadData()
-  } catch {}
+  } catch (e) { console.error('[MRP]', e) }
 }
 
 // ====== 快速出入库 ======

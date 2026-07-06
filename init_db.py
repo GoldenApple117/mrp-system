@@ -38,7 +38,11 @@ def main():
     if not wait_for_mysql(cfg.DATABASE_URL):
         sys.exit(1)
 
-    # Step 2: Init tables
+    # Step 2: Import all models so they register with Base.metadata
+    print("Loading data models...")
+    import app.models  # noqa: F401 — registers models with SQLAlchemy Base
+
+    # Step 3: Init tables
     print("Initializing database tables...")
     from app.core.database import init_db, SessionLocal
     init_db()

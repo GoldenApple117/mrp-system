@@ -10,6 +10,7 @@ from app.models.inspection import InspectionRecord, StockCount
 from app.models.user import User
 from app.models.permission import PermissionRequest
 from app.models.smtp_config import SmtpConfig
+from app.models.mrp_run_record import MrpRunRecord
 
 __all__ = [
     "MaterialMaster",

@@ -40,7 +40,7 @@ onMounted(async () => {
   try {
     const res = await api.get('/permissions/my-status')
     status.value = res.status
-  } catch {}
+  } catch (e) { console.error('[MRP] 获取权限状态失败', e) }
 })
 
 async function apply() {

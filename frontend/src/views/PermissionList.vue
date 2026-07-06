@@ -52,7 +52,7 @@ async function fetchList() {
   try {
     const res = await api.get('/permissions/list')
     requests.value = res
-  } catch {} finally {
+  } catch (e) { console.error('[MRP] 获取审批列表失败', e) } finally {
     loading.value = false
   }
 }
@@ -63,7 +63,7 @@ async function approve(id) {
     const res = await api.put(`/permissions/approve/${id}`)
     ElMessage.success(res.message)
     fetchList()
-  } catch {} finally {
+  } catch (e) { console.error('[MRP] 审批失败', e) } finally {
     approvingId.value = null
   }
 }
@@ -75,7 +75,7 @@ async function reject(id) {
     const res = await api.put(`/permissions/reject/${id}`)
     ElMessage.success(res.message)
     fetchList()
-  } catch {} finally {
+  } catch (e) { console.error('[MRP] 拒绝失败', e) } finally {
     rejectingId.value = null
   }
 }

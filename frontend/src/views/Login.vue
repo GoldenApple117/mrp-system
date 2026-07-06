@@ -276,7 +276,7 @@ onMounted(() => {
         localStorage.removeItem(REMEMBER_KEY)
       }
     }
-  } catch {}
+  } catch (e) { console.error('[MRP] 加载记住密码失败', e) }
 })
 
 // ====== 实时表单校验 ======

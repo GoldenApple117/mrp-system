@@ -240,7 +240,7 @@ async function batchDelete() {
   await ElMessageBox.confirm(`确定删除已选的 ${selectedIds.value.length} 条计划？`, '批量删除', { type: 'warning' })
   let count = 0
   for (const id of selectedIds.value) {
-    try { await api.delete(`/mps/${id}`); count++ } catch {}
+    try { await api.delete(`/mps/${id}`); count++ } catch (e) { console.error('[MRP] 删除MPS失败', e) }
   }
   ElMessage.success(`已删除 ${count} 条`)
   selectedIds.value = []

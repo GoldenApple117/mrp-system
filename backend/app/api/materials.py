@@ -107,40 +107,77 @@ def list_all_materials(
 
 @router.get("/tree")
 def material_tree(db: Session = Depends(get_db)):
-    """获取项目→模块→零件的层级结构"""
-    products = db.query(MaterialMaster).filter(
-        MaterialMaster.level_type == "产品", MaterialMaster.is_active == True
-    ).all()
+    """获取项目→模块→零件的层级结构（优化版：4次查询代替 N+1）"""
+    from collections import defaultdict
+
+    # 1. 一次加载所有启用的物料
+    all_materials = db.query(MaterialMaster).filter(MaterialMaster.is_active == True).all()
+    mat_by_id = {m.id: m for m in all_materials}
+
+    # 2. 一次加载所有 BOM 头
+    all_bom_headers = db.query(BomHeader).order_by(BomHeader.id.desc()).all()
+    bom_by_product = {}
+    for bh in all_bom_headers:
+        if bh.product_id not in bom_by_product:
+            bom_by_product[bh.product_id] = bh  # id desc 保证取最新版本
+
+    # 3. 一次加载所有 BOM 行
+    all_bom_lines = db.query(BomLine).order_by(BomLine.sort_order).all()
+    lines_by_bom_id = defaultdict(list)
+    for bl in all_bom_lines:
+        lines_by_bom_id[bl.bom_header_id].append(bl)
+
+    # 4. 组装树（纯内存操作，0 次额外查询）
+    products = [m for m in all_materials if m.level_type == "产品"]
     result = []
+
     for product in products:
-        proj_bom = db.query(BomHeader).filter(BomHeader.product_id == product.id).order_by(BomHeader.id.desc()).first()
-        if not proj_bom: continue
-        module_lines = db.query(BomLine).filter(BomLine.bom_header_id == proj_bom.id).order_by(BomLine.sort_order).all()
+        proj_bom = bom_by_product.get(product.id)
+        if not proj_bom:
+            continue
+
+        module_lines = lines_by_bom_id.get(proj_bom.id, [])
         modules = []
+
         for ml in module_lines:
-            mod = db.query(MaterialMaster).filter(MaterialMaster.id == ml.item_id, MaterialMaster.level_type == "模块").first()
-            if not mod: continue
-            mod_bom = db.query(BomHeader).filter(BomHeader.product_id == mod.id).order_by(BomHeader.id.desc()).first()
+            mod = mat_by_id.get(ml.item_id)
+            if not mod or mod.level_type != "模块":
+                continue
+
+            # 模块下的零件：优先从模块 BOM 头查，否则从产品 BOM 查
+            mod_bom = bom_by_product.get(mod.id)
             if mod_bom:
-                part_lines = db.query(BomLine).filter(BomLine.bom_header_id == mod_bom.id).order_by(BomLine.sort_order).all()
+                part_lines = lines_by_bom_id.get(mod_bom.id, [])
             else:
-                # 模块无独立BOM头，零件直接挂在同一产品BOM头下
-                part_lines = db.query(BomLine).filter(
-                    BomLine.bom_header_id == proj_bom.id,
-                    BomLine.parent_item_id == mod.id
-                ).order_by(BomLine.sort_order).all()
+                part_lines = [bl for bl in module_lines if bl.parent_item_id == mod.id]
+
             parts = []
             for pl in part_lines:
-                part = db.query(MaterialMaster).filter(MaterialMaster.id == pl.item_id, MaterialMaster.level_type == "零件").first()
-                if part:
-                    parts.append({"id": part.id, "material_code": part.material_code, "material_name": part.material_name,
-                        "specification": part.specification or "", "unit": part.unit, "is_purchased": part.is_purchased,
+                part = mat_by_id.get(pl.item_id)
+                if part and part.level_type == "零件":
+                    parts.append({
+                        "id": part.id, "material_code": part.material_code,
+                        "material_name": part.material_name,
+                        "specification": part.specification or "", "unit": part.unit,
+                        "is_purchased": part.is_purchased,
                         "lead_time": part.lead_time, "safety_stock": part.safety_stock,
-                        "reference_unit_price": part.reference_unit_price or 0})
-            modules.append({"id": mod.id, "module_code": mod.material_code, "module_name": mod.material_name,
-                "part_count": len(parts), "parts": parts})
-        result.append({"id": product.id, "product_code": product.material_code, "product_name": product.material_name,
-            "module_count": len(modules), "total_parts": sum(m["part_count"] for m in modules), "modules": modules})
+                        "reference_unit_price": part.reference_unit_price or 0,
+                    })
+
+            modules.append({
+                "id": mod.id, "module_code": mod.material_code,
+                "module_name": mod.material_name,
+                "part_count": len(parts), "parts": parts,
+            })
+
+        result.append({
+            "id": product.id, "product_code": product.material_code,
+            "product_name": product.material_name,
+            "module_count": len(modules),
+            "total_parts": sum(m["part_count"] for m in modules),
+            "modules": modules,
+        })
+
     return {"projects": result}
 
 

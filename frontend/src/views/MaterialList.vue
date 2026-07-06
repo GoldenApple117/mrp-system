@@ -202,7 +202,7 @@ async function batchUpdate(field, value, label) {
     batchPrice.value = null
     batchSubmitter.value = ''
     fetchData()
-  } catch {}
+  } catch (e) { console.error('[MRP] 批量更新失败', e) }
 }
 
 async function fetchData() {
