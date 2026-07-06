@@ -75,7 +75,7 @@ def init_db():
                 seed_db.commit()
                 logger.info("✅ 已创建默认用户: user1 / 123456")
     else:
-        # MySQL 生产环境：优先 Alembic
+        # MySQL 生产环境：优先 Alembic，失败则回退到 create_all
         try:
             from alembic.config import Config
             from alembic import command as alembic_cmd
@@ -85,36 +85,10 @@ def init_db():
                 alembic_cfg = Config(alembic_cfg_path)
                 alembic_cmd.upgrade(alembic_cfg, "head")
                 logger.info("Alembic 迁移执行成功")
-
-            # create_all 补充 Alembic 未覆盖的新表/列（如 WorkOrderReport、unit_cost 等）
-            Base.metadata.create_all(bind=engine)
-
-            # MySQL: 确保 mrp_run_record 的 JSON 列足够大 + 新增列
-            with engine.connect() as conn:
-                for col in ["planned_orders_json", "summary_json"]:
-                    try:
-                        conn.execute(text(
-                            f"ALTER TABLE mrp_run_record MODIFY COLUMN {col} LONGTEXT"
-                        ))
-                        conn.commit()
-                        logger.info(f"mrp_run_record.{col} 已扩展为 LONGTEXT")
-                    except Exception:
-                        conn.rollback()
-
-                # 新增列：work_order_material.unit_cost / total_cost
-                for col_sql in [
-                    "ALTER TABLE work_order_material ADD COLUMN unit_cost FLOAT DEFAULT 0",
-                    "ALTER TABLE work_order_material ADD COLUMN total_cost FLOAT DEFAULT 0",
-                ]:
-                    try:
-                        conn.execute(text(col_sql))
-                        conn.commit()
-                        logger.info(f"work_order_material 列已添加")
-                    except Exception:
-                        conn.rollback()
         except Exception as e:
             logger.warning(f"Alembic 迁移失败（{e}），回退到 create_all")
             Base.metadata.create_all(bind=engine)
+    
 
         # 迁移：补齐新增的列（不破坏已有数据）
         # 每条 ALTER TABLE 单独 try/except，避免一条失败阻塞后续
