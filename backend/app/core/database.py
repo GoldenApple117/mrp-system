@@ -58,6 +58,19 @@ def init_db():
             alembic_cfg = Config(alembic_cfg_path)
             alembic_cmd.upgrade(alembic_cfg, "head")
             logger.info("Alembic 迁移执行成功")
+
+        # 无论如何，确保 mrp_run_record 的 JSON 列足够大（TEXT→LONGTEXT）
+        # 生产环境 MRP 结果 JSON (~135KB) 超出 TEXT(65KB) 限制
+        with engine.connect() as conn:
+            for col in ["planned_orders_json", "summary_json"]:
+                try:
+                    conn.execute(text(
+                        f"ALTER TABLE mrp_run_record MODIFY COLUMN {col} LONGTEXT"
+                    ))
+                    conn.commit()
+                    logger.info(f"mrp_run_record.{col} 已扩展为 LONGTEXT")
+                except Exception:
+                    conn.rollback()  # 可能是表不存在或已经是 LONGTEXT
     except Exception as e:
         logger.warning(f"Alembic 迁移失败（{e}），回退到 create_all + 遗留迁移")
 
