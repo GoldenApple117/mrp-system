@@ -32,9 +32,10 @@
         </template>
       </el-table-column>
       <el-table-column prop="work_center_name" label="工作中心" width="100" show-overflow-tooltip />
-      <el-table-column label="操作" width="210">
+      <el-table-column label="操作" width="260">
         <template #default="{row}">
           <el-button v-if="row.status==='已下达'" link type="primary" size="small" @click="startOrder(row)">开工</el-button>
+          <el-button v-if="['已下达','进行中'].includes(row.status)" link type="success" size="small" @click="openMaterials(row)">物料</el-button>
           <el-button v-if="row.status==='进行中'" link type="warning" size="small" @click="openReport(row)">报工</el-button>
           <el-button v-if="row.status==='进行中'" link type="success" size="small" @click="completeOrder(row)">完工</el-button>
           <el-button v-if="row.status==='待下达'" link type="danger" size="small" @click="deleteItem(row)">删除</el-button>
@@ -102,6 +103,71 @@
       <template #footer>
         <el-button @click="reportVisible=false">取消</el-button>
         <el-button type="primary" @click="submitReport" :loading="saving">提交报工</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 物料管理弹窗 -->
+    <el-dialog v-model="materialVisible" :title="`物料清单 - ${materialWoNumber}`" width="700px">
+      <div v-if="matLoading" style="text-align:center;padding:30px">加载中...</div>
+      <div v-else-if="!materials.length" style="text-align:center;color:#999;padding:30px">
+        暂无物料需求，请先「开工」生成物料清单
+      </div>
+      <el-table v-else :data="materials" stripe border size="small">
+        <el-table-column prop="material_code" label="编码" width="100" />
+        <el-table-column prop="material_name" label="名称" min-width="120" show-overflow-tooltip />
+        <el-table-column prop="required_qty" label="需求" width="60" align="center" />
+        <el-table-column label="已发" width="80" align="center">
+          <template #default="{row}">
+            <span :style="{color: row.issued_qty >= row.required_qty ? '#67c23a' : '#e6a23c', fontWeight:'bold'}">{{ row.issued_qty || 0 }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="未发" width="70" align="center">
+          <template #default="{row}">
+            <span style="color:#f56c6c">{{ Math.max(0, row.required_qty - (row.issued_qty||0)) }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="160">
+          <template #default="{row}">
+            <el-button link type="success" size="small"
+              @click="openIssueDialog(row)"
+              :disabled="(row.issued_qty||0) >= row.required_qty">领料</el-button>
+            <el-button link type="warning" size="small"
+              @click="openReturnDialog(row)"
+              :disabled="!(row.issued_qty > 0)">退料</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-dialog>
+
+    <!-- 领料弹窗 -->
+    <el-dialog v-model="issueVisible" title="领料" width="400px">
+      <el-form label-width="90px">
+        <el-form-item label="物料"><b>{{ issueForm.material_name }}</b></el-form-item>
+        <el-form-item label="已领">{{ issueForm.issued_qty }}</el-form-item>
+        <el-form-item label="需求">{{ issueForm.required_qty }}</el-form-item>
+        <el-form-item label="可领数">{{ issueForm.available }}</el-form-item>
+        <el-form-item label="本次领料">
+          <el-input-number v-model="issueForm.issue_qty" :min="1" :max="issueForm.available" style="width:150px" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="issueVisible=false">取消</el-button>
+        <el-button type="success" @click="confirmIssue" :loading="matSaving" :disabled="!issueForm.issue_qty">确认领料</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 退料弹窗 -->
+    <el-dialog v-model="returnVisible" title="退料" width="400px">
+      <el-form label-width="90px">
+        <el-form-item label="物料"><b>{{ returnForm.material_name }}</b></el-form-item>
+        <el-form-item label="已领">{{ returnForm.issued_qty }}</el-form-item>
+        <el-form-item label="本次退回">
+          <el-input-number v-model="returnForm.return_qty" :min="1" :max="returnForm.issued_qty" style="width:150px" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="returnVisible=false">取消</el-button>
+        <el-button type="warning" @click="confirmReturn" :loading="matSaving" :disabled="!returnForm.return_qty">确认退料</el-button>
       </template>
     </el-dialog>
   </div>
@@ -249,6 +315,85 @@ async function deleteItem(row) {
   await ElMessageBox.confirm('确定删除？', '提示', { type: 'warning' })
   await api.delete(`/production/orders/${row.id}`)
   fetchData()
+}
+
+// ====== 物料管理 ======
+const materialVisible = ref(false)
+const materialWoNumber = ref('')
+const materialWoId = ref(null)
+const materials = ref([])
+const matLoading = ref(false)
+
+async function openMaterials(row) {
+  materialWoId.value = row.id
+  materialWoNumber.value = row.wo_number
+  materialVisible.value = true
+  matLoading.value = true
+  try {
+    const res = await api.get(`/production/orders/${row.id}/materials`)
+    materials.value = res.items || []
+  } finally { matLoading.value = false }
+}
+
+// 领料
+const issueVisible = ref(false)
+const matSaving = ref(false)
+const issueForm = reactive({
+  id: null, material_code: '', material_name: '', required_qty: 0, issued_qty: 0, available: 0, issue_qty: 1,
+})
+
+function openIssueDialog(row) {
+  const issued = row.issued_qty || 0
+  Object.assign(issueForm, {
+    id: row.id, material_code: row.material_code, material_name: row.material_name,
+    required_qty: row.required_qty, issued_qty: issued,
+    available: Math.max(0, row.required_qty - issued),
+    issue_qty: Math.min(1, row.required_qty - issued),
+  })
+  issueVisible.value = true
+}
+
+async function confirmIssue() {
+  if (!issueForm.issue_qty || issueForm.issue_qty <= 0) return ElMessage.warning('请输入领料数量')
+  matSaving.value = true
+  try {
+    const res = await api.post(`/production/orders/${materialWoId.value}/issue-material`, {
+      item_id: materials.value.find(m => m.id === issueForm.id)?.material_code || issueForm.material_code,
+      issue_qty: issueForm.issue_qty,
+    })
+    ElMessage.success(res.message)
+    issueVisible.value = false
+    // 刷新物料列表
+    await openMaterials({ id: materialWoId.value, wo_number: materialWoNumber.value })
+  } catch (e) { ElMessage.error(e.message || '领料失败') } finally { matSaving.value = false }
+}
+
+// 退料
+const returnVisible = ref(false)
+const returnForm = reactive({
+  id: null, material_code: '', material_name: '', issued_qty: 0, return_qty: 1,
+})
+
+function openReturnDialog(row) {
+  Object.assign(returnForm, {
+    id: row.id, material_code: row.material_code, material_name: row.material_name,
+    issued_qty: row.issued_qty || 0, return_qty: Math.min(1, row.issued_qty || 0),
+  })
+  returnVisible.value = true
+}
+
+async function confirmReturn() {
+  if (!returnForm.return_qty || returnForm.return_qty <= 0) return ElMessage.warning('请输入退料数量')
+  matSaving.value = true
+  try {
+    const res = await api.post(`/production/orders/${materialWoId.value}/return-material`, {
+      item_id: materials.value.find(m => m.id === returnForm.id)?.material_code || returnForm.material_code,
+      return_qty: returnForm.return_qty,
+    })
+    ElMessage.success(res.message)
+    returnVisible.value = false
+    await openMaterials({ id: materialWoId.value, wo_number: materialWoNumber.value })
+  } catch (e) { ElMessage.error(e.message || '退料失败') } finally { matSaving.value = false }
 }
 
 onMounted(fetchData)

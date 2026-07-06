@@ -338,6 +338,150 @@ def get_order_materials(order_id: int, db: Session = Depends(get_db)):
     }
 
 
+@router.post("/orders/{order_id}/issue-material")
+def issue_material_to_work_order(order_id: int, data: dict, db: Session = Depends(get_db)):
+    """工单领料 — 按物料逐项发料，自动扣减库存"""
+    wo = db.query(WorkOrder).filter(WorkOrder.id == order_id).first()
+    if not wo:
+        raise HTTPException(status_code=404, detail="工单不存在")
+    if wo.status not in ("已下达", "进行中"):
+        raise HTTPException(status_code=400, detail=f"当前状态({wo.status})不能领料")
+
+    item_id = data.get("item_id")
+    issue_qty = float(data.get("issue_qty", 0))
+    operator = data.get("operator", "系统")
+
+    if not item_id or issue_qty <= 0:
+        raise HTTPException(status_code=422, detail="请提供物料ID (item_id) 和发料数量 (issue_qty>0)")
+
+    # 查找工单物料记录
+    wom = db.query(WorkOrderMaterial).filter(
+        WorkOrderMaterial.work_order_id == wo.id,
+        WorkOrderMaterial.item_id == item_id,
+    ).first()
+    if not wom:
+        raise HTTPException(status_code=404, detail="该物料不在工单需求清单中")
+
+    # 检查是否超发
+    remaining = wom.required_qty - (wom.issued_qty or 0)
+    if issue_qty > remaining:
+        return {"success": False, "message": f"超出发料上限：可发 {remaining}，请求 {issue_qty}"}
+
+    # 检查库存
+    inv = db.query(InventoryRecord).filter(
+        InventoryRecord.item_id == item_id,
+    ).first()
+    on_hand = inv.on_hand_qty if inv else 0
+    if on_hand < issue_qty:
+        return {"success": False, "message": f"库存不足：需要 {issue_qty}，可用 {on_hand}"}
+
+    # 扣减库存
+    inv.on_hand_qty -= issue_qty
+    wom.issued_qty = (wom.issued_qty or 0) + issue_qty
+
+    # 记录流水
+    db.add(InventoryTransaction(
+        item_id=item_id,
+        warehouse_id=inv.warehouse_id,
+        transaction_type="生产发料",
+        quantity=-issue_qty,
+        reference_no=wo.wo_number,
+        operator=operator,
+        remark=f"工单{wo.wo_number}领料 {issue_qty}，物料{wom.item.material_name if wom.item else ''}",
+    ))
+
+    db.commit()
+
+    mat_name = wom.item.material_name if wom.item else ""
+    return {
+        "success": True,
+        "message": f"已发料 {issue_qty} ({mat_name})，已发总计 {wom.issued_qty}/{wom.required_qty}",
+        "data": {
+            "item_id": item_id,
+            "material_name": mat_name,
+            "issue_qty": issue_qty,
+            "issued_qty": wom.issued_qty,
+            "required_qty": wom.required_qty,
+            "remaining": wom.required_qty - wom.issued_qty,
+            "on_hand_after": inv.on_hand_qty,
+        },
+    }
+
+
+@router.post("/orders/{order_id}/return-material")
+def return_material_from_work_order(order_id: int, data: dict, db: Session = Depends(get_db)):
+    """工单退料 — 未用完的物料退回仓库"""
+    wo = db.query(WorkOrder).filter(WorkOrder.id == order_id).first()
+    if not wo:
+        raise HTTPException(status_code=404, detail="工单不存在")
+    if wo.status not in ("进行中", "已完成"):
+        raise HTTPException(status_code=400, detail=f"当前状态({wo.status})不能退料")
+
+    item_id = data.get("item_id")
+    return_qty = float(data.get("return_qty", 0))
+    operator = data.get("operator", "系统")
+
+    if not item_id or return_qty <= 0:
+        raise HTTPException(status_code=422, detail="请提供物料ID (item_id) 和退料数量 (return_qty>0)")
+
+    wom = db.query(WorkOrderMaterial).filter(
+        WorkOrderMaterial.work_order_id == wo.id,
+        WorkOrderMaterial.item_id == item_id,
+    ).first()
+    if not wom:
+        raise HTTPException(status_code=404, detail="该物料不在工单需求清单中")
+
+    # 检查退料数量不超过已发数量
+    if return_qty > (wom.issued_qty or 0):
+        return {"success": False, "message": f"超出已发数量：已发 {wom.issued_qty}，请求退 {return_qty}"}
+
+    # 增加库存
+    inv = db.query(InventoryRecord).filter(
+        InventoryRecord.item_id == item_id,
+    ).first()
+    if inv:
+        inv.on_hand_qty += return_qty
+    else:
+        # 没有库存记录则创建一条
+        from app.models.inventory import Warehouse
+        wh = db.query(Warehouse).filter(Warehouse.warehouse_code == "WH01").first()
+        if not wh:
+            wh = Warehouse(warehouse_code="WH01", warehouse_name="主仓库")
+            db.add(wh)
+            db.flush()
+        inv = InventoryRecord(item_id=item_id, warehouse_id=wh.id, on_hand_qty=return_qty)
+        db.add(inv)
+
+    wom.issued_qty = (wom.issued_qty or 0) - return_qty
+
+    # 记录流水
+    db.add(InventoryTransaction(
+        item_id=item_id,
+        warehouse_id=inv.warehouse_id,
+        transaction_type="生产退料",
+        quantity=return_qty,
+        reference_no=wo.wo_number,
+        operator=operator,
+        remark=f"工单{wo.wo_number}退料 {return_qty}，物料{wom.item.material_name if wom.item else ''}",
+    ))
+
+    db.commit()
+
+    mat_name = wom.item.material_name if wom.item else ""
+    return {
+        "success": True,
+        "message": f"已退料 {return_qty} ({mat_name})，剩余已发 {wom.issued_qty}",
+        "data": {
+            "item_id": item_id,
+            "material_name": mat_name,
+            "return_qty": return_qty,
+            "issued_qty": wom.issued_qty,
+            "required_qty": wom.required_qty,
+            "on_hand_after": inv.on_hand_qty,
+        },
+    }
+
+
 @router.delete("/orders/{order_id}")
 def delete_work_order(order_id: int, db: Session = Depends(get_db)):
     """删除工单"""
