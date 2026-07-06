@@ -503,10 +503,12 @@ def convert_mrp_to_orders(data: dict = None, db: Session = Depends(get_db)):
 @router.post("/fix-column-types")
 def fix_column_types(db: Session = Depends(get_db)):
     """
-    [临时修复] 将 mrp_run_record 的 JSON 列从 TEXT 改为 LONGTEXT
-    仅在紧急修复时调用，后续将通过正常部署流程解决
+    [应急修复] 确保数据库列类型正确
+    - mrp_run_record: TEXT → LONGTEXT
+    - work_order_material: 添加 unit_cost / total_cost 列
     """
     results = {}
+    # Fix mrp_run_record JSON columns
     for col in ["planned_orders_json", "summary_json"]:
         try:
             db.execute(text(
@@ -516,5 +518,18 @@ def fix_column_types(db: Session = Depends(get_db)):
             results[col] = "LONGTEXT ✅"
         except Exception as e:
             db.rollback()
-            results[col] = f"失败: {e}"
+            results[col] = f"skip: {str(e)[:60]}"
+
+    # Fix work_order_material new columns
+    for col in ["unit_cost", "total_cost"]:
+        try:
+            db.execute(text(
+                f"ALTER TABLE work_order_material ADD COLUMN {col} FLOAT DEFAULT 0"
+            ))
+            db.commit()
+            results[f"work_order_material.{col}"] = "ADDED ✅"
+        except Exception as e:
+            db.rollback()
+            results[f"work_order_material.{col}"] = f"skip: {str(e)[:60]}"
+
     return {"success": True, "results": results}
