@@ -131,7 +131,7 @@ def create_sales_order(data: SalesOrderCreate, db: Session = Depends(get_db)):
         delivery_date=date.fromisoformat(data.delivery_date),
         ship_status="待出货",
         pay_status="未收款",
-        status="进行中",
+        status="待审核",
         priority=data.priority,
         remark=data.remark or "",
     )
@@ -167,6 +167,84 @@ def update_so_status(order_id: int, data: dict, db: Session = Depends(get_db)):
     so.status = data["status"]
     db.commit()
     return {"success": True, "message": f"状态更新为: {so.status}"}
+
+
+@router.post("/orders/{order_id}/approve")
+def approve_sales_order(order_id: int, db: Session = Depends(get_db)):
+    """审核通过销售订单 → 自动生成MPS计划"""
+    so = db.query(SalesOrder).filter(SalesOrder.id == order_id).first()
+    if not so:
+        raise HTTPException(status_code=404, detail="订单不存在")
+    if so.status != "待审核":
+        return {"success": False, "message": f"当前状态为「{so.status}」，不可审核"}
+
+    # 标记为已审核
+    so.status = "已审核"
+
+    # 检查是否已有MPS
+    existing = db.query(MpsEntry).filter(
+        MpsEntry.item_id == so.item_id,
+        MpsEntry.plan_date == so.delivery_date,
+        MpsEntry.source_type == "销售订单",
+        MpsEntry.source_id == so.order_number,
+    ).first()
+
+    if not existing:
+        mps = MpsEntry(
+            item_id=so.item_id,
+            plan_date=so.delivery_date,
+            quantity=so.order_qty,
+            source_type="销售订单",
+            source_id=so.order_number,
+            status="进行中",
+        )
+        db.add(mps)
+        db.flush()
+        mps_msg = f"，已生成MPS#{mps.id}"
+    else:
+        mps_msg = "，MPS已存在无需重复生成"
+
+    db.commit()
+
+    return {
+        "success": True,
+        "message": f"订单已审核{mps_msg}",
+        "data": {
+            "order_id": so.id,
+            "status": "已审核",
+            "material_name": so.item.material_name if so.item else "",
+            "quantity": so.order_qty,
+            "delivery_date": so.delivery_date.isoformat() if so.delivery_date else None,
+        },
+    }
+
+
+@router.post("/orders/{order_id}/cancel")
+def cancel_sales_order(order_id: int, db: Session = Depends(get_db)):
+    """作废销售订单 → 清理关联MPS计划"""
+    so = db.query(SalesOrder).filter(SalesOrder.id == order_id).first()
+    if not so:
+        raise HTTPException(status_code=404, detail="订单不存在")
+    if so.status in ("已完成", "已取消"):
+        return {"success": False, "message": f"订单已{so.status}，不可重复作废"}
+
+    # 清理关联的MPS
+    mps_entries = db.query(MpsEntry).filter(
+        MpsEntry.source_type == "销售订单",
+        MpsEntry.source_id == so.order_number,
+    ).all()
+    deleted_mps = len(mps_entries)
+    for mps in mps_entries:
+        db.delete(mps)
+
+    so.status = "已取消"
+    db.commit()
+
+    return {
+        "success": True,
+        "message": f"销售订单已作废，已清理 {deleted_mps} 条关联MPS计划",
+        "data": {"order_id": so.id, "status": "已取消", "deleted_mps": deleted_mps},
+    }
 
 
 @router.delete("/orders/{order_id}")

@@ -56,8 +56,9 @@
                 <el-table-column label="提交人" width="55" prop="submitter" />
                 <el-table-column label="到/未" width="60" align="center"><template #default="{row}"><span style="color:#67c23a">{{ row.received_qty||0 }}</span>/<span style="color:#f56c6c">{{ (row.order_qty-(row.received_qty||0)).toFixed(0) }}</span></template></el-table-column>
                 <el-table-column label="状态" width="75"><template #default="{row}"><el-tag :type="row.status==='已下单'?'danger':row.status==='部分到货'?'warning':'success'" size="small">{{ row.status }}</el-tag></template></el-table-column>
-                <el-table-column label="操作" width="130" fixed="right">
+                <el-table-column label="操作" width="190" fixed="right">
                   <template #default="{row}">
+                    <el-button link type="success" size="small" @click="showReceiveDialog(row)" v-if="['已下单','部分到货'].includes(row.status)">收货</el-button>
                     <el-button link type="primary" size="small" @click="updateStatus(row)">更新到货</el-button>
                     <el-button link type="danger" size="small" @click="deletePo(row.id)" v-if="row.status==='已下单'">删除</el-button>
                   </template>
@@ -121,6 +122,32 @@
       <div v-if="syncResult" style="margin-top:12px;white-space:pre-wrap;font-size:14px;color:#67c23a;background:#f0f9eb;padding:12px;border-radius:6px">{{ syncResult }}</div>
       <template #footer><el-button @click="bomSyncVisible=false">取消</el-button><el-button type="primary" @click="doBomSync" :loading="syncing">开始同步</el-button></template>
     </el-dialog>
+
+    <!-- 收货弹窗 -->
+    <el-dialog v-model="receiveVisible" title="采购收货" width="460px">
+      <el-form label-width="100px">
+        <el-form-item label="物料"><span style="font-weight:bold">{{ receiveForm.material_name }}</span></el-form-item>
+        <el-form-item label="供应商"><span>{{ receiveForm.supplier_name }}</span></el-form-item>
+        <el-form-item label="订购总数"><el-tag type="info">{{ receiveForm.order_qty }}</el-tag></el-form-item>
+        <el-form-item label="已收数量"><el-tag type="success">{{ receiveForm.total_received }}</el-tag></el-form-item>
+        <el-form-item label="本次收货" required>
+          <el-input-number v-model="receiveForm.receive_qty" :min="1" :max="receiveForm.remaining" style="width:150px" />
+          <span style="margin-left:8px;color:#999">最多 {{ receiveForm.remaining }}</span>
+        </el-form-item>
+        <el-form-item label="不合格数">
+          <el-input-number v-model="receiveForm.reject_qty" :min="0" :max="receiveForm.receive_qty" style="width:150px" />
+          <span style="margin-left:8px;color:#f56c6c">不合格退回供应商</span>
+        </el-form-item>
+        <el-form-item label="操作人"><el-input v-model="receiveForm.operator" style="width:200px" /></el-form-item>
+        <el-divider />
+        <el-form-item label="合格入库"><span style="font-size:16px;color:#67c23a;font-weight:bold">{{ (receiveForm.receive_qty||0) - (receiveForm.reject_qty||0) }}</span></el-form-item>
+        <el-form-item label="累计已收"><span style="font-size:16px;color:#409eff;font-weight:bold">{{ (receiveForm.total_received||0) + (receiveForm.receive_qty||0) }}</span></el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="receiveVisible=false">取消</el-button>
+        <el-button type="success" @click="confirmReceive" :disabled="!receiveForm.receive_qty" :loading="receiving">确认收货入库</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -183,6 +210,38 @@ async function confirmStatus() {
   const total = statusForm.existing_received + d; const ns = total >= statusForm.order_qty ? '全部到货' : '部分到货'
   await api.put(`/purchase/orders/${statusForm.id}/status`, { status: ns, received_qty: total })
   ElMessage.success(`收货 ${d} 件`); statusDialogVisible.value = false; loadGrouped()
+}
+
+// ====== 收货弹窗 ======
+const receiveVisible = ref(false)
+const receiving = ref(false)
+const receiveForm = reactive({
+  id: null, material_name: '', supplier_name: '', order_qty: 0, total_received: 0,
+  remaining: 0, receive_qty: 1, reject_qty: 0, operator: '系统',
+})
+function showReceiveDialog(row) {
+  const rec = row.received_qty || 0
+  Object.assign(receiveForm, {
+    id: row.id, material_name: row.material_name, supplier_name: row.supplier_name || '',
+    order_qty: row.order_qty, total_received: rec,
+    remaining: row.order_qty - rec, receive_qty: Math.min(1, row.order_qty - rec),
+    reject_qty: 0, operator: '系统',
+  })
+  receiveVisible.value = true
+}
+async function confirmReceive() {
+  if (!receiveForm.receive_qty || receiveForm.receive_qty <= 0) return ElMessage.warning('请输入收货数量')
+  receiving.value = true
+  try {
+    const res = await api.post(`/purchase/orders/${receiveForm.id}/receive`, {
+      receive_qty: receiveForm.receive_qty,
+      reject_qty: receiveForm.reject_qty || 0,
+      operator: receiveForm.operator || '系统',
+    })
+    ElMessage.success(res.message)
+    receiveVisible.value = false
+    loadGrouped()
+  } catch (e) { ElMessage.error(e.message || '收货失败') } finally { receiving.value = false }
 }
 async function deletePo(id) { await ElMessageBox.confirm('确定删除？', '提示', { type: 'warning' }); await api.delete(`/purchase/orders/${id}`); loadGrouped() }
 

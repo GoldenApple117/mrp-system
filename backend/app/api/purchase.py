@@ -190,6 +190,102 @@ def update_po_status(order_id: int, data: dict, db: Session = Depends(get_db)):
     return {"success": True, "message": msg, "data": {"delta": delta, "total_received": new_received}}
 
 
+@router.post("/orders/{order_id}/receive")
+def receive_purchase_order(order_id: int, data: dict, db: Session = Depends(get_db)):
+    """采购收货 — 支持抽检 + 不合格退回 + 自动入库"""
+    po = db.query(PurchaseOrder).filter(PurchaseOrder.id == order_id).first()
+    if not po:
+        raise HTTPException(status_code=404, detail="采购单不存在")
+    if po.status in ("已完成", "已取消"):
+        raise HTTPException(status_code=400, detail=f"订单已{po.status}，不可收货")
+
+    receive_qty = float(data.get("receive_qty", 0))
+    reject_qty = float(data.get("reject_qty", 0))
+    operator = data.get("operator", "系统")
+
+    if receive_qty <= 0:
+        raise HTTPException(status_code=400, detail="收货数量必须大于0")
+
+    remaining = po.order_qty - (po.received_qty or 0)
+    if receive_qty > remaining:
+        raise HTTPException(status_code=400,
+            detail=f"超出待收数量：本次可收 {remaining}，请求收 {receive_qty}")
+
+    # 更新已收数量
+    po.received_qty = (po.received_qty or 0) + receive_qty
+
+    # 自动入库（合格部分）
+    wh = db.query(Warehouse).filter(Warehouse.warehouse_code == "WH01").first()
+    if not wh:
+        wh = Warehouse(warehouse_code="WH01", warehouse_name="主仓库")
+        db.add(wh)
+        db.flush()
+
+    inv = db.query(InventoryRecord).filter(
+        InventoryRecord.item_id == po.item_id,
+        InventoryRecord.warehouse_id == wh.id,
+    ).first()
+    if not inv:
+        inv = InventoryRecord(item_id=po.item_id, warehouse_id=wh.id)
+        db.add(inv)
+        db.flush()
+
+    accept_qty = receive_qty - reject_qty
+    if accept_qty > 0:
+        inv.on_hand_qty += accept_qty
+
+    # 记录入库流水
+    tx = InventoryTransaction(
+        item_id=po.item_id,
+        warehouse_id=wh.id,
+        transaction_type="采购入库",
+        quantity=accept_qty,
+        reference_no=po.po_number,
+        operator=operator,
+        remark=f"采购单 {po.po_number} 收货 {receive_qty}"
+              + (f"，不合格退回 {reject_qty}" if reject_qty > 0 else "")
+              + f"，供应商:{po.supplier.supplier_name if po.supplier else ''}",
+    )
+    db.add(tx)
+
+    # 如果有不合格数量，记录一条不合格流水
+    if reject_qty > 0:
+        db.add(InventoryTransaction(
+            item_id=po.item_id,
+            warehouse_id=wh.id,
+            transaction_type="质检不合格",
+            quantity=-reject_qty,
+            reference_no=po.po_number,
+            operator=operator,
+            remark=f"采购单 {po.po_number} 质检不合格退回 {reject_qty}",
+        ))
+
+    # 更新订单状态
+    if po.received_qty >= po.order_qty:
+        po.status = "已完成"
+    else:
+        po.status = "部分收货"
+
+    db.commit()
+
+    return {
+        "success": True,
+        "message": f"收货 {receive_qty} 件"
+                  + (f"，合格入库 {accept_qty}" if reject_qty > 0 else "，已全部入库")
+                  + (f"，不合格退回 {reject_qty}" if reject_qty > 0 else "")
+                  + f"，累计 {po.received_qty:.0f}/{po.order_qty:.0f}",
+        "data": {
+            "receive_qty": receive_qty,
+            "accept_qty": accept_qty,
+            "reject_qty": reject_qty,
+            "total_received": po.received_qty,
+            "order_qty": po.order_qty,
+            "status": po.status,
+            "remaining": po.order_qty - po.received_qty,
+        },
+    }
+
+
 @router.delete("/orders/{order_id}")
 def delete_purchase_order(order_id: int, db: Session = Depends(get_db)):
     """删除采购单"""

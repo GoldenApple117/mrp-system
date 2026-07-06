@@ -3,6 +3,8 @@
     <div class="page-toolbar">
       <el-button type="primary" @click="showOrderDialog(null)"><el-icon><Plus /></el-icon> 新建订单</el-button>
       <el-select v-model="filterStatus" placeholder="状态筛选" style="width:120px" clearable @change="fetchData">
+        <el-option label="待审核" value="待审核" />
+        <el-option label="已审核" value="已审核" />
         <el-option label="待出货" value="待出货" />
         <el-option label="部分出货" value="部分出货" />
         <el-option label="全部出货" value="全部出货" />
@@ -55,14 +57,16 @@
         </el-table-column>
         <el-table-column label="订单状态" width="90">
           <template #default="{row}">
-            <el-tag :type="row.status==='已完成'?'success':'info'" size="small">{{ row.status }}</el-tag>
+            <el-tag :type="row.status==='已完成'?'success':row.status==='待审核'?'warning':row.status==='已审核'?'primary':row.status==='已取消'?'danger':'info'" size="small">{{ row.status }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column label="交期" width="100" prop="delivery_date" />
-        <el-table-column label="操作" width="160" fixed="right">
+        <el-table-column label="操作" width="200" fixed="right">
           <template #default="{row}">
             <el-button link type="primary" size="small" @click="showEdit(row)">编辑</el-button>
-            <el-button link type="success" size="small" @click="toMps(row)" v-if="row.ship_status==='待出货'">→MPS</el-button>
+            <el-button link type="success" size="small" @click="approveSO(row)" v-if="row.status==='待审核'">审核</el-button>
+            <el-button link type="success" size="small" @click="toMps(row)" v-if="row.status==='已审核' && row.ship_status==='待出货'">→MPS</el-button>
+            <el-button link type="danger" size="small" @click="cancelSO(row)" v-if="row.status!=='已完成' && row.status!=='已取消'">作废</el-button>
             <el-button link type="danger" size="small" @click="deleteSO(row)" v-if="row.ship_status==='待出货'">删除</el-button>
           </template>
         </el-table-column>
@@ -288,6 +292,23 @@ async function toMps(row) {
     ElMessage.success(res.message)
     fetchData()
   } catch (e) { ElMessage.error(e.message || '操作失败') }
+}
+
+async function approveSO(row) {
+  try {
+    const res = await api.post(`/sales/orders/${row.id}/approve`)
+    ElMessage.success(res.message)
+    fetchData()
+  } catch (e) { ElMessage.error(e.message || '审核失败') }
+}
+
+async function cancelSO(row) {
+  await ElMessageBox.confirm(`确定作废订单 ${row.order_number}？关联的MPS计划将同时清除。`, '作废确认', { type: 'warning' })
+  try {
+    const res = await api.post(`/sales/orders/${row.id}/cancel`)
+    ElMessage.success(res.message)
+    fetchData()
+  } catch (e) { ElMessage.error(e.message || '作废失败') }
 }
 
 async function deleteSO(row) {
