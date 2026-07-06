@@ -2,8 +2,9 @@
 from datetime import date, datetime
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, text
 import logging
+from sqlalchemy.dialects.mysql import LONGTEXT
 
 from app.core.database import get_db
 from app.models.material import MaterialMaster
@@ -387,3 +388,23 @@ def convert_mrp_to_orders(data: dict = None, db: Session = Depends(get_db)):
             "errors": errors,
         },
     }
+
+
+@router.post("/fix-column-types")
+def fix_column_types(db: Session = Depends(get_db)):
+    """
+    [临时修复] 将 mrp_run_record 的 JSON 列从 TEXT 改为 LONGTEXT
+    仅在紧急修复时调用，后续将通过正常部署流程解决
+    """
+    results = {}
+    for col in ["planned_orders_json", "summary_json"]:
+        try:
+            db.execute(text(
+                f"ALTER TABLE mrp_run_record MODIFY COLUMN {col} LONGTEXT"
+            ))
+            db.commit()
+            results[col] = "LONGTEXT ✅"
+        except Exception as e:
+            db.rollback()
+            results[col] = f"失败: {e}"
+    return {"success": True, "results": results}
