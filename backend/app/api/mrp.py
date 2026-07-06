@@ -231,26 +231,35 @@ def run_mrp_logic(db: Session, horizon_days: int = 90, time_fence_days: int = 7)
 @router.post("/run")
 def run_mrp(data: dict, db: Session = Depends(get_db)):
     """执行MRP运算（API入口）"""
-    horizon_days = max(1, min(data.get("horizon_days", 90), 365))
-    time_fence_days = max(0, min(data.get("time_fence_days", 7), 30))
-    result = run_mrp_logic(db, horizon_days, time_fence_days)
-    if not result.get("success"):
+    import traceback
+    try:
+        horizon_days = max(1, min(data.get("horizon_days", 90), 365))
+        time_fence_days = max(0, min(data.get("time_fence_days", 7), 30))
+        result = run_mrp_logic(db, horizon_days, time_fence_days)
+        if not result.get("success"):
+            return result
+
+        # 持久化到数据库，替代全局变量缓存
+        mrp_data = result.get("data", {})
+        run_id = f"MRP-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        record = MrpRunRecord(
+            run_id=run_id,
+            planned_orders=mrp_data.get("planned_orders", []),
+            summary=mrp_data.get("summary", {}),
+        )
+        db.add(record)
+        db.commit()
+
+        # 在返回结果中附带 run_id 供前端消费
+        result["data"]["run_id"] = run_id
         return result
-
-    # 持久化到数据库，替代全局变量缓存
-    mrp_data = result.get("data", {})
-    run_id = f"MRP-{datetime.now().strftime('%Y%m%d%H%M%S')}"
-    record = MrpRunRecord(
-        run_id=run_id,
-        planned_orders=mrp_data.get("planned_orders", []),
-        summary=mrp_data.get("summary", {}),
-    )
-    db.add(record)
-    db.commit()
-
-    # 在返回结果中附带 run_id 供前端消费
-    result["data"]["run_id"] = run_id
-    return result
+    except Exception as e:
+        logger.exception("MRP运算失败")
+        return {
+            "success": False,
+            "message": str(e),
+            "traceback": traceback.format_exc(),
+        }
 
 
 @router.post("/convert-to-orders")
