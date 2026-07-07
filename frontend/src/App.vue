@@ -66,12 +66,11 @@
           <NavItem to="/sales" icon="Sell" label="销售管理" :collapse="isCollapse" :active="activeMenu === '/sales'" />
           <NavItem to="/purchase" icon="ShoppingCart" label="采购管理" :collapse="isCollapse" :active="activeMenu === '/purchase'" />
           <NavItem to="/production" icon="SetUp" label="生产管理" :collapse="isCollapse" :active="activeMenu === '/production'" />
-          <NavItem to="/shop-floor" icon="Monitor" label="生产看板" :collapse="isCollapse" :active="activeMenu === '/shop-floor'" />
         </NavGroup>
 
         <!-- 分析与监控 -->
         <NavGroup label="分析与监控" :collapse="isCollapse">
-          <NavItem to="/reports" icon="DataAnalysis" label="报表分析" :collapse="isCollapse" :active="activeMenu === '/reports'" />
+          <NavItem to="/reports" icon="DataAnalysis" label="报表中心" :collapse="isCollapse" :active="activeMenu === '/reports'" />
           <NavItem to="/exceptions" icon="WarningFilled" label="例外看板" :collapse="isCollapse" :active="activeMenu === '/exceptions'" />
           <NavItem to="/inspection" icon="Stamp" label="检验盘点" :collapse="isCollapse" :active="activeMenu === '/inspection'" />
         </NavGroup>
@@ -516,7 +515,7 @@ const isLoginPage = computed(() => route.path === '/login')
 
 const pageTitle = computed(() => {
   const map = {
-    '/dashboard': '仪表板',
+    '/dashboard': '生产驾驶舱',
     '/materials': '物料主数据管理',
     '/bom': 'BOM 物料清单管理',
     '/inventory': '库存管理与出入库',
@@ -526,7 +525,7 @@ const pageTitle = computed(() => {
     '/purchase': '采购管理',
     '/production': '生产车间管理',
     '/routings': '工艺路线管理',
-    '/reports': '报表与分析',
+    '/reports': '报表中心',
     '/crp': 'CRP 产能需求计划',
     '/inspection': '检验与盘点管理',
     '/finance': '财务管理',
@@ -540,7 +539,7 @@ const pageTitle = computed(() => {
 
 const pageSubtitle = computed(() => {
   const map = {
-    '/dashboard': '系统概览与关键指标',
+    '/dashboard': 'KPI 指标 / 工单看板 / 实时监控',
     '/materials': '查看与管理所有物料基础数据',
     '/bom': '维护产品物料清单与组成结构',
     '/inventory': '实时库存监控与出入库操作',
@@ -550,7 +549,7 @@ const pageSubtitle = computed(() => {
     '/purchase': '采购订单管理与供应商跟踪',
     '/production': '生产工单派发与进度跟踪',
     '/routings': '定义产品制造的工序流程',
-    '/reports': 'OTD、库存、工单等数据报表',
+    '/reports': '历史数据查询与可视化分析',
     '/crp': '产能负荷分析与瓶颈识别',
     '/inspection': '来料检验与库存盘点',
     '/finance': '财务收款与出货管理',

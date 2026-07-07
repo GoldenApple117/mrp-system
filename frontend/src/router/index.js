@@ -97,11 +97,6 @@ const routes = [
     component: () => import('@/views/ExceptionBoard.vue'),
   },
   {
-    path: '/shop-floor',
-    name: 'ShopFloor',
-    component: () => import('@/views/ShopFloor.vue'),
-  },
-  {
     path: '/permissions',
     name: 'Permissions',
     component: () => import('@/views/PermissionList.vue'),
