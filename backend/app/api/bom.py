@@ -954,3 +954,384 @@ def import_bom_from_kdocs(data: dict, db: Session = Depends(get_db)):
         {"materials": parsed["materials"], "bom_lines": parsed["bom_lines"]},
         db,
     )
+
+
+# ====== 金山文档 Workbook 一键导入 ======
+
+_IMPORTED_FROM_KDOCS_HEADERS = {
+    "编码": "material_code", "物料编码": "material_code", "编号": "material_code",
+    "名称": "material_name", "物料名称": "material_name", "品名": "material_name",
+    "规格": "specification", "规格型号": "specification", "型号": "specification",
+    "数量": "quantity", "用量": "quantity", "单台用量": "quantity",
+    "单位": "unit",
+    "类型": "material_type", "物料类型": "material_type",
+    "备注": "remark",
+}
+
+
+@router.post("/import/kdocs-workbook")
+def import_bom_from_kdocs_workbook(data: dict, db: Session = Depends(get_db)):
+    """
+    一键导入金山文档 Workbook——文档=产品, Sheet=模块, 行=零件
+    
+    自动构建产品→模块→零件的三层BOM结构。
+    
+    请求体:
+    {
+        "url": "https://www.kdocs.cn/l/xxx",
+        "product_code": "[可选] 产品编码，留空自动生成",
+        "product_name": "[可选] 产品名称，留空用文档名",
+        "sheets": "[可选] 直接传入解析后的sheet数据 {name, rows[{col:val}]}",
+        "overwrite": false  // [可选] 是否覆盖已有BOM
+    }
+    """
+    url = data.get("url", "")
+    product_code = data.get("product_code", "")
+    product_name = data.get("product_name", "")
+    sheets_input = data.get("sheets", None)
+    overwrite = data.get("overwrite", False)
+    stats = {"materials_created": 0, "materials_found": 0,
+             "modules_created": 0, "bom_lines_created": 0, "errors": []}
+
+    # 阶段1: 获取工作表数据
+    sheet_data = []
+    if sheets_input:
+        # 直接使用传入的数据
+        sheet_data = sheets_input
+    elif url:
+        # 尝试通过金山API读取文档
+        try:
+            import requests
+            import re
+            # 解析链接
+            m = re.search(r'kdocs\.cn/l/([a-zA-Z0-9_-]+)', url)
+            if not m:
+                return {"success": False, "message": "无法解析金山文档链接"}
+            file_id = m.group(1)
+
+            # 读取文档元信息
+            meta_url = f"https://www.kdocs.cn/api/v3/share/file/{file_id}"
+            resp = requests.get(meta_url, timeout=15, headers={
+                "User-Agent": "MRP-System-BOM-Importer/1.0"
+            })
+            if resp.status_code != 200:
+                return {"success": False, "message": f"无法读取金山文档 (HTTP {resp.status_code})",
+                        "hint": "请确认链接可公开访问，或使用 sheets 参数直接提供数据"}
+            meta = resp.json()
+            doc_name = meta.get("data", {}).get("name", "") or meta.get("name", "")
+            if not product_name and doc_name:
+                product_name = doc_name.rstrip(".xlsx").rstrip(".xls").rstrip(".et")
+
+            # 尝试读取内容（不同文档类型格式不同）
+            try:
+                content_url = f"https://www.kdocs.cn/api/v3/share/file/{file_id}/content"
+                content_resp = requests.get(content_url, timeout=30, headers={
+                    "User-Agent": "MRP-System-BOM-Importer/1.0"
+                })
+                if content_resp.status_code == 200:
+                    raw = content_resp.json()
+                    # 尝试解析 json/xml 格式
+                    sheet_data = _extract_sheets_from_kdocs(raw)
+            except Exception:
+                pass
+        except Exception as e:
+            stats["errors"].append(f"读取文档失败: {e}")
+    else:
+        return {"success": False, "message": "请提供 url 或 sheets 参数"}
+
+    if not sheet_data:
+        # 兜底：如果没有成功读取，给明确的错误引导
+        return {
+            "success": False,
+            "message": "未能读取工作表数据，请通过系统上传金山文档的导出Excel文件",
+            "hint": "在金山文档中: 文件 → 导出为 → Excel(.xlsx)，然后使用 BOM 管理的 Excel 导入功能",
+            "stats": stats,
+        }
+
+    # 阶段2: 确定产品物料
+    if not product_name:
+        product_name = "新产品"
+    if not product_code:
+        product_code = f"PRD-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+
+    # 查找或创建产品物料
+    product = db.query(MaterialMaster).filter(
+        MaterialMaster.material_code == product_code
+    ).first()
+    if not product:
+        product = MaterialMaster(
+            material_code=product_code,
+            material_name=product_name,
+            material_type="成品",
+            level_type="产品",
+            unit="台",
+            is_purchased=False,
+            is_active=True,
+        )
+        db.add(product)
+        db.flush()
+        stats["materials_created"] += 1
+    else:
+        stats["materials_found"] += 1
+
+    # 阶段3: 处理每个Sheet(模块)
+    module_items = []
+    for sheet_idx, sheet in enumerate(sheet_data):
+        sheet_name = sheet.get("name", "").strip()
+        rows = sheet.get("rows", [])
+
+        # 跳过空表或太短的表
+        if len(rows) < 2:
+            continue
+
+        # 提取列名(第一行)
+        header_row = rows[0]
+        col_map = _map_kdocs_columns(header_row)
+        has_code = any(v == "material_code" for v in col_map.values())
+        has_name = any(v == "material_name" for v in col_map.values())
+        if not has_name and not has_code:
+            continue  # 无法识别的表
+
+        # 模块名: 用sheet名, 如果为空或默认名则用"模块N"
+        if not sheet_name or sheet_name.startswith("Sheet"):
+            sheet_name = f"模块{sheet_idx + 1}"
+        module_code = f"{product_code}-MOD-{sheet_idx + 1:02d}"
+
+        # 查找或创建模块物料
+        module = db.query(MaterialMaster).filter(
+            MaterialMaster.material_code == module_code
+        ).first()
+        if not module:
+            module = MaterialMaster(
+                material_code=module_code,
+                material_name=sheet_name,
+                material_type="半成品",
+                level_type="模块",
+                unit="套",
+                is_purchased=False,
+                is_active=True,
+            )
+            db.add(module)
+            db.flush()
+            stats["modules_created"] += 1
+
+        # 阶段4: 创建模块→产品的BOM头(产品→模块)
+        product_bom = db.query(BomHeader).filter(
+            BomHeader.product_id == product.id,
+            BomHeader.bom_code == f"BOM-{product_code}",
+        ).first()
+        if not product_bom:
+            product_bom = BomHeader(
+                bom_code=f"BOM-{product_code}",
+                product_id=product.id,
+                version="A",
+                status="发布",
+                effective_date=date.today(),
+            )
+            db.add(product_bom)
+            db.flush()
+
+        # 添加产品→模块的BOM行
+        existing_pm = db.query(BomLine).filter(
+            BomLine.bom_header_id == product_bom.id,
+            BomLine.item_id == module.id,
+        ).first()
+        if not existing_pm:
+            bl = BomLine(
+                bom_header_id=product_bom.id,
+                parent_item_id=product.id,
+                item_id=module.id,
+                quantity=1,
+                level=1,
+                sort_order=sheet_idx + 1,
+            )
+            db.add(bl)
+            stats["bom_lines_created"] += 1
+
+        # 阶段5: 创建模块→零件的BOM
+        module_bom_code = f"BOM-{module_code}"
+        module_bom = db.query(BomHeader).filter(
+            BomHeader.bom_code == module_bom_code,
+        ).first()
+        if not module_bom:
+            module_bom = BomHeader(
+                bom_code=module_bom_code,
+                product_id=module.id,
+                version="A",
+                status="发布",
+                effective_date=date.today(),
+            )
+            db.add(module_bom)
+            db.flush()
+
+        # 阶段6: 逐行解析零件
+        for row_idx in range(1, len(rows)):
+            row = rows[row_idx]
+            if isinstance(row, dict):
+                row_data = row
+            elif isinstance(row, list):
+                row_data = {list(col_map.keys())[i] if i < len(col_map) else "": v
+                            for i, v in enumerate(row)}
+            else:
+                continue
+
+            # 提取关键字段
+            code = _get_kdocs_val(row_data, col_map, "material_code")
+            name = _get_kdocs_val(row_data, col_map, "material_name")
+            qty = _safe_float_kdocs(_get_kdocs_val(row_data, col_map, "quantity"), 1)
+            spec = _get_kdocs_val(row_data, col_map, "specification")
+            unit = _get_kdocs_val(row_data, col_map, "unit") or "个"
+            remark = _get_kdocs_val(row_data, col_map, "remark")
+
+            if not name and not code:
+                continue  # 空行跳过
+
+            # 确定物料编码
+            if not code:
+                code = f"{module_code}-{row_idx:04d}"
+
+            # 查找或创建零件物料
+            part = db.query(MaterialMaster).filter(
+                MaterialMaster.material_code == code
+            ).first()
+            if not part:
+                part = MaterialMaster(
+                    material_code=code,
+                    material_name=name or f"零件{row_idx}",
+                    specification=spec or "",
+                    unit=unit,
+                    material_type="原材料",
+                    level_type="零件",
+                    is_purchased=True,
+                    is_active=True,
+                )
+                db.add(part)
+                db.flush()
+                stats["materials_created"] += 1
+            else:
+                stats["materials_found"] += 1
+
+            # 添加模块→零件的BOM行
+            existing_ml = db.query(BomLine).filter(
+                BomLine.bom_header_id == module_bom.id,
+                BomLine.item_id == part.id,
+            ).first()
+            if not existing_ml or overwrite:
+                if existing_ml and overwrite:
+                    existing_ml.quantity = qty
+                else:
+                    bl = BomLine(
+                        bom_header_id=module_bom.id,
+                        parent_item_id=module.id,
+                        item_id=part.id,
+                        quantity=qty,
+                        level=2,
+                        sort_order=row_idx,
+                        remark=remark or "",
+                    )
+                    db.add(bl)
+                    stats["bom_lines_created"] += 1
+
+    db.commit()
+    return {
+        "success": True,
+        "message": f"导入完成: 新建{stats['materials_created']}个物料, "
+                   f"{stats['modules_created']}个模块, {stats['bom_lines_created']}条BOM行",
+        "stats": stats,
+        "product": {"code": product_code, "name": product_name, "id": product.id},
+    }
+
+
+def _map_kdocs_columns(headers: list) -> dict:
+    """智能映射列名"""
+    import re
+    col_map = {}
+    for i, h in enumerate(headers):
+        h = str(h).strip()
+        if not h:
+            continue
+        # 尝试匹配
+        for keyword, field in _IMPORTED_FROM_KDOCS_HEADERS.items():
+            if keyword in h:
+                col_map[h] = field
+                break
+        else:
+            # 未匹配的列标记为unknown
+            col_map[h] = f"_col_{i}"
+    return col_map
+
+
+def _get_kdocs_val(row_data: dict, col_map: dict, field: str) -> str:
+    """从行数据取指定字段的值"""
+    for header, mapped_field in col_map.items():
+        if mapped_field == field:
+            val = row_data.get(header, row_data.get(header.strip(), ""))
+            if isinstance(val, (int, float)):
+                return str(val)
+            return str(val or "").strip()
+    return ""
+
+
+def _safe_float_kdocs(v, default=0.0):
+    try:
+        return float(str(v).replace(",", "").replace("，", "").strip() or "0")
+    except (ValueError, TypeError):
+        return default
+
+
+def _extract_sheets_from_kdocs(raw: dict) -> list:
+    """尝试从kdocs API返回数据中提取sheet"""
+    sheets = []
+    data = raw.get("data", raw)
+    content = data.get("content", data)
+
+    # 格式1: 直接有 sheets 列表
+    if isinstance(content, dict) and "sheets" in content:
+        for s in content["sheets"]:
+            name = s.get("name", "")
+            rows_data = s.get("data", [])
+            if isinstance(rows_data, dict):
+                row_list = rows_data.get("rows", [])
+            elif isinstance(rows_data, list):
+                row_list = rows_data
+            else:
+                row_list = []
+            parsed_rows = _kdc_rows_to_list(row_list, content.get("shared_strings", []))
+            sheets.append({"name": name, "rows": parsed_rows})
+
+    # 格式2: 有 tables 列表
+    elif isinstance(content, dict) and "tables" in content:
+        for t in content["tables"]:
+            name = t.get("title", "")
+            rows = t.get("rows", [])
+            if isinstance(rows, list):
+                sheets.append({"name": name, "rows": rows})
+
+    return sheets
+
+
+def _kdc_rows_to_list(rows: list, shared_strings: list) -> list:
+    """将kdc格式的行数据转为行列列表"""
+    result = []
+
+    def get_text(idx):
+        if idx is None or idx < 0 or idx >= len(shared_strings):
+            return ""
+        items = shared_strings[idx].get("items", [])
+        return "".join(item.get("text", "") for item in items if "text" in item)
+
+    for entry in rows:
+        if isinstance(entry, dict):
+            cells = entry.get("cells", [])
+            row_vals = []
+            for cell in cells:
+                if "string" in cell:
+                    row_vals.append(get_text(cell["string"]))
+                elif "number" in cell:
+                    v = cell["number"]
+                    row_vals.append(str(int(v)) if v == int(v) else str(v))
+                else:
+                    row_vals.append("")
+            if any(v for v in row_vals):
+                result.append(row_vals)
+    return result
