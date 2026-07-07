@@ -1,62 +1,20 @@
-# Python
 __pycache__/
 *.py[cod]
 *.egg-info/
 dist/
-build/
-*.db
-*.db-wal
-*.db-shm
-
-# Node
 node_modules/
-frontend/dist/
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# Environment
 .env
-.env.local
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Uploads (保留目录结构，忽略文件)
-uploads/*.xlsx
-!uploads/.gitkeep
-
-# Railway
-.railway/
-
-# Temp
-*.log
-*.pid
-
-# Secrets
-backend/smtp_config.json
-backend/.env
-
-# MySQL local data & config (local dev only)
-mysql-data/
-mysql-config/
-
-# Binary installers (should not be in git)
+*.db
+*.db-shm
+*.db-wal
 *.zip
-*.msi
 *.exe
-*.msix
-*.appx
-*.appxbundle
-
-# Python virtual env
-venv/
-env/
-ENV/
-
-# Logs
-*.log
+*.msi
+*.json
+!package.json
+!railway.json
+!requirements.json
+.pytest_cache/
+uploads/
+.vscode/
+.workbuddy/

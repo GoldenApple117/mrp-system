@@ -10,7 +10,7 @@ RAILWAY_MYSQL_URL = os.getenv("MYSQL_URL", "") or os.getenv("DATABASE_URL", "")
 # MySQL 数据库连接（默认） / SQLite 备用
 MYSQL_CONFIG = {
     "user": os.getenv("MYSQL_USER", "root"),
-    "password": os.getenv("MYSQL_PASSWORD", "root"),
+    "password": os.getenv("MYSQL_PASSWORD", "root123"),
     "host": os.getenv("MYSQL_HOST", "127.0.0.1"),
     "port": int(os.getenv("MYSQL_PORT", "3306")),
     "database": os.getenv("MYSQL_DATABASE", "mrp_system"),
