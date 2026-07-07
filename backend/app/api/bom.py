@@ -1335,3 +1335,93 @@ def _kdc_rows_to_list(rows: list, shared_strings: list) -> list:
             if any(v for v in row_vals):
                 result.append(row_vals)
     return result
+
+
+@router.post("/import/workbook-excel")
+async def import_bom_from_workbook_excel(
+    file: UploadFile = File(...),
+    product_code: str = Query("", description="产品编码，留空自动生成"),
+    product_name: str = Query("", description="产品名称，留空用文件名"),
+    db: Session = Depends(get_db),
+):
+    """
+    从 Excel 文件导入多 Sheet BOM 产品。
+
+    Excel 中每个 Sheet = 一个模块，Sheet 内的行 = 零件。
+    一行 API 调用即可将整个 Excel Workbook 转为三层 BOM 结构。
+
+    支持的列名: 编码/物料编码/编号, 名称/品名/物料名称, 规格/型号, 数量/用量
+    """
+    if not file.filename.endswith(('.xlsx', '.xls')):
+        raise HTTPException(400, "仅支持 .xlsx / .xls 文件")
+
+    import openpyxl
+    wb = openpyxl.load_workbook(file.file, data_only=True)
+
+    if not product_name:
+        product_name = file.filename.rstrip('.xlsx').rstrip('.xls')
+    if not product_code:
+        product_code = f"PRD-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+
+    sheets = []
+    for ws in wb.worksheets:
+        sheet_name = ws.title
+        rows = []
+        for row in ws.iter_rows(values_only=True):
+            row_list = [str(c).strip() if c is not None else "" for c in row]
+            # 跳过全空行
+            if any(v for v in row_list):
+                rows.append(row_list)
+        if len(rows) >= 2:  # 至少表头 + 一行数据
+            # 跳过前导标题行，找到真正的表头行
+            header_idx = 0
+            for idx, r in enumerate(rows):
+                row_text = "|".join(r).lower()
+                # 常见的表头关键字: 编码, 名称, 序号+型号, 物料编码, 数量, 序号+名称
+                if any(kw in row_text for kw in ["物料编码", "物料名称", "名称规格", "单台数量"]) \
+                   or (("序号" in row_text or "编码" in row_text or "型号" in row_text)
+                       and ("名称" in row_text or "数量" in row_text)):
+                    header_idx = idx
+                    break
+            # 交换表头行到第一行
+            if header_idx > 0:
+                rows = rows[header_idx:]
+            sheets.append({"name": sheet_name, "rows": rows})
+
+    wb.close()
+
+    if not sheets:
+        raise HTTPException(400, "Excel 中未找到有效数据")
+
+    # 复用 kdocs-workbook 的导入逻辑
+    result = import_bom_from_kdocs_workbook({
+        "product_code": product_code,
+        "product_name": product_name,
+        "sheets": sheets,
+    }, db)
+
+    return result
+    """将kdc格式的行数据转为行列列表"""
+    result = []
+
+    def get_text(idx):
+        if idx is None or idx < 0 or idx >= len(shared_strings):
+            return ""
+        items = shared_strings[idx].get("items", [])
+        return "".join(item.get("text", "") for item in items if "text" in item)
+
+    for entry in rows:
+        if isinstance(entry, dict):
+            cells = entry.get("cells", [])
+            row_vals = []
+            for cell in cells:
+                if "string" in cell:
+                    row_vals.append(get_text(cell["string"]))
+                elif "number" in cell:
+                    v = cell["number"]
+                    row_vals.append(str(int(v)) if v == int(v) else str(v))
+                else:
+                    row_vals.append("")
+            if any(v for v in row_vals):
+                result.append(row_vals)
+    return result
