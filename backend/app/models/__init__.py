@@ -21,4 +21,5 @@ __all__ = [
     "WorkCenter", "RoutingHeader", "RoutingOperation",
     "Supplier",
     "InspectionRecord", "InspectionStandard", "InspectionDefect", "NcrRecord", "StockCount",
+    "BatchRecord", "SerialNumber", "SerialNumberLog",
 ]

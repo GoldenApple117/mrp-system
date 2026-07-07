@@ -9,7 +9,7 @@ import logging
 
 from app.core.database import init_db
 from app.core.config import UPLOAD_DIR
-from app.api import materials, bom, inventory, mps, mrp, purchase, production, crp, inspection, sales, cost, finance, exceptions, system as system_api, auth, permissions
+from app.api import materials, bom, inventory, mps, mrp, purchase, production, crp, inspection, sales, cost, finance, exceptions, system as system_api, auth, permissions, trace
 from app.api.deps import require_approved
 
 logging.basicConfig(level=logging.INFO)
@@ -42,7 +42,8 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="MRP II 系统",
     description="物料需求计划管理系统 — MPS + BOM + 库存 + MRP引擎 + 采购 + 生产",
-    version="1.4.0",
+    version="1.5.0",
+    debug=True,
     lifespan=lifespan,
 )
 
@@ -79,6 +80,7 @@ app.include_router(cost.router, dependencies=_auth)
 app.include_router(finance.router, dependencies=_auth)
 app.include_router(exceptions.router, dependencies=_auth)
 app.include_router(system_api.router, dependencies=_auth)
+app.include_router(trace.router, dependencies=_auth)
 
 # 上传文件静态访问
 os.makedirs(UPLOAD_DIR, exist_ok=True)
