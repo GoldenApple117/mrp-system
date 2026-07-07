@@ -194,8 +194,9 @@ def update_inspection_result(inspection_id: int, data: dict, db: Session = Depen
         insp.result = "合格"
     insp.inspector = data.get("inspector", insp.inspector)
 
-    # 合格 → 入库（仅 IQC 采购入库场景）
-    if pass_qty > 0 and insp.source_type == "采购单":
+    # ⚠️ 注意：采购收货时已经加了库存，IQC 检验仅记录结果，不再重复入库
+    # 只有非采购单来源（如 PQC 过程检验、OQC 出货检验）才在此处处理库存
+    if pass_qty > 0 and insp.source_type != "采购单":
         wh_id = data.get("warehouse_id", 1)
         rec = db.query(InventoryRecord).filter(
             InventoryRecord.item_id == insp.item_id,
@@ -211,8 +212,8 @@ def update_inspection_result(inspection_id: int, data: dict, db: Session = Depen
             transaction_type="采购入库", quantity=pass_qty,
             reference_no=insp.inspection_no, operator=data.get("inspector", ""),
         ))
-
-        # 更新采购单
+    elif pass_qty > 0 and insp.source_type == "采购单":
+        # 仅更新采购单状态，不操作库存
         po = db.query(PurchaseOrder).filter(PurchaseOrder.id == insp.source_id).first()
         if po:
             po.received_qty = (po.received_qty or 0) + pass_qty
