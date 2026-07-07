@@ -12,6 +12,7 @@ from app.models.permission import PermissionRequest
 from app.models.smtp_config import SmtpConfig
 from app.models.mrp_run_record import MrpRunRecord
 from app.models.andon import AndonEvent
+from app.models.equipment import Equipment, Tooling, MaintenancePlan
 
 __all__ = [
     "MaterialMaster",
@@ -24,4 +25,5 @@ __all__ = [
     "InspectionRecord", "InspectionStandard", "InspectionDefect", "NcrRecord", "StockCount",
     "BatchRecord", "SerialNumber", "SerialNumberLog",
     "AndonEvent",
+    "Equipment", "Tooling", "MaintenancePlan",
 ]

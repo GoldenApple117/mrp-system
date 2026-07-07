@@ -9,7 +9,7 @@ import logging
 
 from app.core.database import init_db
 from app.core.config import UPLOAD_DIR
-from app.api import materials, bom, inventory, mps, mrp, purchase, production, crp, inspection, sales, cost, finance, exceptions, system as system_api, auth, permissions, trace, shop_floor
+from app.api import materials, bom, inventory, mps, mrp, purchase, production, crp, inspection, sales, cost, finance, exceptions, system as system_api, auth, permissions, trace, shop_floor, equipment
 from app.api.deps import require_approved
 
 logging.basicConfig(level=logging.INFO)
@@ -82,6 +82,7 @@ app.include_router(exceptions.router, dependencies=_auth)
 app.include_router(system_api.router, dependencies=_auth)
 app.include_router(trace.router, dependencies=_auth)
 app.include_router(shop_floor.router, dependencies=_auth)
+app.include_router(equipment.router, dependencies=_auth)
 
 # 上传文件静态访问
 os.makedirs(UPLOAD_DIR, exist_ok=True)
