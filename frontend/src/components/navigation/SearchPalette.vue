@@ -4,7 +4,9 @@
       <div v-if="visible" class="palette-overlay" @click.self="close">
         <div class="palette-dialog">
           <!-- 搜索框 -->
-          <div class="flex items-center gap-2 px-4 py-3 border-b border-[var(--color-border-subtle)]">
+          <div
+            class="flex items-center gap-2 px-4 py-3 border-b border-[var(--color-border-subtle)]"
+          >
             <el-icon :size="16" color="var(--color-text-tertiary)"><Search /></el-icon>
             <input
               ref="inputRef"
@@ -12,21 +14,26 @@
               type="text"
               class="flex-1 bg-transparent border-none outline-none text-sm text-[var(--color-text-primary)] placeholder-[var(--color-text-disabled)]"
               placeholder="搜索页面或输入命令..."
-              @keydown="handleKeydown"
               autofocus
+              @keydown="handleKeydown"
             />
             <kbd class="shortcut-kbd">Esc</kbd>
           </div>
 
           <!-- 无结果 -->
-          <div v-if="query && !filtered.length" class="px-4 py-8 text-center text-xs text-[var(--color-text-tertiary)]">
+          <div
+            v-if="query && !filtered.length"
+            class="px-4 py-8 text-center text-xs text-[var(--color-text-tertiary)]"
+          >
             <el-icon :size="24" color="var(--color-text-disabled)"><Search /></el-icon>
             <p class="mt-2">未找到 "{{ query }}" 相关结果</p>
           </div>
 
           <!-- 初始提示 -->
           <div v-if="!query" class="px-4 py-3">
-            <div class="text-2xs text-[var(--color-text-tertiary)] uppercase tracking-wider font-semibold mb-2 px-2">
+            <div
+              class="text-2xs text-[var(--color-text-tertiary)] uppercase tracking-wider font-semibold mb-2 px-2"
+            >
               快捷键
             </div>
             <div class="space-y-0.5">
@@ -66,18 +73,31 @@
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-1.5">
                   <span class="truncate">{{ item.label }}</span>
-                  <el-tag v-if="item.section" size="small" effect="plain" class="!text-2xs !px-1 !py-0">{{ item.section }}</el-tag>
+                  <el-tag
+                    v-if="item.section"
+                    size="small"
+                    effect="plain"
+                    class="!text-2xs !px-1 !py-0"
+                    >{{ item.section }}</el-tag
+                  >
                 </div>
-                <div v-if="item.desc" class="text-xs text-[var(--color-text-tertiary)] truncate mt-0.5">
+                <div
+                  v-if="item.desc"
+                  class="text-xs text-[var(--color-text-tertiary)] truncate mt-0.5"
+                >
                   {{ item.desc }}
                 </div>
               </div>
-              <span v-if="i === activeIndex" class="text-2xs text-[var(--color-text-disabled)]">↵ 进入</span>
+              <span v-if="i === activeIndex" class="text-2xs text-[var(--color-text-disabled)]"
+                >↵ 进入</span
+              >
             </button>
           </div>
 
           <!-- 底部提示 -->
-          <div class="flex items-center justify-between px-4 py-2 border-t border-[var(--color-border-subtle)] text-2xs text-[var(--color-text-disabled)]">
+          <div
+            class="flex items-center justify-between px-4 py-2 border-t border-[var(--color-border-subtle)] text-2xs text-[var(--color-text-disabled)]"
+          >
             <div class="flex items-center gap-3">
               <span>↑↓ 导航</span>
               <span>↵ 选择</span>

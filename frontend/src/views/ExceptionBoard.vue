@@ -1,25 +1,65 @@
 <template>
   <div class="page-container">
     <div class="page-toolbar">
-      <el-button type="primary" @click="runMrp"><el-icon><Cpu /></el-icon> 运行MRP</el-button>
-      <el-button @click="clearAll"><el-icon><Delete /></el-icon> 清空记录</el-button>
-      <span style="flex:1"></span>
-      <el-select v-model="filterSeverity" placeholder="严重程度" style="width:120px" clearable @change="fetchData">
-        <el-option label="错误" value="ERROR" /><el-option label="警告" value="WARNING" /><el-option label="信息" value="INFO" />
+      <el-button type="primary" @click="runMrp"
+        ><el-icon><Cpu /></el-icon> 运行MRP</el-button
+      >
+      <el-button @click="clearAll"
+        ><el-icon><Delete /></el-icon> 清空记录</el-button
+      >
+      <span class="flex-1"></span>
+      <el-select
+        v-model="filterSeverity"
+        placeholder="严重程度"
+        class="w-[120px]"
+        clearable
+        @change="fetchData"
+      >
+        <el-option label="错误" value="ERROR" /><el-option label="警告" value="WARNING" /><el-option
+          label="信息"
+          value="INFO"
+        />
       </el-select>
-      <el-select v-model="filterType" placeholder="类型" style="width:130px" clearable @change="fetchData">
-        <el-option label="缺料" value="SHORTAGE" /><el-option label="逾期订单" value="OVERDUE_ORDER" />
-        <el-option label="安全库存" value="SAFETY_STOCK_ALERT" /><el-option label="替代料" value="SUBSTITUTE" />
+      <el-select
+        v-model="filterType"
+        placeholder="类型"
+        class="w-[130px]"
+        clearable
+        @change="fetchData"
+      >
+        <el-option label="缺料" value="SHORTAGE" /><el-option
+          label="逾期订单"
+          value="OVERDUE_ORDER"
+        />
+        <el-option label="安全库存" value="SAFETY_STOCK_ALERT" /><el-option
+          label="替代料"
+          value="SUBSTITUTE"
+        />
       </el-select>
-      <el-checkbox v-model="filterResolved" @change="fetchData" style="margin-left:8px">含已处理</el-checkbox>
+      <el-checkbox v-model="filterResolved" class="ml-2" @change="fetchData">含已处理</el-checkbox>
     </div>
 
     <!-- 汇总卡片 -->
-    <el-row :gutter="16" style="margin-bottom:16px">
-      <el-col :span="4"><div class="stat-card" style="border-left:3px solid var(--color-text-tertiary)"><div class="sl">未处理</div><div class="sv">{{ summary.unresolved }}</div></div></el-col>
-      <el-col :span="4"><div class="stat-card" style="border-left:3px solid var(--color-danger)"><div class="sl">错误</div><div class="sv" style="color:var(--color-danger)">{{ summary.errors }}</div></div></el-col>
-      <el-col :span="4"><div class="stat-card" style="border-left:3px solid var(--color-warning)"><div class="sl">警告</div><div class="sv" style="color:var(--color-warning)">{{ summary.warnings }}</div></div></el-col>
-      <el-col :span="4" v-for="t in summary.by_type" :key="t.type">
+    <el-row :gutter="16" class="mb-4">
+      <el-col :span="4"
+        ><div class="stat-card" style="border-left:3px solid var(--color-text-tertiary)">
+          <div class="sl">未处理</div>
+          <div class="sv">{{ summary.unresolved }}</div>
+        </div></el-col
+      >
+      <el-col :span="4"
+        ><div class="stat-card" style="border-left:3px solid var(--color-danger)">
+          <div class="sl">错误</div>
+          <div class="sv" style="color:var(--color-danger)">{{ summary.errors }}</div>
+        </div></el-col
+      >
+      <el-col :span="4"
+        ><div class="stat-card" style="border-left:3px solid var(--color-warning)">
+          <div class="sl">警告</div>
+          <div class="sv" style="color:var(--color-warning)">{{ summary.warnings }}</div>
+        </div></el-col
+      >
+      <el-col v-for="t in summary.by_type" :key="t.type" :span="4">
         <div class="stat-card" :style="{borderLeft:'3px solid '+typeColor(t.type)}">
           <div class="sl">{{ summary.type_labels?.[t.type] || t.type }}</div>
           <div class="sv">{{ t.count }}</div>
@@ -34,37 +74,76 @@
       <el-button size="small" @click="selectedIds=[]">取消</el-button>
     </div>
 
-    <el-table :data="tableData" v-loading="loading" stripe border
-      @selection-change="(rows)=>selectedIds=rows.map(r=>r.id)">
+    <el-table
+      v-loading="loading"
+      :data="tableData"
+      stripe
+      border
+      @selection-change="(rows)=>selectedIds=rows.map(r=>r.id)"
+    >
       <el-table-column type="selection" width="40" :selectable="row=>!row.is_resolved" />
       <el-table-column label="等级" width="70">
         <template #default="{row}">
-          <el-tag :type="row.severity==='ERROR'?'danger':row.severity==='WARNING'?'warning':'info'" size="small">{{ row.severity }}</el-tag>
+          <el-tag
+            :type="row.severity==='ERROR'?'danger':row.severity==='WARNING'?'warning':'info'"
+            size="small"
+            >{{ row.severity }}</el-tag
+          >
         </template>
       </el-table-column>
       <el-table-column prop="exception_type" label="类型" width="90">
-        <template #default="{row}">{{ summary.type_labels?.[row.exception_type] || row.exception_type }}</template>
+        <template
+          #default="{row}"
+          >{{ summary.type_labels?.[row.exception_type] || row.exception_type }}</template
+        >
       </el-table-column>
       <el-table-column prop="item_code" label="物料编码" width="110" />
-      <el-table-column prop="material_name" label="物料型号" min-width="120" show-overflow-tooltip />
+      <el-table-column
+        prop="material_name"
+        label="物料型号"
+        min-width="120"
+        show-overflow-tooltip
+      />
       <el-table-column prop="message" label="详情" min-width="200" show-overflow-tooltip />
       <el-table-column label="状态" width="80">
         <template #default="{row}">
-          <el-tag :type="row.is_resolved?'success':'danger'" size="small">{{ row.is_resolved?'已处理':'待处理' }}</el-tag>
+          <el-tag
+            :type="row.is_resolved?'success':'danger'"
+            size="small"
+            >{{ row.is_resolved?'已处理':'待处理' }}</el-tag
+          >
         </template>
       </el-table-column>
       <el-table-column label="时间" width="145">
-        <template #default="{row}"><span style="font-size:12px">{{ row.created_at?.slice(0,16)?.replace('T',' ') }}</span></template>
+        <template #default="{row}"
+          ><span
+            class="text-xs"
+            >{{ row.created_at?.slice(0,16)?.replace('T',' ') }}</span
+          ></template
+        >
       </el-table-column>
       <el-table-column label="操作" width="80">
         <template #default="{row}">
-          <el-button v-if="!row.is_resolved" link type="success" size="small" @click="resolveOne(row)">处理</el-button>
+          <el-button
+            v-if="!row.is_resolved"
+            link
+            type="success"
+            size="small"
+            @click="resolveOne(row)"
+            >处理</el-button
+          >
         </template>
       </el-table-column>
     </el-table>
 
-    <el-pagination v-model:current-page="page" v-model:page-size="pageSize" :total="total"
-      layout="total,prev,pager,next" @change="fetchData" style="margin-top:12px;justify-content:flex-end" />
+    <el-pagination
+      v-model:current-page="page"
+      v-model:page-size="pageSize"
+      :total="total"
+      layout="total,prev,pager,next"
+      class="mt-3 justify-end"
+      @change="fetchData"
+    />
   </div>
 </template>
 

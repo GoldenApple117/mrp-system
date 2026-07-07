@@ -4,98 +4,213 @@
       <!-- Tab 1: 检验记录 -->
       <el-tab-pane label="检验记录" name="inspection">
         <div class="page-toolbar">
-          <el-button type="primary" @click="showInspectionDialog"><el-icon><Plus /></el-icon> 创建检验</el-button>
-          <el-select v-model="filterType" placeholder="类型" style="width:100px" clearable @change="fetchInspections">
-            <el-option label="IQC" value="IQC" /><el-option label="PQC" value="PQC" /><el-option label="OQC" value="OQC" />
+          <el-button type="primary" @click="showInspectionDialog"
+            ><el-icon><Plus /></el-icon> 创建检验</el-button
+          >
+          <el-select
+            v-model="filterType"
+            placeholder="类型"
+            class="w-[100px]"
+            clearable
+            @change="fetchInspections"
+          >
+            <el-option label="IQC" value="IQC" /><el-option label="PQC" value="PQC" /><el-option
+              label="OQC"
+              value="OQC"
+            />
           </el-select>
-          <el-select v-model="filterResult" placeholder="结果" style="width:100px" clearable @change="fetchInspections">
+          <el-select
+            v-model="filterResult"
+            placeholder="结果"
+            class="w-[100px]"
+            clearable
+            @change="fetchInspections"
+          >
             <el-option label="待检" value="待检" /><el-option label="合格" value="合格" />
-            <el-option label="部分合格" value="部分合格" /><el-option label="不合格" value="不合格" />
+            <el-option label="部分合格" value="部分合格" /><el-option
+              label="不合格"
+              value="不合格"
+            />
           </el-select>
         </div>
-        <el-table :data="inspections" v-loading="loading" stripe border>
+        <el-table v-loading="loading" :data="inspections" stripe border>
           <el-table-column prop="inspection_no" label="检验单号" width="180" />
-          <el-table-column label="类型" width="70"><template #default="{row}"><el-tag :type="row.inspection_type==='IQC'?'':row.inspection_type==='PQC'?'warning':'success'" size="small">{{ row.inspection_type }}</el-tag></template></el-table-column>
+          <el-table-column label="类型" width="70"
+            ><template #default="{row}"
+              ><el-tag
+                :type="row.inspection_type==='IQC'?'':row.inspection_type==='PQC'?'warning':'success'"
+                size="small"
+                >{{ row.inspection_type }}</el-tag
+              ></template
+            ></el-table-column
+          >
           <el-table-column prop="material_code" label="物料" width="120" />
           <el-table-column prop="material_name" label="物料型号" min-width="140" />
           <el-table-column prop="inspect_qty" label="检验数" width="80" />
           <el-table-column prop="pass_qty" label="合格" width="70" />
           <el-table-column prop="reject_qty" label="不合格" width="70" />
-          <el-table-column label="结果" width="90"><template #default="{row}"><el-tag :type="resultTag(row.result)" size="small">{{ row.result }}</el-tag></template></el-table-column>
+          <el-table-column label="结果" width="90"
+            ><template #default="{row}"
+              ><el-tag
+                :type="resultTag(row.result)"
+                size="small"
+                >{{ row.result }}</el-tag
+              ></template
+            ></el-table-column
+          >
           <el-table-column prop="inspector" label="检验员" width="90" />
           <el-table-column label="操作" width="160" fixed="right">
             <template #default="{row}">
-              <el-button link type="primary" size="small" @click="showResultDialog(row)" v-if="row.result==='待检'">录入结果</el-button>
+              <el-button
+                v-if="row.result==='待检'"
+                link
+                type="primary"
+                size="small"
+                @click="showResultDialog(row)"
+                >录入结果</el-button
+              >
             </template>
           </el-table-column>
         </el-table>
-        <el-pagination v-model:current-page="page" v-model:page-size="pageSize" :total="total" layout="total,sizes,prev,pager,next" @change="fetchInspections" style="margin-top:12px;justify-content:flex-end" />
+        <el-pagination
+          v-model:current-page="page"
+          v-model:page-size="pageSize"
+          :total="total"
+          layout="total,sizes,prev,pager,next"
+          class="mt-3 justify-end"
+          @change="fetchInspections"
+        />
       </el-tab-pane>
 
       <!-- Tab 2: 检验标准 -->
       <el-tab-pane label="检验标准" name="standards">
         <div class="page-toolbar">
-          <el-button type="primary" @click="showStdDialog"><el-icon><Plus /></el-icon> 新建标准</el-button>
-          <el-select v-model="stdTypeFilter" placeholder="类型" style="width:100px" clearable @change="fetchStandards">
-            <el-option label="IQC" value="IQC" /><el-option label="PQC" value="PQC" /><el-option label="OQC" value="OQC" />
+          <el-button type="primary" @click="showStdDialog"
+            ><el-icon><Plus /></el-icon> 新建标准</el-button
+          >
+          <el-select
+            v-model="stdTypeFilter"
+            placeholder="类型"
+            class="w-[100px]"
+            clearable
+            @change="fetchStandards"
+          >
+            <el-option label="IQC" value="IQC" /><el-option label="PQC" value="PQC" /><el-option
+              label="OQC"
+              value="OQC"
+            />
           </el-select>
         </div>
-        <el-table :data="standards" v-loading="stdLoading" stripe border>
+        <el-table v-loading="stdLoading" :data="standards" stripe border>
           <el-table-column prop="standard_code" label="标准编码" width="130" />
           <el-table-column prop="standard_name" label="标准名称" width="160" />
           <el-table-column prop="material_name" label="物料" min-width="120" />
-          <el-table-column label="类型" width="70"><template #default="{row}"><el-tag size="small">{{ row.inspection_type }}</el-tag></template></el-table-column>
+          <el-table-column label="类型" width="70"
+            ><template #default="{row}"
+              ><el-tag size="small">{{ row.inspection_type }}</el-tag></template
+            ></el-table-column
+          >
           <el-table-column prop="sampling_method" label="抽样方式" width="90" />
           <el-table-column prop="sample_size" label="样本量" width="80" />
           <el-table-column prop="accept_level" label="允收标准" width="90" />
-          <el-table-column label="操作" width="100"><template #default="{row}">
-            <el-button link type="danger" size="small" @click="deleteStd(row)">删除</el-button>
-          </template></el-table-column>
+          <el-table-column label="操作" width="100"
+            ><template #default="{row}">
+              <el-button link type="danger" size="small" @click="deleteStd(row)">删除</el-button>
+            </template></el-table-column
+          >
         </el-table>
       </el-tab-pane>
 
       <!-- Tab 3: NCR 不合格品处理 -->
       <el-tab-pane label="NCR 不合格品" name="ncr">
         <div class="page-toolbar">
-          <el-button type="danger" @click="showNcrDialog"><el-icon><Plus /></el-icon> 新建 NCR</el-button>
-          <el-select v-model="ncrStatusFilter" placeholder="状态" style="width:120px" clearable @change="fetchNcr">
-            <el-option label="待处理" value="待处理" /><el-option label="评审中" value="评审中" /><el-option label="已处理" value="已处理" />
+          <el-button type="danger" @click="showNcrDialog"
+            ><el-icon><Plus /></el-icon> 新建 NCR</el-button
+          >
+          <el-select
+            v-model="ncrStatusFilter"
+            placeholder="状态"
+            class="w-[120px]"
+            clearable
+            @change="fetchNcr"
+          >
+            <el-option label="待处理" value="待处理" /><el-option
+              label="评审中"
+              value="评审中"
+            /><el-option label="已处理" value="已处理" />
           </el-select>
         </div>
-        <el-table :data="ncrs" v-loading="ncrLoading" stripe border>
+        <el-table v-loading="ncrLoading" :data="ncrs" stripe border>
           <el-table-column prop="ncr_no" label="NCR编号" width="160" />
           <el-table-column prop="material_name" label="物料" width="140" />
           <el-table-column prop="qty" label="数量" width="70" />
-          <el-table-column prop="severity" label="严重度" width="80"><template #default="{row}">
-            <el-tag :type="row.severity==='致命'?'danger':row.severity==='严重'?'warning':'info'" size="small">{{ row.severity }}</el-tag>
-          </template></el-table-column>
+          <el-table-column prop="severity" label="严重度" width="80"
+            ><template #default="{row}">
+              <el-tag
+                :type="row.severity==='致命'?'danger':row.severity==='严重'?'warning':'info'"
+                size="small"
+                >{{ row.severity }}</el-tag
+              >
+            </template></el-table-column
+          >
           <el-table-column prop="disposition" label="处置方式" width="100" />
-          <el-table-column prop="status" label="状态" width="80"><template #default="{row}">
-            <el-tag :type="row.status==='已处理'?'success':row.status==='评审中'?'warning':'danger'" size="small">{{ row.status }}</el-tag>
-          </template></el-table-column>
+          <el-table-column prop="status" label="状态" width="80"
+            ><template #default="{row}">
+              <el-tag
+                :type="row.status==='已处理'?'success':row.status==='评审中'?'warning':'danger'"
+                size="small"
+                >{{ row.status }}</el-tag
+              >
+            </template></el-table-column
+          >
           <el-table-column prop="description" label="描述" min-width="140" show-overflow-tooltip />
-          <el-table-column label="操作" width="110"><template #default="{row}">
-            <el-button v-if="row.status==='待处理'" link type="primary" size="small" @click="showDisposeDialog(row)">处置</el-button>
-          </template></el-table-column>
+          <el-table-column label="操作" width="110"
+            ><template #default="{row}">
+              <el-button
+                v-if="row.status==='待处理'"
+                link
+                type="primary"
+                size="small"
+                @click="showDisposeDialog(row)"
+                >处置</el-button
+              >
+            </template></el-table-column
+          >
         </el-table>
       </el-tab-pane>
 
       <!-- Tab 4: 质量看板 -->
       <el-tab-pane label="质量看板" name="dashboard">
-        <div v-if="!dash" style="text-align:center;padding:40px;color:#999">加载中...</div>
-        <div v-else style="display:flex;flex-direction:column;gap:20px">
-          <div style="display:flex;gap:16px">
-            <div class="kpi-card" style="background:#e6f1fb"><span class="kpi-label">总检验次数</span><span class="kpi-val">{{ dash.total_inspections }}</span></div>
-            <div class="kpi-card" style="background:#f0f9eb"><span class="kpi-label">合格率</span><span class="kpi-val" style="color:#67c23a">{{ dash.pass_rate }}%</span></div>
-            <div class="kpi-card" style="background:#fcebeb"><span class="kpi-label">待处理NCR</span><span class="kpi-val" style="color:#f56c6c">{{ dash.pending_ncr }}</span></div>
-            <div class="kpi-card" style="background:#faeeda"><span class="kpi-label">待检</span><span class="kpi-val" style="color:#e6a23c">{{ dash.pending_inspections }}</span></div>
+        <div v-if="!dash" class="text-center p-10 text-[var(--color-text-disabled)]">加载中...</div>
+        <div v-else class="flex flex-col gap-5">
+          <div class="flex gap-4">
+            <div class="kpi-card bg-[#e6f1fb]">
+              <span class="kpi-label">总检验次数</span
+              ><span class="kpi-val">{{ dash.total_inspections }}</span>
+            </div>
+            <div class="kpi-card bg-[#f0f9eb]">
+              <span class="kpi-label">合格率</span
+              ><span class="kpi-val text-[#67c23a]">{{ dash.pass_rate }}%</span>
+            </div>
+            <div class="kpi-card bg-[#fcebeb]">
+              <span class="kpi-label">待处理NCR</span
+              ><span class="kpi-val text-[#f56c6c]">{{ dash.pending_ncr }}</span>
+            </div>
+            <div class="kpi-card bg-[#faeeda]">
+              <span class="kpi-label">待检</span
+              ><span class="kpi-val text-[#e6a23c]">{{ dash.pending_inspections }}</span>
+            </div>
           </div>
           <el-table :data="typeData" stripe border size="small">
-            <el-table-column label="类型"><template #default="{row}">{{ row.type }}</template></el-table-column>
+            <el-table-column label="类型"
+              ><template #default="{row}">{{ row.type }}</template></el-table-column
+            >
             <el-table-column label="次数" prop="count" width="80" />
             <el-table-column label="合格数" prop="pass_qty" width="90" />
             <el-table-column label="不合格数" prop="reject_qty" width="90" />
-            <el-table-column label="合格率" width="90"><template #default="{row}">{{ row.pass_rate }}%</template></el-table-column>
+            <el-table-column label="合格率" width="90"
+              ><template #default="{row}">{{ row.pass_rate }}%</template></el-table-column
+            >
           </el-table>
         </div>
       </el-tab-pane>
@@ -103,23 +218,65 @@
       <!-- Tab 5: 盘点管理 -->
       <el-tab-pane label="盘点管理" name="stock">
         <div class="page-toolbar">
-          <el-button type="primary" @click="showStockDialog"><el-icon><Plus /></el-icon> 新建盘点</el-button>
+          <el-button type="primary" @click="showStockDialog"
+            ><el-icon><Plus /></el-icon> 新建盘点</el-button
+          >
         </div>
-        <el-table :data="stockCounts" v-loading="loading2" stripe border>
+        <el-table v-loading="loading2" :data="stockCounts" stripe border>
           <el-table-column prop="count_no" label="盘点单号" width="180" />
           <el-table-column prop="material_code" label="物料编码" width="120" />
           <el-table-column prop="material_name" label="物料名称" min-width="140" />
           <el-table-column prop="system_qty" label="系统数" width="80" />
-          <el-table-column label="实盘数" width="80"><template #default="{row}">{{ row.actual_qty ?? '-' }}</template></el-table-column>
-          <el-table-column label="差异" width="80"><template #default="{row}"><span :style="{color: row.difference > 0 ? '#67c23a' : row.difference < 0 ? '#f56c6c' : '#333', fontWeight:'bold'}">{{ row.difference ?? '-' }}</span></template></el-table-column>
-          <el-table-column label="状态" width="80"><template #default="{row}"><el-tag :type="row.status==='已调整'?'success':row.status==='已盘点'?'warning':'info'" size="small">{{ row.status }}</el-tag></template></el-table-column>
+          <el-table-column label="实盘数" width="80"
+            ><template #default="{row}">{{ row.actual_qty ?? '-' }}</template></el-table-column
+          >
+          <el-table-column label="差异" width="80"
+            ><template #default="{row}"
+              ><span
+                :style="{color: row.difference > 0 ? '#67c23a' : row.difference < 0 ? '#f56c6c' : '#333', fontWeight:'bold'}"
+                >{{ row.difference ?? '-' }}</span
+              ></template
+            ></el-table-column
+          >
+          <el-table-column label="状态" width="80"
+            ><template #default="{row}"
+              ><el-tag
+                :type="row.status==='已调整'?'success':row.status==='已盘点'?'warning':'info'"
+                size="small"
+                >{{ row.status }}</el-tag
+              ></template
+            ></el-table-column
+          >
           <el-table-column prop="counter" label="盘点人" width="80" />
-          <el-table-column label="操作" width="130" fixed="right"><template #default="{row}">
-            <el-button v-if="row.status==='待盘点'" link type="primary" size="small" @click="showStockResult(row)">录入结果</el-button>
-            <el-button v-if="row.status==='已盘点'" link type="success" size="small" @click="adjustStock(row)">确认调整</el-button>
-          </template></el-table-column>
+          <el-table-column label="操作" width="130" fixed="right"
+            ><template #default="{row}">
+              <el-button
+                v-if="row.status==='待盘点'"
+                link
+                type="primary"
+                size="small"
+                @click="showStockResult(row)"
+                >录入结果</el-button
+              >
+              <el-button
+                v-if="row.status==='已盘点'"
+                link
+                type="success"
+                size="small"
+                @click="adjustStock(row)"
+                >确认调整</el-button
+              >
+            </template></el-table-column
+          >
         </el-table>
-        <el-pagination v-model:current-page="spage" v-model:page-size="spageSize" :total="stotal" layout="total,prev,pager,next" @change="fetchStock" style="margin-top:12px;justify-content:flex-end" />
+        <el-pagination
+          v-model:current-page="spage"
+          v-model:page-size="spageSize"
+          :total="stotal"
+          layout="total,prev,pager,next"
+          class="mt-3 justify-end"
+          @change="fetchStock"
+        />
       </el-tab-pane>
     </el-tabs>
 
@@ -127,41 +284,77 @@
     <el-dialog v-model="inspDialogVisible" title="创建检验" width="500px">
       <el-form ref="inspFormRef" :model="inspForm" label-width="100px">
         <el-form-item label="检验类型">
-          <el-select v-model="inspForm.inspection_type" style="width:100%">
-            <el-option label="IQC 来料检验" value="IQC" /><el-option label="PQC 过程检验" value="PQC" /><el-option label="OQC 出货检验" value="OQC" />
+          <el-select v-model="inspForm.inspection_type" class="w-full">
+            <el-option label="IQC 来料检验" value="IQC" /><el-option
+              label="PQC 过程检验"
+              value="PQC"
+            /><el-option label="OQC 出货检验" value="OQC" />
           </el-select>
         </el-form-item>
         <el-form-item label="来源类型">
-          <el-select v-model="inspForm.source_type" style="width:100%"><el-option label="采购单" value="采购单" /></el-select>
+          <el-select v-model="inspForm.source_type" class="w-full"
+            ><el-option label="采购单" value="采购单"
+          /></el-select>
         </el-form-item>
         <el-form-item label="来源单号" required>
-          <el-select v-model="inspForm.source_id" filterable placeholder="选择采购单" style="width:100%">
-            <el-option v-for="po in poOptions" :key="po.id" :label="`${po.po_number} - ${po.material_name} x${po.order_qty}`" :value="po.id" />
+          <el-select
+            v-model="inspForm.source_id"
+            filterable
+            placeholder="选择采购单"
+            class="w-full"
+          >
+            <el-option
+              v-for="po in poOptions"
+              :key="po.id"
+              :label="`${po.po_number} - ${po.material_name} x${po.order_qty}`"
+              :value="po.id"
+            />
           </el-select>
         </el-form-item>
         <el-form-item label="检验数量" required>
-          <el-input-number v-model="inspForm.inspect_qty" :min="1" style="width:100%" />
+          <el-input-number v-model="inspForm.inspect_qty" :min="1" class="w-full" />
         </el-form-item>
         <el-form-item label="检验员"><el-input v-model="inspForm.inspector" /></el-form-item>
-        <el-form-item label="备注"><el-input v-model="inspForm.remark" type="textarea" /></el-form-item>
+        <el-form-item label="备注"
+          ><el-input v-model="inspForm.remark" type="textarea"
+        /></el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="inspDialogVisible=false">取消</el-button>
-        <el-button type="primary" @click="createInspection" :loading="saving">创建</el-button>
+        <el-button type="primary" :loading="saving" @click="createInspection">创建</el-button>
       </template>
     </el-dialog>
 
     <!-- 录入检验结果弹窗 -->
     <el-dialog v-model="resultDialogVisible" title="录入检验结果" width="420px">
       <el-form :model="resultForm" label-width="100px">
-        <el-form-item label="检验数量"><b>{{ resultForm.inspect_qty }}</b></el-form-item>
-        <el-form-item label="合格数量"><el-input-number v-model="resultForm.pass_qty" :min="0" :max="resultForm.inspect_qty" style="width:100%" /></el-form-item>
-        <el-form-item label="不合格数量"><el-input-number v-model="resultForm.reject_qty" :min="0" :max="resultForm.inspect_qty" style="width:100%" /></el-form-item>
-        <el-form-item label="不合格原因"><el-input v-model="resultForm.ncr_reason" type="textarea" placeholder="不合格将自动创建NCR" /></el-form-item>
+        <el-form-item label="检验数量"
+          ><b>{{ resultForm.inspect_qty }}</b></el-form-item
+        >
+        <el-form-item label="合格数量"
+          ><el-input-number
+            v-model="resultForm.pass_qty"
+            :min="0"
+            :max="resultForm.inspect_qty"
+            class="w-full"
+        /></el-form-item>
+        <el-form-item label="不合格数量"
+          ><el-input-number
+            v-model="resultForm.reject_qty"
+            :min="0"
+            :max="resultForm.inspect_qty"
+            class="w-full"
+        /></el-form-item>
+        <el-form-item label="不合格原因"
+          ><el-input
+            v-model="resultForm.ncr_reason"
+            type="textarea"
+            placeholder="不合格将自动创建NCR"
+        /></el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="resultDialogVisible=false">取消</el-button>
-        <el-button type="primary" @click="submitResult" :loading="saving">提交</el-button>
+        <el-button type="primary" :loading="saving" @click="submitResult">提交</el-button>
       </template>
     </el-dialog>
 
@@ -169,44 +362,70 @@
     <el-dialog v-model="stdDialogVisible" title="新建检验标准" width="500px">
       <el-form :model="stdForm" label-width="100px">
         <el-form-item label="物料" required>
-          <el-select v-model="stdForm.item_id" filterable placeholder="选择物料" style="width:100%">
-            <el-option v-for="m in materialOptions" :key="m.id" :label="`${m.material_code} ${m.material_name}`" :value="m.id" />
+          <el-select v-model="stdForm.item_id" filterable placeholder="选择物料" class="w-full">
+            <el-option
+              v-for="m in materialOptions"
+              :key="m.id"
+              :label="`${m.material_code} ${m.material_name}`"
+              :value="m.id"
+            />
           </el-select>
         </el-form-item>
-        <el-form-item label="标准编码" required><el-input v-model="stdForm.standard_code" /></el-form-item>
+        <el-form-item label="标准编码" required
+          ><el-input v-model="stdForm.standard_code"
+        /></el-form-item>
         <el-form-item label="标准名称"><el-input v-model="stdForm.standard_name" /></el-form-item>
         <el-form-item label="检验类型">
-          <el-select v-model="stdForm.inspection_type" style="width:100%"><el-option label="IQC" value="IQC" /><el-option label="PQC" value="PQC" /><el-option label="OQC" value="OQC" /></el-select>
+          <el-select v-model="stdForm.inspection_type" class="w-full"
+            ><el-option label="IQC" value="IQC" /><el-option label="PQC" value="PQC" /><el-option
+              label="OQC"
+              value="OQC"
+          /></el-select>
         </el-form-item>
         <el-form-item label="抽样方式">
-          <el-select v-model="stdForm.sampling_method" style="width:100%"><el-option label="全检" value="全检" /><el-option label="AQL" value="AQL" /><el-option label="百分比" value="百分比" /></el-select>
+          <el-select v-model="stdForm.sampling_method" class="w-full"
+            ><el-option label="全检" value="全检" /><el-option label="AQL" value="AQL" /><el-option
+              label="百分比"
+              value="百分比"
+          /></el-select>
         </el-form-item>
-        <el-form-item label="样本量"><el-input-number v-model="stdForm.sample_size" :min="0" style="width:100%" /></el-form-item>
-        <el-form-item label="允收标准"><el-input-number v-model="stdForm.accept_level" :min="0" style="width:100%" /></el-form-item>
+        <el-form-item label="样本量"
+          ><el-input-number v-model="stdForm.sample_size" :min="0" class="w-full"
+        /></el-form-item>
+        <el-form-item label="允收标准"
+          ><el-input-number v-model="stdForm.accept_level" :min="0" class="w-full"
+        /></el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="stdDialogVisible=false">取消</el-button>
-        <el-button type="primary" @click="createStandard" :loading="saving">创建</el-button>
+        <el-button type="primary" :loading="saving" @click="createStandard">创建</el-button>
       </template>
     </el-dialog>
 
     <!-- NCR 处置弹窗 -->
     <el-dialog v-model="disposeVisible" title="NCR 处置" width="420px">
       <el-form :model="disposeForm" label-width="90px">
-        <el-form-item label="NCR编号"><b>{{ disposeForm.ncr_no }}</b></el-form-item>
+        <el-form-item label="NCR编号"
+          ><b>{{ disposeForm.ncr_no }}</b></el-form-item
+        >
         <el-form-item label="处置方式">
-          <el-select v-model="disposeForm.disposition" style="width:100%">
+          <el-select v-model="disposeForm.disposition" class="w-full">
             <el-option label="退货" value="退货" /><el-option label="让步接收" value="让步接收" />
-            <el-option label="返工" value="返工" /><el-option label="报废" value="报废" /><el-option label="降级" value="降级" />
+            <el-option label="返工" value="返工" /><el-option label="报废" value="报废" /><el-option
+              label="降级"
+              value="降级"
+            />
           </el-select>
         </el-form-item>
-        <el-form-item label="处置数量"><el-input-number v-model="disposeForm.disposition_qty" :min="0" style="width:100%" /></el-form-item>
+        <el-form-item label="处置数量"
+          ><el-input-number v-model="disposeForm.disposition_qty" :min="0" class="w-full"
+        /></el-form-item>
         <el-form-item label="评审人"><el-input v-model="disposeForm.reviewer" /></el-form-item>
         <el-form-item label="批准人"><el-input v-model="disposeForm.approver" /></el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="disposeVisible=false">取消</el-button>
-        <el-button type="primary" @click="submitDispose" :loading="saving">提交处置</el-button>
+        <el-button type="primary" :loading="saving" @click="submitDispose">提交处置</el-button>
       </template>
     </el-dialog>
 
@@ -214,27 +433,36 @@
     <el-dialog v-model="stockDialogVisible" title="新建盘点" width="420px">
       <el-form ref="stockFormRef" :model="stockForm" label-width="80px">
         <el-form-item label="物料" required>
-          <el-select v-model="stockForm.item_id" filterable placeholder="选择物料" style="width:100%">
-            <el-option v-for="m in materialOptions" :key="m.id" :label="`${m.material_code} ${m.material_name}`" :value="m.id" />
+          <el-select v-model="stockForm.item_id" filterable placeholder="选择物料" class="w-full">
+            <el-option
+              v-for="m in materialOptions"
+              :key="m.id"
+              :label="`${m.material_code} ${m.material_name}`"
+              :value="m.id"
+            />
           </el-select>
         </el-form-item>
         <el-form-item label="盘点人"><el-input v-model="stockForm.counter" /></el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="stockDialogVisible=false">取消</el-button>
-        <el-button type="primary" @click="createStockCount" :loading="saving">创建</el-button>
+        <el-button type="primary" :loading="saving" @click="createStockCount">创建</el-button>
       </template>
     </el-dialog>
 
     <!-- 录入盘点结果弹窗 -->
     <el-dialog v-model="stockResultVisible" title="录入盘点结果" width="400px">
       <el-form :model="stockResultForm" label-width="80px">
-        <el-form-item label="系统数"><b>{{ stockResultForm.system_qty }}</b></el-form-item>
-        <el-form-item label="实盘数"><el-input-number v-model="stockResultForm.actual_qty" :min="0" style="width:100%" /></el-form-item>
+        <el-form-item label="系统数"
+          ><b>{{ stockResultForm.system_qty }}</b></el-form-item
+        >
+        <el-form-item label="实盘数"
+          ><el-input-number v-model="stockResultForm.actual_qty" :min="0" class="w-full"
+        /></el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="stockResultVisible=false">取消</el-button>
-        <el-button type="primary" @click="submitStockResult" :loading="saving">提交</el-button>
+        <el-button type="primary" :loading="saving" @click="submitStockResult">提交</el-button>
       </template>
     </el-dialog>
   </div>

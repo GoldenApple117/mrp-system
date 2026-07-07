@@ -1,12 +1,19 @@
 <template>
   <div class="page-container">
     <div class="page-toolbar">
-      <el-button type="primary" @click="showDialog(null)"><el-icon><Plus /></el-icon> 新建工艺路线</el-button>
+      <el-button type="primary" @click="showDialog(null)"
+        ><el-icon><Plus /></el-icon> 新建工艺路线</el-button
+      >
     </div>
 
-    <el-empty v-if="!loading &amp;&amp; tableData.length === 0" description="暂无工艺路线数据" />
+    <el-empty v-if="!loading && tableData.length === 0" description="暂无工艺路线">
+      <template #image>
+        <el-icon :size="48" color="var(--color-text-disabled)"><Box /></el-icon>
+      </template>
+      <el-button type="primary" @click="showDialog()">新建工艺路线</el-button>
+    </el-empty>
 
-    <el-table :data="tableData" v-loading="loading" stripe border @row-click="showDetail">
+    <el-table v-loading="loading" :data="tableData" stripe border @row-click="showDetail">
       <el-table-column prop="routing_code" label="工艺编码" width="150" />
       <el-table-column prop="material_code" label="物料编码" width="130" />
       <el-table-column prop="material_name" label="物料型号" min-width="160" />
@@ -33,8 +40,13 @@
           </el-col>
           <el-col :span="12">
             <el-form-item label="适用物料" required>
-              <el-select v-model="form.item_id" filterable placeholder="选择物料" style="width:100%">
-                <el-option v-for="m in matOptions" :key="m.id" :label="`${m.material_code} ${m.material_name}`" :value="m.id" />
+              <el-select v-model="form.item_id" filterable placeholder="选择物料" class="w-full">
+                <el-option
+                  v-for="m in matOptions"
+                  :key="m.id"
+                  :label="`${m.material_code} ${m.material_name}`"
+                  :value="m.id"
+                />
               </el-select>
             </el-form-item>
           </el-col>
@@ -42,7 +54,11 @@
 
         <el-divider>工序列表</el-divider>
 
-        <div v-for="(op, idx) in form.operations" :key="idx" style="background:#f9f9f9;padding:12px;margin-bottom:8px;border-radius:6px">
+        <div
+          v-for="(op, idx) in form.operations"
+          :key="idx"
+          class="bg-[#f9f9f9] p-3 mb-2 rounded-md"
+        >
           <el-row :gutter="12">
             <el-col :span="2">
               <el-input v-model="op.seq_no" placeholder="序号" size="small" />
@@ -51,39 +67,75 @@
               <el-input v-model="op.operation_name" placeholder="工序名称" size="small" />
             </el-col>
             <el-col :span="5">
-              <el-select v-model="op.work_center_id" filterable placeholder="工作中心" size="small" style="width:100%">
-                <el-option v-for="wc in wcOptions" :key="wc.id" :label="wc.center_name" :value="wc.id" />
+              <el-select
+                v-model="op.work_center_id"
+                filterable
+                placeholder="工作中心"
+                size="small"
+                class="w-full"
+              >
+                <el-option
+                  v-for="wc in wcOptions"
+                  :key="wc.id"
+                  :label="wc.center_name"
+                  :value="wc.id"
+                />
               </el-select>
             </el-col>
             <el-col :span="4">
-              <el-input-number v-model="op.setup_time" :min="0" :precision="1" size="small" placeholder="准备(min)" style="width:100%" />
+              <el-input-number
+                v-model="op.setup_time"
+                :min="0"
+                :precision="1"
+                size="small"
+                placeholder="准备(min)"
+                class="w-full"
+              />
             </el-col>
             <el-col :span="4">
-              <el-input-number v-model="op.run_time_per_unit" :min="0" :precision="2" size="small" placeholder="单件(min)" style="width:100%" />
+              <el-input-number
+                v-model="op.run_time_per_unit"
+                :min="0"
+                :precision="2"
+                size="small"
+                placeholder="单件(min)"
+                class="w-full"
+              />
             </el-col>
             <el-col :span="2">
-              <el-button link type="danger" size="small" @click="form.operations.splice(idx,1)">×</el-button>
+              <el-button link type="danger" size="small" @click="form.operations.splice(idx,1)"
+                >×</el-button
+              >
             </el-col>
           </el-row>
         </div>
-        <el-button size="small" @click="form.operations.push({seq_no: form.operations.length+1, operation_name: '', work_center_id: null, setup_time: 5, run_time_per_unit: 0.5, queue_time: 0})">
+        <el-button
+          size="small"
+          @click="form.operations.push({seq_no: form.operations.length+1, operation_name: '', work_center_id: null, setup_time: 5, run_time_per_unit: 0.5, queue_time: 0})"
+        >
           添加工序
         </el-button>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible=false">取消</el-button>
-        <el-button type="primary" @click="submitForm" :loading="saving">保存</el-button>
+        <el-button type="primary" :loading="saving" @click="submitForm">保存</el-button>
       </template>
     </el-dialog>
 
     <!-- 详情弹窗 -->
-    <el-dialog v-model="detailVisible" title="工艺路线详情" width="700px" v-loading="!detailData">
+    <el-dialog v-model="detailVisible" v-loading="!detailData" title="工艺路线详情" width="700px">
       <template v-if="detailData">
         <el-descriptions :column="2" border size="small">
-          <el-descriptions-item label="工艺编码">{{ detailData.header.routing_code }}</el-descriptions-item>
-          <el-descriptions-item label="物料">{{ detailData.header.material_code }}</el-descriptions-item>
+          <el-descriptions-item
+            label="工艺编码"
+            >{{ detailData.header.routing_code }}</el-descriptions-item
+          >
+          <el-descriptions-item
+            label="物料"
+            >{{ detailData.header.material_code }}</el-descriptions-item
+          >
         </el-descriptions>
-        <el-table :data="detailData.operations" stripe border size="small" style="margin-top:12px">
+        <el-table :data="detailData.operations" stripe border size="small" class="mt-3">
           <el-table-column label="序号" prop="seq_no" width="60" />
           <el-table-column label="工序名称" prop="operation_name" min-width="140" />
           <el-table-column label="工作中心" prop="work_center_name" width="130" />
@@ -92,7 +144,9 @@
           <el-table-column label="排队(min)" prop="queue_time" width="100" />
         </el-table>
       </template>
-      <div v-else style="text-align:center;padding:40px;color:#999"><el-icon class="is-loading"><Loading /></el-icon> 加载中...</div>
+      <div v-else class="text-center p-10 text-[var(--color-text-disabled)]">
+        <el-icon class="is-loading"><Loading /></el-icon> 加载中...
+      </div>
     </el-dialog>
   </div>
 </template>

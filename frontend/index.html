@@ -2,8 +2,8 @@
 <html lang="zh-CN" class="dark">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MRP II · 物料需求计划系统</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>%VITE_APP_TITLE%</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -12,9 +12,20 @@
     html.dark { background: #0f0f11; }
     body { opacity: 0; transition: opacity 0.15s ease; }
     body.loaded { opacity: 1; }
+    /* 跳过导航链接 */
+    .skip-link {
+      position: absolute; top: -100px; left: 8px;
+      z-index: 9999; padding: 8px 16px;
+      background: var(--color-accent, #3b82f6); color: #fff;
+      border-radius: 0 0 6px 6px; font-size: 14px; text-decoration: none;
+      transition: top 0.2s ease;
+    }
+    .skip-link:focus { top: 0; }
   </style>
 </head>
 <body>
+  <!-- 键盘导航：跳过导航直达内容 -->
+  <a href="#main-content" class="skip-link">跳到主要内容</a>
   <div id="app"></div>
   <script>
     document.body.classList.add('loaded')

@@ -1,16 +1,40 @@
 <template>
   <div class="page-container">
     <div class="page-toolbar">
-      <el-button type="primary" @click="showDialog(null)"><el-icon><Plus /></el-icon> 新建采购单</el-button>
-      <el-button type="success" @click="syncFromBom" :loading="syncing"><el-icon><Refresh /></el-icon> 从BOM同步</el-button>
-      <el-input v-model="keyword" placeholder="搜索型号/编码" style="width:200px" clearable @clear="onSearch" @keyup.enter="onSearch">
-        <template #prefix><el-icon><Search /></el-icon></template>
+      <el-button type="primary" @click="showDialog(null)"
+        ><el-icon><Plus /></el-icon> 新建采购单</el-button
+      >
+      <el-button type="success" :loading="syncing" @click="syncFromBom"
+        ><el-icon><Refresh /></el-icon> 从BOM同步</el-button
+      >
+      <el-input
+        v-model="keyword"
+        placeholder="搜索型号/编码"
+        class="w-[200px]"
+        clearable
+        @clear="onSearch"
+        @keyup.enter="onSearch"
+      >
+        <template #prefix
+          ><el-icon><Search /></el-icon
+        ></template>
       </el-input>
-      <el-select v-model="filterStatus" placeholder="状态" style="width:130px" clearable @change="onSearch">
-        <el-option label="已下单" value="已下单" /><el-option label="部分到货" value="部分到货" /><el-option label="全部到货" value="全部到货" />
+      <el-select
+        v-model="filterStatus"
+        placeholder="状态"
+        class="w-[130px]"
+        clearable
+        @change="onSearch"
+      >
+        <el-option label="已下单" value="已下单" /><el-option
+          label="部分到货"
+          value="部分到货"
+        /><el-option label="全部到货" value="全部到货" />
       </el-select>
-      <span style="flex:1" />
-      <el-button @click="tab='suppliers'" :type="tab==='suppliers'?'':'default'">供应商管理</el-button>
+      <span class="flex-1" />
+      <el-button :type="tab==='suppliers'?'':'default'" @click="tab='suppliers'"
+        >供应商管理</el-button
+      >
     </div>
 
     <el-tabs v-model="tab" @tab-change="onTabChange">
@@ -22,45 +46,121 @@
     <div v-if="tab==='orders'" v-loading="loading">
       <div v-for="p in projectModules" :key="p.product_code" class="proj-card">
         <div class="proj-header" @click="p._open=!p._open">
-          <span style="font-size:15px;font-weight:600">{{ p.product_name }}</span>
-          <el-tag size="small" type="danger" style="margin:0 8px">{{ p.module_count }}模块</el-tag>
-          <span style="font-size:12px;color:#999">{{ p.total_parts }}零件</span>
-          <span style="margin-left:auto;color:#409eff;font-weight:bold">¥{{ formatMoney(p.totalAmount) }}</span>
-          <span style="margin-left:8px;color:#999">{{ p._open?'▲':'▼' }}</span>
+          <span class="text-[15px] font-semibold">{{ p.product_name }}</span>
+          <el-tag size="small" type="danger" class="mx-2 my-0">{{ p.module_count }}模块</el-tag>
+          <span class="text-xs text-[var(--color-text-disabled)]">{{ p.total_parts }}零件</span>
+          <span class="ml-auto text-[#409eff] font-bold">¥{{ formatMoney(p.totalAmount) }}</span>
+          <span class="ml-2 text-[var(--color-text-disabled)]">{{ p._open?'▲':'▼' }}</span>
         </div>
-        <div v-show="p._open" style="padding:0 12px 8px">
+        <div v-show="p._open" class="px-3 pb-2">
           <div v-for="m in p.modules" :key="m.module_code" class="mod-card">
             <div class="mod-header" @click="m._open=!m._open">
-              <span style="font-weight:500">{{ m.module_name }}</span>
-              <el-tag size="small" style="margin:0 6px">{{ m.rows.length }}笔</el-tag>
-              <span style="color:#e6a23c;margin-left:auto;font-size:13px">¥{{ formatMoney(m.totalAmount) }}</span>
-              <span style="margin-left:6px;color:#999;font-size:12px">{{ m._open?'▲':'▼' }}</span>
+              <span class="font-medium">{{ m.module_name }}</span>
+              <el-tag size="small" class="mx-1.5 my-0">{{ m.rows.length }}笔</el-tag>
+              <span class="text-[#e6a23c] ml-auto text-[13px]"
+                >¥{{ formatMoney(m.totalAmount) }}</span
+              >
+              <span
+                class="ml-1.5 text-[var(--color-text-disabled)] text-xs"
+                >{{ m._open?'▲':'▼' }}</span
+              >
             </div>
             <div v-show="m._open">
               <el-table :data="filterRows(m.rows)" size="small" stripe border>
                 <el-table-column prop="material_code" label="编码" width="110" />
-                <el-table-column prop="material_name" label="型号" min-width="110" show-overflow-tooltip />
+                <el-table-column
+                  prop="material_name"
+                  label="型号"
+                  min-width="110"
+                  show-overflow-tooltip
+                />
                 <el-table-column prop="brand" label="品牌" width="75" />
                 <el-table-column label="供应商" width="170">
                   <template #default="{row}">
-                    <div v-if="row.supplier_link" style="display:flex;align-items:flex-start;gap:4px">
-                      <a :href="row.supplier_link" target="_blank" style="color:#409eff;font-size:11px;word-break:break-all;flex:1">{{ expandedLinks[row.id] ? row.supplier_link : row.supplier_link.slice(0,25)+'...' }}</a>
-                      <el-button v-if="row.supplier_link.length>25" link size="small" @click="expandedLinks[row.id]=!expandedLinks[row.id]" style="font-size:10px;flex-shrink:0">{{ expandedLinks[row.id]?'收':'展' }}</el-button>
-                    </div><span v-else style="color:#c0c4cc;font-size:11px">—</span>
+                    <div v-if="row.supplier_link" class="flex items-start gap-1">
+                      <a
+                        :href="row.supplier_link"
+                        target="_blank"
+                        class="text-[#409eff] text-[11px] break-all flex-1"
+                        >{{ expandedLinks[row.id] ? row.supplier_link : row.supplier_link.slice(0,25)+'...' }}</a
+                      >
+                      <el-button
+                        v-if="row.supplier_link.length>25"
+                        link
+                        size="small"
+                        class="text-[10px] shrink-0"
+                        @click="expandedLinks[row.id]=!expandedLinks[row.id]"
+                        >{{ expandedLinks[row.id]?'收':'展' }}</el-button
+                      >
+                    </div>
+                    <span v-else class="text-[#c0c4cc] text-[11px]">—</span>
                   </template>
                 </el-table-column>
-                <el-table-column label="订购" width="55" align="center"><template #default="{row}">{{ row.order_qty }}</template></el-table-column>
-                <el-table-column label="需求日" width="90" align="center"><template #default="{row}"><span v-if="row.due_date" :style="{color: new Date(row.due_date)<new Date()?'#f56c6c':'#606266'}">{{ row.due_date }}</span><span v-else style="color:#c0c4cc">—</span></template></el-table-column>
-                <el-table-column label="单价" width="65" align="right"><template #default="{row}"><span v-if="row.unit_price>0">¥{{ row.unit_price }}</span><span v-else style="color:#c0c4cc">—</span></template></el-table-column>
-                <el-table-column label="金额" width="75" align="right"><template #default="{row}"><span v-if="row.total_amount>0" style="color:#e6a23c;font-weight:bold">¥{{ row.total_amount }}</span><span v-else style="color:#c0c4cc">—</span></template></el-table-column>
+                <el-table-column label="订购" width="55" align="center"
+                  ><template #default="{row}">{{ row.order_qty }}</template></el-table-column
+                >
+                <el-table-column label="需求日" width="90" align="center"
+                  ><template #default="{row}"
+                    ><span
+                      v-if="row.due_date"
+                      :style="{color: new Date(row.due_date)<new Date()?'#f56c6c':'#606266'}"
+                      >{{ row.due_date }}</span
+                    ><span v-else class="text-[#c0c4cc]">—</span></template
+                  ></el-table-column
+                >
+                <el-table-column label="单价" width="65" align="right"
+                  ><template #default="{row}"
+                    ><span v-if="row.unit_price>0">¥{{ row.unit_price }}</span
+                    ><span v-else class="text-[#c0c4cc]">—</span></template
+                  ></el-table-column
+                >
+                <el-table-column label="金额" width="75" align="right"
+                  ><template #default="{row}"
+                    ><span v-if="row.total_amount>0" class="text-[#e6a23c] font-bold"
+                      >¥{{ row.total_amount }}</span
+                    ><span v-else class="text-[#c0c4cc]">—</span></template
+                  ></el-table-column
+                >
                 <el-table-column label="提交人" width="55" prop="submitter" />
-                <el-table-column label="到/未" width="60" align="center"><template #default="{row}"><span style="color:#67c23a">{{ row.received_qty||0 }}</span>/<span style="color:#f56c6c">{{ (row.order_qty-(row.received_qty||0)).toFixed(0) }}</span></template></el-table-column>
-                <el-table-column label="状态" width="75"><template #default="{row}"><el-tag :type="row.status==='已下单'?'danger':row.status==='部分到货'?'warning':'success'" size="small">{{ row.status }}</el-tag></template></el-table-column>
+                <el-table-column label="到/未" width="60" align="center"
+                  ><template #default="{row}"
+                    ><span class="text-[#67c23a]">{{ row.received_qty||0 }}</span
+                    >/<span
+                      class="text-[#f56c6c]"
+                      >{{ (row.order_qty-(row.received_qty||0)).toFixed(0) }}</span
+                    ></template
+                  ></el-table-column
+                >
+                <el-table-column label="状态" width="75"
+                  ><template #default="{row}"
+                    ><el-tag
+                      :type="row.status==='已下单'?'danger':row.status==='部分到货'?'warning':'success'"
+                      size="small"
+                      >{{ row.status }}</el-tag
+                    ></template
+                  ></el-table-column
+                >
                 <el-table-column label="操作" width="190" fixed="right">
                   <template #default="{row}">
-                    <el-button link type="success" size="small" @click="showReceiveDialog(row)" v-if="['已下单','部分到货'].includes(row.status)">收货</el-button>
-                    <el-button link type="primary" size="small" @click="updateStatus(row)">更新到货</el-button>
-                    <el-button link type="danger" size="small" @click="deletePo(row.id)" v-if="row.status==='已下单'">删除</el-button>
+                    <el-button
+                      v-if="['已下单','部分到货'].includes(row.status)"
+                      link
+                      type="success"
+                      size="small"
+                      @click="showReceiveDialog(row)"
+                      >收货</el-button
+                    >
+                    <el-button link type="primary" size="small" @click="updateStatus(row)"
+                      >更新到货</el-button
+                    >
+                    <el-button
+                      v-if="row.status==='已下单'"
+                      link
+                      type="danger"
+                      size="small"
+                      @click="deletePo(row.id)"
+                      >删除</el-button
+                    >
                   </template>
                 </el-table-column>
               </el-table>
@@ -68,84 +168,250 @@
           </div>
         </div>
       </div>
-      <el-empty v-if="!loading && !projectModules.length" description="暂无采购数据" />
+      <el-empty v-if="!loading && !projectModules.length" description="暂无采购数据">
+        <template #image>
+          <el-icon :size="48" color="var(--color-text-disabled)"><Box /></el-icon>
+        </template>
+        <el-button type="primary" @click="showDialog()">新建采购单</el-button>
+      </el-empty>
     </div>
 
     <!-- 供应商 -->
     <div v-if="tab==='suppliers'">
-      <div style="margin-bottom:12px"><el-button type="primary" size="small" @click="showSupplierDialog"><el-icon><Plus /></el-icon> 新增</el-button></div>
+      <div class="mb-3">
+        <el-button type="primary" size="small" @click="showSupplierDialog"
+          ><el-icon><Plus /></el-icon> 新增</el-button
+        >
+      </div>
       <el-table :data="suppliers" stripe border>
-        <el-table-column prop="supplier_code" label="编码" width="120" /><el-table-column prop="supplier_name" label="名称" width="100" />
+        <el-table-column prop="supplier_code" label="编码" width="120" /><el-table-column
+          prop="supplier_name"
+          label="名称"
+          width="100"
+        />
         <el-table-column label="购买链接" min-width="180">
-          <template #default="{row}"><div v-if="row.purchase_link" style="display:flex;align-items:flex-start;gap:4px"><a :href="row.purchase_link" target="_blank" style="color:#409eff;font-size:12px;word-break:break-all;flex:1">{{ expandedSuppliers[row.id]?row.purchase_link:row.purchase_link.slice(0,35)+'...' }}</a><el-button v-if="row.purchase_link.length>35" link size="small" @click="expandedSuppliers[row.id]=!expandedSuppliers[row.id]" style="font-size:10px">{{ expandedSuppliers[row.id]?'收起':'展开' }}</el-button></div><span v-else style="color:#c0c4cc">—</span></template>
+          <template #default="{row}"
+            ><div v-if="row.purchase_link" class="flex items-start gap-1">
+              <a
+                :href="row.purchase_link"
+                target="_blank"
+                class="text-[#409eff] text-xs break-all flex-1"
+                >{{ expandedSuppliers[row.id]?row.purchase_link:row.purchase_link.slice(0,35)+'...' }}</a
+              ><el-button
+                v-if="row.purchase_link.length>35"
+                link
+                size="small"
+                class="text-[10px]"
+                @click="expandedSuppliers[row.id]=!expandedSuppliers[row.id]"
+                >{{ expandedSuppliers[row.id]?'收起':'展开' }}</el-button
+              >
+            </div>
+            <span v-else class="text-[#c0c4cc]">—</span></template
+          >
         </el-table-column>
-        <el-table-column prop="contact_person" label="联系人" width="80" /><el-table-column prop="contact_phone" label="电话" width="120" /><el-table-column prop="lead_time_days" label="交期(天)" width="80" />
+        <el-table-column prop="contact_person" label="联系人" width="80" /><el-table-column
+          prop="contact_phone"
+          label="电话"
+          width="120"
+        /><el-table-column prop="lead_time_days" label="交期(天)" width="80" />
       </el-table>
       <el-dialog v-model="supplierDialogVisible" title="新增供应商" width="450px">
         <el-form :model="supplierForm" label-width="90px">
-          <el-form-item label="编码" required><el-input v-model="supplierForm.supplier_code" /></el-form-item>
-          <el-form-item label="名称" required><el-input v-model="supplierForm.supplier_name" /></el-form-item>
-          <el-form-item label="联系人"><el-input v-model="supplierForm.contact_person" /></el-form-item>
-          <el-form-item label="电话"><el-input v-model="supplierForm.contact_phone" /></el-form-item>
+          <el-form-item label="编码" required
+            ><el-input v-model="supplierForm.supplier_code"
+          /></el-form-item>
+          <el-form-item label="名称" required
+            ><el-input v-model="supplierForm.supplier_name"
+          /></el-form-item>
+          <el-form-item label="联系人"
+            ><el-input v-model="supplierForm.contact_person"
+          /></el-form-item>
+          <el-form-item label="电话"
+            ><el-input v-model="supplierForm.contact_phone"
+          /></el-form-item>
           <el-form-item label="地址"><el-input v-model="supplierForm.address" /></el-form-item>
-          <el-form-item label="交期(天)"><el-input-number v-model="supplierForm.lead_time_days" :min="0" /></el-form-item>
+          <el-form-item label="交期(天)"
+            ><el-input-number v-model="supplierForm.lead_time_days" :min="0"
+          /></el-form-item>
         </el-form>
-        <template #footer><el-button @click="supplierDialogVisible=false">取消</el-button><el-button type="primary" @click="submitSupplier">保存</el-button></template>
+        <template #footer
+          ><el-button @click="supplierDialogVisible=false">取消</el-button
+          ><el-button type="primary" @click="submitSupplier">保存</el-button></template
+        >
       </el-dialog>
     </div>
 
     <!-- 弹窗 -->
     <el-dialog v-model="dialogVisible" title="新建采购单" width="500px">
       <el-form :model="form" :rules="rules" label-width="90px">
-        <el-form-item label="物料" required><el-select v-model="form.item_id" filterable placeholder="选择物料" style="width:100%"><el-option v-for="m in materialOptions" :key="m.id" :label="`${m.material_code} ${m.material_name}`" :value="m.id" /></el-select></el-form-item>
-        <el-form-item label="供应商" required><el-select v-model="form.supplier_id" filterable placeholder="选择供应商" style="width:100%"><el-option v-for="s in suppliers" :key="s.id" :label="s.supplier_name" :value="s.id" /></el-select></el-form-item>
-        <el-row :gutter="16"><el-col :span="12"><el-form-item label="数量" required><el-input-number v-model="form.order_qty" :min="1" style="width:100%" /></el-form-item></el-col><el-col :span="12"><el-form-item label="到货日"><el-date-picker v-model="form.due_date" type="date" value-format="YYYY-MM-DD" style="width:100%" /></el-form-item></el-col></el-row>
+        <el-form-item label="物料" required
+          ><el-select v-model="form.item_id" filterable placeholder="选择物料" class="w-full"
+            ><el-option
+              v-for="m in materialOptions"
+              :key="m.id"
+              :label="`${m.material_code} ${m.material_name}`"
+              :value="m.id" /></el-select
+        ></el-form-item>
+        <el-form-item label="供应商" required
+          ><el-select v-model="form.supplier_id" filterable placeholder="选择供应商" class="w-full"
+            ><el-option
+              v-for="s in suppliers"
+              :key="s.id"
+              :label="s.supplier_name"
+              :value="s.id" /></el-select
+        ></el-form-item>
+        <el-row :gutter="16"
+          ><el-col :span="12"
+            ><el-form-item label="数量" required
+              ><el-input-number
+                v-model="form.order_qty"
+                :min="1"
+                class="w-full" /></el-form-item></el-col
+          ><el-col :span="12"
+            ><el-form-item label="到货日"
+              ><el-date-picker
+                v-model="form.due_date"
+                type="date"
+                value-format="YYYY-MM-DD"
+                class="w-full" /></el-form-item></el-col
+        ></el-row>
       </el-form>
-      <template #footer><el-button @click="dialogVisible=false">取消</el-button><el-button type="primary" :loading="saving" @click="submitForm">保存</el-button></template>
+      <template #footer
+        ><el-button @click="dialogVisible=false">取消</el-button
+        ><el-button type="primary" :loading="saving" @click="submitForm">保存</el-button></template
+      >
     </el-dialog>
 
     <el-dialog v-model="statusDialogVisible" title="更新到货" width="480px">
       <el-form label-width="90px">
-        <el-form-item label="物料"><span style="font-weight:bold">{{ statusForm.material_name }}</span></el-form-item>
-        <el-form-item label="订购总数"><el-tag type="info" size="large">{{ statusForm.order_qty }}</el-tag></el-form-item>
-        <el-form-item label="本次到货"><el-input-number v-model="statusForm.received_delta" :min="0" :max="statusForm.remain_qty" size="large" style="width:180px" @change="calcRemain" /><span style="margin-left:12px;color:#999">(已到: {{ statusForm.existing_received }})</span></el-form-item>
+        <el-form-item label="物料"
+          ><span class="font-bold">{{ statusForm.material_name }}</span></el-form-item
+        >
+        <el-form-item label="订购总数"
+          ><el-tag type="info" size="large">{{ statusForm.order_qty }}</el-tag></el-form-item
+        >
+        <el-form-item label="本次到货"
+          ><el-input-number
+            v-model="statusForm.received_delta"
+            :min="0"
+            :max="statusForm.remain_qty"
+            size="large"
+            class="w-[180px]"
+            @change="calcRemain"
+          /><span class="ml-3 text-[var(--color-text-disabled)]"
+            >(已到: {{ statusForm.existing_received }})</span
+          ></el-form-item
+        >
         <el-divider />
-        <el-form-item label="累计到货"><span style="font-size:18px;color:#67c23a;font-weight:bold">{{ statusForm.total_after }}</span></el-form-item>
-        <el-form-item label="剩余未到"><span style="font-size:18px;color:#f56c6c;font-weight:bold">{{ statusForm.remain_after }}</span></el-form-item>
+        <el-form-item label="累计到货"
+          ><span
+            class="text-lg text-[#67c23a] font-bold"
+            >{{ statusForm.total_after }}</span
+          ></el-form-item
+        >
+        <el-form-item label="剩余未到"
+          ><span
+            class="text-lg text-[#f56c6c] font-bold"
+            >{{ statusForm.remain_after }}</span
+          ></el-form-item
+        >
       </el-form>
-      <template #footer><el-button @click="statusDialogVisible=false">取消</el-button><el-button type="primary" @click="confirmStatus" :disabled="!statusForm.received_delta">确认到货</el-button></template>
+      <template #footer
+        ><el-button @click="statusDialogVisible=false">取消</el-button
+        ><el-button type="primary" :disabled="!statusForm.received_delta" @click="confirmStatus"
+          >确认到货</el-button
+        ></template
+      >
     </el-dialog>
 
     <el-dialog v-model="bomSyncVisible" title="选择BOM同步" width="500px">
-      <el-alert type="info" :closable="false" show-icon style="margin-bottom:16px">自动提取BOM中所有采购件生成采购单。</el-alert>
-      <el-form label-width="100px"><el-form-item label="选择BOM"><el-select v-model="bomSyncBomId" placeholder="选择BOM" style="width:100%"><el-option v-for="b in bomOptions" :key="b.id" :label="`${b.bom_code} - ${b.product_name}`" :value="b.id" /></el-select></el-form-item></el-form>
-      <div v-if="syncResult" style="margin-top:12px;white-space:pre-wrap;font-size:14px;color:#67c23a;background:#f0f9eb;padding:12px;border-radius:6px">{{ syncResult }}</div>
-      <template #footer><el-button @click="bomSyncVisible=false">取消</el-button><el-button type="primary" @click="doBomSync" :loading="syncing">开始同步</el-button></template>
+      <el-alert type="info" :closable="false" show-icon class="mb-4"
+        >自动提取BOM中所有采购件生成采购单。</el-alert
+      >
+      <el-form label-width="100px"
+        ><el-form-item label="选择BOM"
+          ><el-select v-model="bomSyncBomId" placeholder="选择BOM" class="w-full"
+            ><el-option
+              v-for="b in bomOptions"
+              :key="b.id"
+              :label="`${b.bom_code} - ${b.product_name}`"
+              :value="b.id" /></el-select></el-form-item
+      ></el-form>
+      <div
+        v-if="syncResult"
+        class="mt-3 whitespace-pre-wrap text-sm text-[#67c23a] bg-[#f0f9eb] p-3 rounded-md"
+      >
+        {{ syncResult }}
+      </div>
+      <template #footer
+        ><el-button @click="bomSyncVisible=false">取消</el-button
+        ><el-button type="primary" :loading="syncing" @click="doBomSync"
+          >开始同步</el-button
+        ></template
+      >
     </el-dialog>
 
     <!-- 收货弹窗 -->
     <el-dialog v-model="receiveVisible" title="采购收货" width="460px">
       <el-form label-width="100px">
-        <el-form-item label="物料"><span style="font-weight:bold">{{ receiveForm.material_name }}</span></el-form-item>
-        <el-form-item label="供应商"><span>{{ receiveForm.supplier_name }}</span></el-form-item>
-        <el-form-item label="订购总数"><el-tag type="info">{{ receiveForm.order_qty }}</el-tag></el-form-item>
-        <el-form-item label="已收数量"><el-tag type="success">{{ receiveForm.total_received }}</el-tag></el-form-item>
+        <el-form-item label="物料"
+          ><span class="font-bold">{{ receiveForm.material_name }}</span></el-form-item
+        >
+        <el-form-item label="供应商"
+          ><span>{{ receiveForm.supplier_name }}</span></el-form-item
+        >
+        <el-form-item label="订购总数"
+          ><el-tag type="info">{{ receiveForm.order_qty }}</el-tag></el-form-item
+        >
+        <el-form-item label="已收数量"
+          ><el-tag type="success">{{ receiveForm.total_received }}</el-tag></el-form-item
+        >
         <el-form-item label="本次收货" required>
-          <el-input-number v-model="receiveForm.receive_qty" :min="1" :max="receiveForm.remaining" style="width:150px" />
-          <span style="margin-left:8px;color:#999">最多 {{ receiveForm.remaining }}</span>
+          <el-input-number
+            v-model="receiveForm.receive_qty"
+            :min="1"
+            :max="receiveForm.remaining"
+            class="w-[150px]"
+          />
+          <span class="ml-2 text-[var(--color-text-disabled)]"
+            >最多 {{ receiveForm.remaining }}</span
+          >
         </el-form-item>
         <el-form-item label="不合格数">
-          <el-input-number v-model="receiveForm.reject_qty" :min="0" :max="receiveForm.receive_qty" style="width:150px" />
-          <span style="margin-left:8px;color:#f56c6c">不合格退回供应商</span>
+          <el-input-number
+            v-model="receiveForm.reject_qty"
+            :min="0"
+            :max="receiveForm.receive_qty"
+            class="w-[150px]"
+          />
+          <span class="ml-2 text-[#f56c6c]">不合格退回供应商</span>
         </el-form-item>
-        <el-form-item label="操作人"><el-input v-model="receiveForm.operator" style="width:200px" /></el-form-item>
+        <el-form-item label="操作人"
+          ><el-input v-model="receiveForm.operator" class="w-[200px]"
+        /></el-form-item>
         <el-divider />
-        <el-form-item label="合格入库"><span style="font-size:16px;color:#67c23a;font-weight:bold">{{ (receiveForm.receive_qty||0) - (receiveForm.reject_qty||0) }}</span></el-form-item>
-        <el-form-item label="累计已收"><span style="font-size:16px;color:#409eff;font-weight:bold">{{ (receiveForm.total_received||0) + (receiveForm.receive_qty||0) }}</span></el-form-item>
+        <el-form-item label="合格入库"
+          ><span
+            class="text-base text-[#67c23a] font-bold"
+            >{{ (receiveForm.receive_qty||0) - (receiveForm.reject_qty||0) }}</span
+          ></el-form-item
+        >
+        <el-form-item label="累计已收"
+          ><span
+            class="text-base text-[#409eff] font-bold"
+            >{{ (receiveForm.total_received||0) + (receiveForm.receive_qty||0) }}</span
+          ></el-form-item
+        >
       </el-form>
       <template #footer>
         <el-button @click="receiveVisible=false">取消</el-button>
-        <el-button type="success" @click="confirmReceive" :disabled="!receiveForm.receive_qty" :loading="receiving">确认收货入库</el-button>
+        <el-button
+          type="success"
+          :disabled="!receiveForm.receive_qty"
+          :loading="receiving"
+          @click="confirmReceive"
+          >确认收货入库</el-button
+        >
       </template>
     </el-dialog>
   </div>

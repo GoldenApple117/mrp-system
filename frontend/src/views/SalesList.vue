@@ -1,8 +1,16 @@
 <template>
   <div class="page-container">
     <div class="page-toolbar">
-      <el-button type="primary" @click="showOrderDialog(null)"><el-icon><Plus /></el-icon> 新建订单</el-button>
-      <el-select v-model="filterStatus" placeholder="状态筛选" style="width:120px" clearable @change="fetchData">
+      <el-button type="primary" @click="showOrderDialog(null)"
+        ><el-icon><Plus /></el-icon> 新建订单</el-button
+      >
+      <el-select
+        v-model="filterStatus"
+        placeholder="状态筛选"
+        class="w-[120px]"
+        clearable
+        @change="fetchData"
+      >
         <el-option label="待审核" value="待审核" />
         <el-option label="已审核" value="已审核" />
         <el-option label="待出货" value="待出货" />
@@ -10,8 +18,10 @@
         <el-option label="全部出货" value="全部出货" />
         <el-option label="已取消" value="已取消" />
       </el-select>
-      <span style="flex:1"></span>
-      <el-button @click="tab='customers'" :type="tab==='customers'?'':'default'">客户管理</el-button>
+      <span class="flex-1"></span>
+      <el-button :type="tab==='customers'?'':'default'" @click="tab='customers'"
+        >客户管理</el-button
+      >
     </div>
 
     <el-tabs v-model="tab" @tab-change="onTabChange">
@@ -22,63 +32,130 @@
     <!-- 订单列表 -->
     <div v-if="tab==='orders'">
       <div v-if="selectedIds.length" class="batch-bar">
-        <el-tag type="info" style="margin-right:8px">已选 {{ selectedIds.length }} 项</el-tag>
+        <el-tag type="info" class="mr-2">已选 {{ selectedIds.length }} 项</el-tag>
         <el-button size="small" type="primary" @click="batchToMps">生成MPS计划</el-button>
         <el-button size="small" type="danger" @click="batchDeleteSO">批量删除</el-button>
         <el-button size="small" @click="selectedIds = []">取消选择</el-button>
       </div>
-      <el-table :data="orderData" v-loading="loading" stripe border
+      <el-table
+        v-loading="loading"
+        :data="orderData"
+        stripe
+        border
         :row-class-name="soRowClass"
-        @selection-change="(rows) => selectedIds = rows.map(r => r.id)">
+        @selection-change="(rows) => selectedIds = rows.map(r => r.id)"
+      >
         <el-table-column type="selection" width="40" />
         <el-table-column prop="order_number" label="订单号" width="170" />
         <el-table-column prop="customer_name" label="客户" width="120" />
         <el-table-column prop="material_code" label="产品编码" width="120" />
-        <el-table-column prop="material_name" label="产品型号" min-width="120" show-overflow-tooltip />
+        <el-table-column
+          prop="material_name"
+          label="产品型号"
+          min-width="120"
+          show-overflow-tooltip
+        />
         <el-table-column label="单价" width="80" align="right">
           <template #default="{row}">¥{{ formatMoney(row.unit_price) }}</template>
         </el-table-column>
         <el-table-column label="数量" width="85" align="center">
           <template #default="{row}">
-            <span @click="showEdit(row)" style="cursor:pointer;text-decoration:underline dashed var(--color-accent, #409eff)">{{ row.order_qty }}</span>
+            <span
+              style="cursor:pointer;text-decoration:underline dashed var(--color-accent, #409eff)"
+              @click="showEdit(row)"
+              >{{ row.order_qty }}</span
+            >
           </template>
         </el-table-column>
         <el-table-column label="出货状态" width="130" align="center">
           <template #default="{row}">
-            <span style="color:var(--color-success, #67c23a)">{{ row.shipped_qty || 0 }}</span>/{{ row.order_qty }}
-            <el-tag :type="row.ship_status==='全部出货'?'success':row.ship_status==='部分出货'?'warning':'danger'" size="small" style="margin-left:4px">{{ row.ship_status }}</el-tag>
+            <span style="color:var(--color-success, #67c23a)">{{ row.shipped_qty || 0 }}</span
+            >/{{ row.order_qty }}
+            <el-tag
+              :type="row.ship_status==='全部出货'?'success':row.ship_status==='部分出货'?'warning':'danger'"
+              size="small"
+              class="ml-1"
+              >{{ row.ship_status }}</el-tag
+            >
           </template>
         </el-table-column>
         <el-table-column label="收款状态" width="130" align="center">
           <template #default="{row}">
-            <span style="color:var(--color-accent, #409eff)">¥{{ formatMoney(row.paid_amount) }}</span>/¥{{ formatMoney(row.total_amount) }}
-            <el-tag :type="row.pay_status==='全部收款'?'success':row.pay_status==='部分收款'?'warning':'danger'" size="small" style="margin-left:4px">{{ row.pay_status }}</el-tag>
+            <span style="color:var(--color-accent, #409eff)"
+              >¥{{ formatMoney(row.paid_amount) }}</span
+            >/¥{{ formatMoney(row.total_amount) }}
+            <el-tag
+              :type="row.pay_status==='全部收款'?'success':row.pay_status==='部分收款'?'warning':'danger'"
+              size="small"
+              class="ml-1"
+              >{{ row.pay_status }}</el-tag
+            >
           </template>
         </el-table-column>
         <el-table-column label="订单状态" width="90">
           <template #default="{row}">
-            <el-tag :type="row.status==='已完成'?'success':row.status==='待审核'?'warning':row.status==='已审核'?'primary':row.status==='已取消'?'danger':'info'" size="small">{{ row.status }}</el-tag>
+            <el-tag
+              :type="row.status==='已完成'?'success':row.status==='待审核'?'warning':row.status==='已审核'?'primary':row.status==='已取消'?'danger':'info'"
+              size="small"
+              >{{ row.status }}</el-tag
+            >
           </template>
         </el-table-column>
         <el-table-column label="交期" width="100" prop="delivery_date" />
         <el-table-column label="操作" width="200" fixed="right">
           <template #default="{row}">
             <el-button link type="primary" size="small" @click="showEdit(row)">编辑</el-button>
-            <el-button link type="success" size="small" @click="approveSO(row)" v-if="row.status==='待审核'">审核</el-button>
-            <el-button link type="success" size="small" @click="toMps(row)" v-if="row.status==='已审核' && row.ship_status==='待出货'">→MPS</el-button>
-            <el-button link type="danger" size="small" @click="cancelSO(row)" v-if="row.status!=='已完成' && row.status!=='已取消'">作废</el-button>
-            <el-button link type="danger" size="small" @click="deleteSO(row)" v-if="row.ship_status==='待出货'">删除</el-button>
+            <el-button
+              v-if="row.status==='待审核'"
+              link
+              type="success"
+              size="small"
+              @click="approveSO(row)"
+              >审核</el-button
+            >
+            <el-button
+              v-if="row.status==='已审核' && row.ship_status==='待出货'"
+              link
+              type="success"
+              size="small"
+              @click="toMps(row)"
+              >→MPS</el-button
+            >
+            <el-button
+              v-if="row.status!=='已完成' && row.status!=='已取消'"
+              link
+              type="danger"
+              size="small"
+              @click="cancelSO(row)"
+              >作废</el-button
+            >
+            <el-button
+              v-if="row.ship_status==='待出货'"
+              link
+              type="danger"
+              size="small"
+              @click="deleteSO(row)"
+              >删除</el-button
+            >
           </template>
         </el-table-column>
       </el-table>
-      <el-pagination v-model:current-page="page" v-model:page-size="pageSize" :total="total"
-        layout="total,prev,pager,next" @change="fetchData" style="margin-top:16px;justify-content:flex-end" />
+      <el-pagination
+        v-model:current-page="page"
+        v-model:page-size="pageSize"
+        :total="total"
+        layout="total,prev,pager,next"
+        class="mt-4 justify-end"
+        @change="fetchData"
+      />
     </div>
 
     <!-- 客户列表 -->
     <div v-else>
-      <div style="margin-bottom:12px">
-        <el-button type="primary" size="small" @click="showCustomerDialog(null)"><el-icon><Plus /></el-icon> 新增客户</el-button>
+      <div class="mb-3">
+        <el-button type="primary" size="small" @click="showCustomerDialog(null)"
+          ><el-icon><Plus /></el-icon> 新增客户</el-button
+        >
       </div>
       <el-table :data="customerData" stripe border>
         <el-table-column prop="customer_code" label="编码" width="120" />
@@ -93,23 +170,38 @@
     <el-dialog v-model="dialogVisible" title="新建销售订单" width="500px">
       <el-form ref="formRef" :model="form" :rules="rules" label-width="90px">
         <el-form-item label="客户" prop="customer_id">
-          <el-select v-model="form.customer_id" filterable placeholder="选择客户" style="width:100%">
-            <el-option v-for="c in customerData" :key="c.id" :label="c.customer_name" :value="c.id" />
+          <el-select v-model="form.customer_id" filterable placeholder="选择客户" class="w-full">
+            <el-option
+              v-for="c in customerData"
+              :key="c.id"
+              :label="c.customer_name"
+              :value="c.id"
+            />
           </el-select>
         </el-form-item>
         <el-form-item label="产品" prop="item_id">
-          <el-select v-model="form.item_id" filterable placeholder="选择产品" style="width:100%">
-            <el-option v-for="m in productOptions" :key="m.id" :label="`${m.material_code} ${m.material_name}`" :value="m.id" />
+          <el-select v-model="form.item_id" filterable placeholder="选择产品" class="w-full">
+            <el-option
+              v-for="m in productOptions"
+              :key="m.id"
+              :label="`${m.material_code} ${m.material_name}`"
+              :value="m.id"
+            />
           </el-select>
         </el-form-item>
         <el-form-item label="数量" prop="order_qty">
-          <el-input-number v-model="form.order_qty" :min="1" style="width:100%" />
+          <el-input-number v-model="form.order_qty" :min="1" class="w-full" />
         </el-form-item>
         <el-form-item label="单价 ¥">
-          <el-input-number v-model="form.unit_price" :min="0" style="width:100%" />
+          <el-input-number v-model="form.unit_price" :min="0" class="w-full" />
         </el-form-item>
         <el-form-item label="交期" prop="delivery_date">
-          <el-date-picker v-model="form.delivery_date" type="date" value-format="YYYY-MM-DD" style="width:100%" />
+          <el-date-picker
+            v-model="form.delivery_date"
+            type="date"
+            value-format="YYYY-MM-DD"
+            class="w-full"
+          />
         </el-form-item>
         <el-form-item label="备注">
           <el-input v-model="form.remark" />
@@ -117,25 +209,42 @@
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible=false">取消</el-button>
-        <el-button type="primary" @click="submitForm" :loading="saving">保存</el-button>
+        <el-button type="primary" :loading="saving" @click="submitForm">保存</el-button>
       </template>
     </el-dialog>
 
     <!-- 编辑订单弹窗 -->
     <el-dialog v-model="editVisible" title="编辑订单" width="420px">
       <el-form label-width="90px">
-        <el-form-item label="订单号"><strong>{{ editForm.order_number }}</strong></el-form-item>
-        <el-form-item label="数量"><el-input-number v-model="editForm.order_qty" :min="1" style="width:100%" /></el-form-item>
-        <el-form-item label="单价 ¥"><el-input-number v-model="editForm.unit_price" :min="0" style="width:100%" /></el-form-item>
-        <el-form-item label="交期"><el-date-picker v-model="editForm.delivery_date" type="date" value-format="YYYY-MM-DD" style="width:100%" /></el-form-item>
+        <el-form-item label="订单号"
+          ><strong>{{ editForm.order_number }}</strong></el-form-item
+        >
+        <el-form-item label="数量"
+          ><el-input-number v-model="editForm.order_qty" :min="1" class="w-full"
+        /></el-form-item>
+        <el-form-item label="单价 ¥"
+          ><el-input-number v-model="editForm.unit_price" :min="0" class="w-full"
+        /></el-form-item>
+        <el-form-item label="交期"
+          ><el-date-picker
+            v-model="editForm.delivery_date"
+            type="date"
+            value-format="YYYY-MM-DD"
+            class="w-full"
+        /></el-form-item>
       </el-form>
-      <template #footer><el-button @click="editVisible=false">取消</el-button><el-button type="primary" :loading="saving" @click="submitEdit">保存</el-button></template>
+      <template #footer
+        ><el-button @click="editVisible=false">取消</el-button
+        ><el-button type="primary" :loading="saving" @click="submitEdit">保存</el-button></template
+      >
     </el-dialog>
 
     <!-- 状态更新弹窗 -->
     <el-dialog v-model="statusVisible" title="更新订单状态" width="350px">
       <el-form label-width="90px">
-        <el-form-item label="当前状态"><el-tag>{{ statusForm.oldStatus }}</el-tag></el-form-item>
+        <el-form-item label="当前状态"
+          ><el-tag>{{ statusForm.oldStatus }}</el-tag></el-form-item
+        >
         <el-form-item label="新状态">
           <el-select v-model="statusForm.newStatus">
             <el-option label="待处理" value="待处理" />
@@ -155,8 +264,12 @@
     <!-- 客户弹窗 -->
     <el-dialog v-model="customerVisible" title="新增客户" width="450px">
       <el-form ref="custFormRef" :model="custForm" label-width="90px">
-        <el-form-item label="编码" required><el-input v-model="custForm.customer_code" /></el-form-item>
-        <el-form-item label="名称" required><el-input v-model="custForm.customer_name" /></el-form-item>
+        <el-form-item label="编码" required
+          ><el-input v-model="custForm.customer_code"
+        /></el-form-item>
+        <el-form-item label="名称" required
+          ><el-input v-model="custForm.customer_name"
+        /></el-form-item>
         <el-form-item label="联系人"><el-input v-model="custForm.contact_person" /></el-form-item>
         <el-form-item label="电话"><el-input v-model="custForm.contact_phone" /></el-form-item>
         <el-form-item label="地址"><el-input v-model="custForm.address" /></el-form-item>

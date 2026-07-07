@@ -1,8 +1,8 @@
 <template>
   <div class="page-container space-y-5 animate-fade-in">
-
-    <!-- ══════════ KPI 统计卡片（系统级 + 生产级）══════════ -->
-    <div class="kpi-row">
+    <!-- ══════════ KPI 统计卡片 ══════════ -->
+    <SkeletonCard v-if="loading" :count="8" />
+    <div v-else class="grid grid-cols-2 lg:grid-cols-4 gap-3">
       <div class="kpi-box" style="background:linear-gradient(135deg,#409eff,#3375d6)">
         <span class="kpi-num">{{ stats.materialCount }}</span>
         <span class="kpi-label">物料总数</span>
@@ -39,12 +39,19 @@
 
     <!-- ══════════ 预警卡片 ══════════ -->
     <div v-if="dashAlerts.length > 0" style="display:flex;gap:12px;flex-wrap:wrap;">
-      <div v-for="a in dashAlerts" :key="a.title"
+      <div
+        v-for="a in dashAlerts"
+        :key="a.title"
         style="flex:1;min-width:200px;display:flex;align-items:center;gap:12px;border-radius:8px;padding:12px 16px;cursor:pointer;background:var(--color-bg-overlay);border:1px solid var(--color-border-subtle);"
-        @click="$router.push(a.type==='danger'?'/production':a.type==='warning'?'/inventory':'/mrp')">
-        <el-icon :size="20"><component :is="a.type==='danger'?'WarningFilled':a.type==='warning'?'Box':'Setting'" /></el-icon>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:600;color:var(--color-text-primary)">{{ a.title }}</div>
+        @click="$router.push(a.type==='danger'?'/production':a.type==='warning'?'/inventory':'/mrp')"
+      >
+        <el-icon :size="20"
+          ><component :is="a.type==='danger'?'WarningFilled':a.type==='warning'?'Box':'Setting'"
+        /></el-icon>
+        <div class="w-full lg:w-1/3">
+          <div style="font-size:13px;font-weight:600;color:var(--color-text-primary)">
+            {{ a.title }}
+          </div>
           <div style="font-size:12px;color:var(--color-text-tertiary)">{{ a.detail }}</div>
         </div>
         <span style="font-size:18px;font-weight:700;color:var(--color-danger)">{{ a.count }}</span>
@@ -52,17 +59,25 @@
     </div>
 
     <!-- ══════════ 工单看板 + OEE + 负荷 ══════════ -->
-    <div style="display:flex;gap:16px;">
-      <div style="flex:2;min-width:0">
+    <div class="flex flex-col lg:flex-row gap-4">
+      <div class="w-full lg:w-2/3">
         <el-card shadow="never">
           <template #header><span style="font-weight:600">工单看板</span></template>
           <div class="kanban-row">
             <div v-for="(wos, status) in kanban.columns" :key="status" class="kanban-col">
-              <div class="kanban-header">{{ status }} <span class="kanban-count">{{ wos.length }}</span></div>
-              <div v-for="w in wos" :key="w.id" :class="['kanban-card', `priority-${w.priority || 0}`]">
+              <div class="kanban-header">
+                {{ status }} <span class="kanban-count">{{ wos.length }}</span>
+              </div>
+              <div
+                v-for="w in wos"
+                :key="w.id"
+                :class="['kanban-card', `priority-${w.priority || 0}`]"
+              >
                 <div class="kanban-wo">{{ w.wo_number }}</div>
                 <div class="kanban-mat">{{ w.material_name }}</div>
-                <div class="kanban-bar-bg"><div class="kanban-bar" :style="{width: w.progress + '%'}"></div></div>
+                <div class="kanban-bar-bg">
+                  <div class="kanban-bar" :style="{width: w.progress + '%'}"></div>
+                </div>
                 <div class="kanban-info">{{ w.completed_qty }}/{{ w.plan_qty }}</div>
                 <div v-if="w.work_center_name" class="kanban-wc">{{ w.work_center_name }}</div>
               </div>
@@ -71,12 +86,17 @@
           </div>
         </el-card>
       </div>
-      <div style="flex:1;min-width:0">
+      <div class="w-full lg:w-1/3">
         <el-card shadow="never" style="margin-bottom:16px">
           <template #header><span style="font-weight:600">OEE 设备效率</span></template>
           <div v-for="o in oee.items" :key="o.work_center_id" class="oee-row">
             <div class="oee-name">{{ o.center_name }}</div>
-            <div class="oee-bar-bg"><div class="oee-bar" :style="{width: o.oee + '%', background: o.oee < 50 ? '#f56c6c' : o.oee < 75 ? '#e6a23c' : '#67c23a'}"></div></div>
+            <div class="oee-bar-bg">
+              <div
+                class="oee-bar"
+                :style="{width: o.oee + '%', background: o.oee < 50 ? '#f56c6c' : o.oee < 75 ? '#e6a23c' : '#67c23a'}"
+              ></div>
+            </div>
             <div class="oee-val">{{ o.oee }}%</div>
           </div>
         </el-card>
@@ -84,7 +104,12 @@
           <template #header><span style="font-weight:600">工作中心负荷</span></template>
           <div v-for="w in load.items" :key="w.work_center_id" class="oee-row">
             <div class="oee-name">{{ w.center_name }}</div>
-            <div class="oee-bar-bg"><div class="oee-bar" :style="{width: Math.min(w.load_pct, 100) + '%', background: w.load_pct > 100 ? '#f56c6c' : w.load_pct > 80 ? '#e6a23c' : '#67c23a'}"></div></div>
+            <div class="oee-bar-bg">
+              <div
+                class="oee-bar"
+                :style="{width: Math.min(w.load_pct, 100) + '%', background: w.load_pct > 100 ? '#f56c6c' : w.load_pct > 80 ? '#e6a23c' : '#67c23a'}"
+              ></div>
+            </div>
             <div class="oee-val">{{ w.load_pct }}%</div>
           </div>
         </el-card>
@@ -92,37 +117,86 @@
     </div>
 
     <!-- ══════════ 快捷操作 + 最近 MRP + 系统状态 ══════════ -->
-    <div style="display:flex;gap:16px;">
-      <div class="stat-card" style="flex:1;">
-        <h3 style="font-weight:600;font-size:14px;margin-bottom:16px;display:flex;align-items:center;gap:8px;">
+    <div class="flex flex-col lg:flex-row gap-4">
+      <div class="stat-card flex-1">
+        <h3
+          style="font-weight:600;font-size:14px;margin-bottom:16px;display:flex;align-items:center;gap:8px;"
+        >
           <el-icon :size="14" color="var(--color-accent)"><Promotion /></el-icon> 快捷操作
         </h3>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
           <QuickActionBtn to="/mrp" icon="Cpu" label="MRP 运算" desc="物料需求计算" color="blue" />
-          <QuickActionBtn to="/materials" icon="Plus" label="新增物料" desc="录入物料数据" color="emerald" />
-          <QuickActionBtn to="/bom" icon="Connection" label="BOM 管理" desc="物料清单维护" color="amber" />
-          <QuickActionBtn to="/purchase" icon="ShoppingCart" label="采购管理" desc="采购订单处理" color="purple" />
-          <QuickActionBtn to="/production" icon="SetUp" label="生产管理" desc="工单下达跟踪" color="cyan" />
-          <QuickActionBtn to="/reports" icon="DataAnalysis" label="报表中心" desc="数据可视化" color="rose" />
+          <QuickActionBtn
+            to="/materials"
+            icon="Plus"
+            label="新增物料"
+            desc="录入物料数据"
+            color="emerald"
+          />
+          <QuickActionBtn
+            to="/bom"
+            icon="Connection"
+            label="BOM 管理"
+            desc="物料清单维护"
+            color="amber"
+          />
+          <QuickActionBtn
+            to="/purchase"
+            icon="ShoppingCart"
+            label="采购管理"
+            desc="采购订单处理"
+            color="purple"
+          />
+          <QuickActionBtn
+            to="/production"
+            icon="SetUp"
+            label="生产管理"
+            desc="工单下达跟踪"
+            color="cyan"
+          />
+          <QuickActionBtn
+            to="/reports"
+            icon="DataAnalysis"
+            label="报表中心"
+            desc="数据可视化"
+            color="rose"
+          />
         </div>
       </div>
 
-      <div class="stat-card" style="flex:1;">
-        <h3 style="font-weight:600;font-size:14px;margin-bottom:16px;display:flex;align-items:center;gap:8px;">
+      <div class="stat-card flex-1">
+        <h3
+          style="font-weight:600;font-size:14px;margin-bottom:16px;display:flex;align-items:center;gap:8px;"
+        >
           <el-icon :size="14" color="var(--color-accent)"><Timer /></el-icon> 最近 MRP 运算
         </h3>
         <div v-if="loading" style="display:flex;flex-direction:column;gap:12px;">
-          <div v-for="i in 3" :key="i" style="height:32px;border-radius:6px;background:var(--color-bg-overlay);animation:pulse 2s infinite;"></div>
+          <div
+            v-for="i in 3"
+            :key="i"
+            style="height:32px;border-radius:6px;background:var(--color-bg-overlay);animation:pulse 2s infinite;"
+          ></div>
         </div>
-        <div v-else-if="lastMrpRuns.length === 0" style="display:flex;flex-direction:column;align-items:center;padding:32px 0;color:var(--color-text-tertiary)">
+        <div
+          v-else-if="lastMrpRuns.length === 0"
+          style="display:flex;flex-direction:column;align-items:center;padding:32px 0;color:var(--color-text-tertiary)"
+        >
           <el-icon :size="32" color="var(--color-text-disabled)"><Cpu /></el-icon>
           <p style="margin-top:8px;font-size:13px;">暂无 MRP 运算记录</p>
-          <router-link to="/mrp" style="margin-top:12px;font-size:13px;color:var(--color-accent)">前往 MRP 运算 →</router-link>
+          <router-link to="/mrp" style="margin-top:12px;font-size:13px;color:var(--color-accent)"
+            >前往 MRP 运算 →</router-link
+          >
         </div>
         <div v-else style="display:flex;flex-direction:column;gap:8px;">
-          <div v-for="(run, i) in lastMrpRuns" :key="i" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-radius:6px;background:var(--color-bg-overlay);font-size:13px;">
+          <div
+            v-for="(run, i) in lastMrpRuns"
+            :key="i"
+            style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-radius:6px;background:var(--color-bg-overlay);font-size:13px;"
+          >
             <div style="display:flex;align-items:center;gap:8px;">
-              <span :style="{width:'6px',height:'6px',borderRadius:'50%',background:run.status==='success'?'var(--color-success)':'var(--color-danger)'}"></span>
+              <span
+                :style="{width:'6px',height:'6px',borderRadius:'50%',background:run.status==='success'?'var(--color-success)':'var(--color-danger)'}"
+              ></span>
               <span style="color:var(--color-text-secondary)">{{ run.time }}</span>
             </div>
             <div style="display:flex;gap:12px;color:var(--color-text-tertiary)">
@@ -134,8 +208,10 @@
         </div>
       </div>
 
-      <div class="stat-card" style="flex:1;">
-        <h3 style="font-weight:600;font-size:14px;margin-bottom:16px;display:flex;align-items:center;gap:8px;">
+      <div class="stat-card flex-1">
+        <h3
+          style="font-weight:600;font-size:14px;margin-bottom:16px;display:flex;align-items:center;gap:8px;"
+        >
           <el-icon :size="14" color="var(--color-success)"><Monitor /></el-icon> 系统状态
         </h3>
         <div style="display:flex;flex-direction:column;gap:12px;">
@@ -144,72 +220,143 @@
           <StatusRow label="MRP 引擎" status="ready" />
           <StatusRow label="API 服务" status="connected" />
         </div>
-        <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--color-border-subtle);">
+        <div
+          style="margin-top:16px;padding-top:16px;border-top:1px solid var(--color-border-subtle);"
+        >
           <div style="display:flex;justify-content:space-between;font-size:13px;">
             <span style="color:var(--color-text-tertiary)">定时 MRP</span>
-            <span :style="{color:timerEnabled?'var(--color-success)':'var(--color-text-tertiary)'}">{{ timerEnabled ? '已启用' : '已暂停' }}</span>
+            <span
+              :style="{color:timerEnabled?'var(--color-success)':'var(--color-text-tertiary)'}"
+              >{{ timerEnabled ? '已启用' : '已暂停' }}</span
+            >
           </div>
-          <div v-if="timerEnabled" style="display:flex;justify-content:space-between;font-size:13px;margin-top:4px;">
+          <div
+            v-if="timerEnabled"
+            style="display:flex;justify-content:space-between;font-size:13px;margin-top:4px;"
+          >
             <span style="color:var(--color-text-tertiary)">下次执行</span>
-            <span style="color:var(--color-text-secondary);font-family:monospace;">{{ timerHour }}:{{ String(timerMinute).padStart(2, '0') }}</span>
+            <span style="color:var(--color-text-secondary);font-family:monospace;"
+              >{{ timerHour }}:{{ String(timerMinute).padStart(2, '0') }}</span
+            >
           </div>
         </div>
       </div>
     </div>
 
     <!-- ══════════ 图表区域 ══════════ -->
-    <div style="display:flex;gap:16px;">
-      <div class="stat-card" style="flex:1;">
-        <h3 style="font-weight:600;font-size:14px;margin-bottom:12px;">库存概览（按模块）</h3>
-        <div ref="inventoryChart" style="height:280px"></div>
-        <div v-if="!invData.length && !loading" style="display:flex;align-items:center;justify-content:center;height:280px;color:var(--color-text-tertiary);font-size:13px;">暂无库存数据</div>
+    <div class="flex flex-col lg:flex-row gap-4">
+      <div class="stat-card flex-1">
+        <h3 class="font-semibold text-sm mb-3">库存概览（按模块）</h3>
+        <div v-if="loading" class="h-[280px] rounded-md bg-[var(--color-bg-hover)] animate-pulse" />
+        <div v-else ref="inventoryChart" style="height:280px"></div>
+        <div
+          v-if="!loading && !invData.length"
+          class="flex items-center justify-center h-[280px] text-[var(--color-text-tertiary)] text-[13px]"
+        >
+          暂无库存数据
+        </div>
       </div>
-      <div class="stat-card" style="flex:1;">
-        <h3 style="font-weight:600;font-size:14px;margin-bottom:12px;">工单状态分布</h3>
-        <div ref="woChart" style="height:280px"></div>
-        <div v-if="!woData.length && !loading" style="display:flex;align-items:center;justify-content:center;height:280px;color:var(--color-text-tertiary);font-size:13px;">暂无工单数据</div>
+      <div class="stat-card flex-1">
+        <h3 class="font-semibold text-sm mb-3">工单状态分布</h3>
+        <div v-if="loading" class="h-[280px] rounded-md bg-[var(--color-bg-hover)] animate-pulse" />
+        <div v-else ref="woChart" style="height:280px"></div>
+        <div
+          v-if="!loading && !woData.length"
+          class="flex items-center justify-center h-[280px] text-[var(--color-text-tertiary)] text-[13px]"
+        >
+          暂无工单数据
+        </div>
       </div>
     </div>
 
     <!-- ══════════ 安灯事件 + 低库存预警 ══════════ -->
-    <div style="display:flex;gap:16px;">
-      <div class="stat-card" style="flex:1;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+    <div class="flex flex-col lg:flex-row gap-4">
+      <div class="stat-card flex-1">
+        <div
+          style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"
+        >
           <h3 style="font-weight:600;font-size:14px;">安灯事件</h3>
           <el-button size="small" type="danger" @click="showAndonDialog">触发安灯</el-button>
         </div>
-        <el-table :data="andons" stripe border size="small" v-loading="aLoading">
+        <el-table v-loading="aLoading" :data="andons" stripe border size="small">
           <el-table-column prop="event_no" label="编号" width="160" />
           <el-table-column prop="event_type" label="类型" width="80" />
-          <el-table-column label="严重度" width="70"><template #default="{row}">
-            <el-tag :type="row.severity==='红色'?'danger':row.severity==='黄色'?'warning':'info'" size="small">{{ row.severity }}</el-tag>
-          </template></el-table-column>
+          <el-table-column label="严重度" width="70"
+            ><template #default="{row}">
+              <el-tag
+                :type="row.severity==='红色'?'danger':row.severity==='黄色'?'warning':'info'"
+                size="small"
+                >{{ row.severity }}</el-tag
+              >
+            </template></el-table-column
+          >
           <el-table-column prop="description" label="描述" min-width="120" show-overflow-tooltip />
           <el-table-column prop="handler" label="响应人" width="70" />
-          <el-table-column label="状态" width="70"><template #default="{row}">
-            <el-tag :type="row.status==='已解决'?'success':row.status==='处理中'?'warning':'danger'" size="small">{{ row.status }}</el-tag>
-          </template></el-table-column>
-          <el-table-column label="操作" width="120"><template #default="{row}">
-            <el-button v-if="row.status==='待响应'" link size="small" type="primary" @click="respondAndon(row)">响应</el-button>
-            <el-button v-if="row.status==='处理中'" link size="small" type="success" @click="resolveAndon(row)">解决</el-button>
-          </template></el-table-column>
+          <el-table-column label="状态" width="70"
+            ><template #default="{row}">
+              <el-tag
+                :type="row.status==='已解决'?'success':row.status==='处理中'?'warning':'danger'"
+                size="small"
+                >{{ row.status }}</el-tag
+              >
+            </template></el-table-column
+          >
+          <el-table-column label="操作" width="120"
+            ><template #default="{row}">
+              <el-button
+                v-if="row.status==='待响应'"
+                link
+                size="small"
+                type="primary"
+                @click="respondAndon(row)"
+                >响应</el-button
+              >
+              <el-button
+                v-if="row.status==='处理中'"
+                link
+                size="small"
+                type="success"
+                @click="resolveAndon(row)"
+                >解决</el-button
+              >
+            </template></el-table-column
+          >
         </el-table>
       </div>
-      <div class="stat-card" style="flex:1;" v-if="lowStockItems.length > 0">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <div v-if="lowStockItems.length > 0" class="stat-card flex-1">
+        <div
+          style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"
+        >
           <h3 style="font-weight:600;font-size:14px;display:flex;align-items:center;gap:8px;">
-            <span style="width:8px;height:8px;border-radius:50%;background:var(--color-danger);"></span> 低库存预警
+            <span
+              style="width:8px;height:8px;border-radius:50%;background:var(--color-danger);"
+            ></span>
+            低库存预警
           </h3>
-          <router-link to="/inventory" style="font-size:13px;color:var(--color-accent)">查看全部 →</router-link>
+          <router-link to="/inventory" style="font-size:13px;color:var(--color-accent)"
+            >查看全部 →</router-link
+          >
         </div>
         <el-table :data="lowStockItems.slice(0, 5)" stripe size="small">
           <el-table-column prop="material_code" label="编码" width="100" />
-          <el-table-column prop="material_name" label="物料型号" min-width="140" show-overflow-tooltip />
+          <el-table-column
+            prop="material_name"
+            label="物料型号"
+            min-width="140"
+            show-overflow-tooltip
+          />
           <el-table-column prop="on_hand" label="库存" width="60" align="center" />
           <el-table-column prop="safety_stock" label="安全" width="60" align="center" />
-          <el-table-column label="状态" width="60" align="center"><template #default="{ row }">
-            <el-tag :type="row.available <= 0 ? 'danger' : 'warning'" size="small" effect="dark">{{ row.available <= 0 ? '缺料' : '偏低' }}</el-tag>
-          </template></el-table-column>
+          <el-table-column label="状态" width="60" align="center"
+            ><template #default="{ row }">
+              <el-tag
+                :type="row.available <= 0 ? 'danger' : 'warning'"
+                size="small"
+                effect="dark"
+                >{{ row.available <= 0 ? '缺料' : '偏低' }}</el-tag
+              >
+            </template></el-table-column
+          >
         </el-table>
       </div>
     </div>
@@ -220,19 +367,27 @@
         <el-form-item label="类型">
           <el-select v-model="andonForm.event_type" style="width:100%">
             <el-option label="缺料" value="缺料" /><el-option label="设备故障" value="设备故障" />
-            <el-option label="质量问题" value="质量问题" /><el-option label="安全" value="安全" /><el-option label="其他" value="其他" />
+            <el-option label="质量问题" value="质量问题" /><el-option
+              label="安全"
+              value="安全"
+            /><el-option label="其他" value="其他" />
           </el-select>
         </el-form-item>
         <el-form-item label="严重度">
           <el-select v-model="andonForm.severity" style="width:100%">
-            <el-option label="红色（停线）" value="红色" /><el-option label="黄色（预警）" value="黄色" /><el-option label="蓝色（请求）" value="蓝色" />
+            <el-option label="红色（停线）" value="红色" /><el-option
+              label="黄色（预警）"
+              value="黄色"
+            /><el-option label="蓝色（请求）" value="蓝色" />
           </el-select>
         </el-form-item>
-        <el-form-item label="描述"><el-input v-model="andonForm.description" type="textarea" /></el-form-item>
+        <el-form-item label="描述"
+          ><el-input v-model="andonForm.description" type="textarea"
+        /></el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="andonVisible=false">取消</el-button>
-        <el-button type="danger" @click="createAndon" :loading="saving">触发</el-button>
+        <el-button type="danger" :loading="saving" @click="createAndon">触发</el-button>
       </template>
     </el-dialog>
   </div>
@@ -240,14 +395,15 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
-import { darkChartOptions } from '@/utils/echarts-theme'
 import { useRoute } from 'vue-router'
-import * as echarts from 'echarts'
+import { echarts, darkChartOptions } from '@/utils/echarts-theme'
 import { ElMessage } from 'element-plus'
 import api from '@/api'
-import KpiCard from '@/components/KpiCard.vue'
-import QuickActionBtn from '@/components/QuickActionBtn.vue'
-import StatusRow from '@/components/StatusRow.vue'
+import KpiCard from '@/components/common/KpiCard.vue'
+import QuickActionBtn from '@/components/common/QuickActionBtn.vue'
+import StatusRow from '@/components/common/StatusRow.vue'
+import SkeletonCard from '@/components/common/SkeletonCard.vue'
+import SkeletonTable from '@/components/common/SkeletonTable.vue'
 
 const route = useRoute()
 const loading = ref(true)
@@ -442,31 +598,30 @@ onBeforeUnmount(() => {
 
 <style scoped>
 /* KPI 卡片行 */
-.kpi-row { display:flex; gap:12px; flex-wrap:wrap; }
 .kpi-box { flex:1; min-width:100px; border-radius:10px; padding:14px 12px; color:#fff; display:flex; flex-direction:column; align-items:center; text-align:center; }
 .kpi-num { font-size:24px; font-weight:800; line-height:1.2; }
 .kpi-label { font-size:12px; opacity:0.85; margin-top:4px; }
 
 /* 看板 */
 .kanban-row { display:flex; gap:10px; min-height:180px; }
-.kanban-col { flex:1; background:#f5f7fa; border-radius:8px; padding:10px; }
-.kanban-header { font-weight:600; font-size:14px; margin-bottom:10px; color:#333; }
-.kanban-count { background:#dcdfe6; color:#666; border-radius:10px; padding:1px 8px; font-size:12px; margin-left:6px; }
-.kanban-card { background:#fff; border-radius:8px; padding:10px; margin-bottom:8px; border-left:3px solid #dcdfe6; box-shadow:0 1px 4px rgba(0,0,0,0.05); }
+.kanban-col { flex:1; background:var(--color-bg-raised); border-radius:8px; padding:10px; }
+.kanban-header { font-weight:600; font-size:14px; margin-bottom:10px; color:var(--color-text-primary); }
+.kanban-count { background:var(--color-bg-hover); color:var(--color-text-secondary); border-radius:10px; padding:1px 8px; font-size:12px; margin-left:6px; }
+.kanban-card { background:var(--color-bg-overlay); border-radius:8px; padding:10px; margin-bottom:8px; border-left:3px solid var(--color-border-light); box-shadow:0 1px 4px rgba(0,0,0,0.15); }
 .kanban-card.priority-1 { border-left-color:#e6a23c; }
 .kanban-card.priority-2 { border-left-color:#f56c6c; }
 .kanban-wo { font-weight:600; font-size:13px; }
-.kanban-mat { font-size:12px; color:#666; margin:2px 0 6px; }
-.kanban-bar-bg { height:4px; background:#f0f0f0; border-radius:2px; margin-bottom:4px; }
-.kanban-bar { height:100%; background:#409eff; border-radius:2px; transition:width 0.3s; }
-.kanban-info { font-size:11px; color:#999; }
-.kanban-wc { font-size:11px; color:#409eff; margin-top:2px; }
-.kanban-empty { text-align:center; color:#bbb; padding:20px 0; font-size:13px; }
+.kanban-mat { font-size:12px; color:var(--color-text-tertiary); margin:2px 0 6px; }
+.kanban-bar-bg { height:4px; background:var(--color-bg-hover); border-radius:2px; margin-bottom:4px; }
+.kanban-bar { height:100%; background:var(--color-accent); border-radius:2px; transition:width 0.3s; }
+.kanban-info { font-size:11px; color:var(--color-text-tertiary); }
+.kanban-wc { font-size:11px; color:var(--color-accent); margin-top:2px; }
+.kanban-empty { text-align:center; color:var(--color-text-disabled); padding:20px 0; font-size:13px; }
 
 /* OEE/负荷 */
 .oee-row { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
-.oee-name { width:90px; font-size:12px; color:#666; flex-shrink:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.oee-bar-bg { flex:1; height:10px; background:#f0f0f0; border-radius:5px; overflow:hidden; }
+.oee-name { width:90px; font-size:12px; color:var(--color-text-secondary); flex-shrink:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.oee-bar-bg { flex:1; height:10px; background:var(--color-bg-hover); border-radius:5px; overflow:hidden; }
 .oee-bar { height:100%; border-radius:5px; transition:width 0.5s; }
 .oee-val { width:36px; text-align:right; font-weight:600; font-size:13px; }
 

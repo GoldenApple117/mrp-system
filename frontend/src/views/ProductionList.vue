@@ -1,8 +1,16 @@
 <template>
   <div class="page-container">
     <div class="page-toolbar">
-      <el-button type="primary" @click="showDialog(null)"><el-icon><Plus /></el-icon> 新建工单</el-button>
-      <el-select v-model="filterStatus" placeholder="状态筛选" style="width:140px" clearable @change="fetchData">
+      <el-button type="primary" @click="showDialog(null)"
+        ><el-icon><Plus /></el-icon> 新建工单</el-button
+      >
+      <el-select
+        v-model="filterStatus"
+        placeholder="状态筛选"
+        class="w-[140px]"
+        clearable
+        @change="fetchData"
+      >
         <el-option label="待下达" value="待下达" />
         <el-option label="已下达" value="已下达" />
         <el-option label="进行中" value="进行中" />
@@ -10,17 +18,29 @@
       </el-select>
     </div>
 
-    <el-empty v-if="!loading &amp;&amp; tableData.length === 0" description="暂无生产工单" />
+    <el-empty v-if="!loading && tableData.length === 0" description="暂无生产工单">
+      <template #image>
+        <el-icon :size="48" color="var(--color-text-disabled)"><Box /></el-icon>
+      </template>
+      <el-button type="primary" @click="showDialog(null)">新建工单</el-button>
+    </el-empty>
 
-    <el-table :data="tableData" v-loading="loading" stripe border>
+    <el-table v-loading="loading" :data="tableData" stripe border>
       <el-table-column prop="wo_number" label="工单号" width="170" show-overflow-tooltip />
       <el-table-column prop="material_code" label="物料编码" width="120" show-overflow-tooltip />
-      <el-table-column prop="material_name" label="物料名称" min-width="130" show-overflow-tooltip />
+      <el-table-column
+        prop="material_name"
+        label="物料名称"
+        min-width="130"
+        show-overflow-tooltip
+      />
       <el-table-column prop="plan_qty" label="计划量" width="70" align="center" />
       <el-table-column label="进度" width="100" align="center">
         <template #default="{row}">
           <span>{{ row.completed_qty || 0 }}/{{ row.plan_qty }}</span>
-          <span v-if="row.rejected_qty" style="color:var(--el-color-danger)">(-{{ row.rejected_qty }})</span>
+          <span v-if="row.rejected_qty" style="color:var(--el-color-danger)"
+            >(-{{ row.rejected_qty }})</span
+          >
         </template>
       </el-table-column>
       <el-table-column prop="labor_hours" label="工时" width="65" align="center" />
@@ -34,46 +54,128 @@
       <el-table-column prop="work_center_name" label="工作中心" width="100" show-overflow-tooltip />
       <el-table-column label="操作" width="440">
         <template #default="{row}">
-          <el-button v-if="row.status==='已下达'" link type="primary" size="small" @click="startOrder(row)">开工</el-button>
-          <el-button v-if="['已下达','进行中'].includes(row.status)" link type="success" size="small" @click="openMaterials(row)">物料</el-button>
-          <el-button v-if="['已下达','进行中'].includes(row.status) && row.routing_id" link type="primary" size="small" @click="openOperations(row)">工序</el-button>
-          <el-button v-if="row.status==='进行中'" link type="warning" size="small" @click="openReport(row)">报工</el-button>
-          <el-button v-if="row.status==='进行中'" link type="info" size="small" @click="openReportHistory(row)">记录</el-button>
-          <el-button v-if="row.status==='进行中'" link type="success" size="small" @click="checkReadiness(row)">完工</el-button>
-          <el-button v-if="!['待下达'].includes(row.status)" link type="info" size="small" @click="showCost(row)">成本</el-button>
-          <el-button v-if="row.status==='待下达'" link type="danger" size="small" @click="deleteItem(row)">删除</el-button>
+          <el-button
+            v-if="row.status==='已下达'"
+            link
+            type="primary"
+            size="small"
+            @click="startOrder(row)"
+            >开工</el-button
+          >
+          <el-button
+            v-if="['已下达','进行中'].includes(row.status)"
+            link
+            type="success"
+            size="small"
+            @click="openMaterials(row)"
+            >物料</el-button
+          >
+          <el-button
+            v-if="['已下达','进行中'].includes(row.status) && row.routing_id"
+            link
+            type="primary"
+            size="small"
+            @click="openOperations(row)"
+            >工序</el-button
+          >
+          <el-button
+            v-if="row.status==='进行中'"
+            link
+            type="warning"
+            size="small"
+            @click="openReport(row)"
+            >报工</el-button
+          >
+          <el-button
+            v-if="row.status==='进行中'"
+            link
+            type="info"
+            size="small"
+            @click="openReportHistory(row)"
+            >记录</el-button
+          >
+          <el-button
+            v-if="row.status==='进行中'"
+            link
+            type="success"
+            size="small"
+            @click="checkReadiness(row)"
+            >完工</el-button
+          >
+          <el-button
+            v-if="!['待下达'].includes(row.status)"
+            link
+            type="info"
+            size="small"
+            @click="showCost(row)"
+            >成本</el-button
+          >
+          <el-button
+            v-if="row.status==='待下达'"
+            link
+            type="danger"
+            size="small"
+            @click="deleteItem(row)"
+            >删除</el-button
+          >
         </template>
       </el-table-column>
     </el-table>
 
-    <el-pagination v-model:current-page="page" v-model:page-size="pageSize" :total="total"
-      layout="total,sizes,prev,pager,next" @change="fetchData" style="margin-top:16px;justify-content:flex-end" />
+    <el-pagination
+      v-model:current-page="page"
+      v-model:page-size="pageSize"
+      :total="total"
+      layout="total,sizes,prev,pager,next"
+      class="mt-4 justify-end"
+      @change="fetchData"
+    />
 
     <!-- 新建工单弹窗 -->
     <el-dialog v-model="dialogVisible" title="新建生产工单" width="500px">
       <el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
         <el-form-item label="物料" prop="item_id">
-          <el-select v-model="form.item_id" filterable placeholder="选择物料" style="width:100%">
-            <el-option v-for="m in materialOptions" :key="m.id" :label="`${m.material_code} ${m.material_name}`" :value="m.id" />
+          <el-select v-model="form.item_id" filterable placeholder="选择物料" class="w-full">
+            <el-option
+              v-for="m in materialOptions"
+              :key="m.id"
+              :label="`${m.material_code} ${m.material_name}`"
+              :value="m.id"
+            />
           </el-select>
         </el-form-item>
         <el-form-item label="计划产量" prop="plan_qty">
-          <el-input-number v-model="form.plan_qty" :min="1" style="width:100%" />
+          <el-input-number v-model="form.plan_qty" :min="1" class="w-full" />
         </el-form-item>
         <el-form-item label="开始日期" prop="start_date">
-          <el-date-picker v-model="form.start_date" type="date" value-format="YYYY-MM-DD" style="width:100%" />
+          <el-date-picker
+            v-model="form.start_date"
+            type="date"
+            value-format="YYYY-MM-DD"
+            class="w-full"
+          />
         </el-form-item>
         <el-form-item label="完成日期" prop="end_date">
-          <el-date-picker v-model="form.end_date" type="date" value-format="YYYY-MM-DD" style="width:100%" />
+          <el-date-picker
+            v-model="form.end_date"
+            type="date"
+            value-format="YYYY-MM-DD"
+            class="w-full"
+          />
         </el-form-item>
         <el-form-item label="工作中心">
-          <el-select v-model="form.work_center_id" clearable placeholder="可选" style="width:100%">
+          <el-select v-model="form.work_center_id" clearable placeholder="可选" class="w-full">
             <el-option v-for="w in workCenters" :key="w.id" :label="w.center_name" :value="w.id" />
           </el-select>
         </el-form-item>
         <el-form-item label="工艺路线">
-          <el-select v-model="form.routing_id" clearable placeholder="可选" style="width:100%">
-            <el-option v-for="r in routingOptions" :key="r.id" :label="`${r.routing_code} (${r.material_name})`" :value="r.id" />
+          <el-select v-model="form.routing_id" clearable placeholder="可选" class="w-full">
+            <el-option
+              v-for="r in routingOptions"
+              :key="r.id"
+              :label="`${r.routing_code} (${r.material_name})`"
+              :value="r.id"
+            />
           </el-select>
         </el-form-item>
         <el-form-item label="备注">
@@ -82,26 +184,34 @@
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible=false">取消</el-button>
-        <el-button type="primary" @click="submitForm" :loading="saving">保存</el-button>
+        <el-button type="primary" :loading="saving" @click="submitForm">保存</el-button>
       </template>
     </el-dialog>
 
     <!-- 报工弹窗 -->
     <el-dialog v-model="reportVisible" title="生产报工" width="500px">
       <el-form :model="reportForm" label-width="100px">
-        <el-form-item label="工单号"><b>{{ reportForm.wo_number }}</b></el-form-item>
+        <el-form-item label="工单号"
+          ><b>{{ reportForm.wo_number }}</b></el-form-item
+        >
         <el-form-item label="物料">{{ reportForm.material_name }}</el-form-item>
         <el-form-item label="计划产量">{{ reportForm.plan_qty }}</el-form-item>
         <el-form-item label="已累计完成">{{ reportForm.existing_completed }}</el-form-item>
         <el-divider />
         <el-form-item label="本次完成">
-          <el-input-number v-model="reportForm.completed_qty" :min="0" style="width:100%" />
+          <el-input-number v-model="reportForm.completed_qty" :min="0" class="w-full" />
         </el-form-item>
         <el-form-item label="不合格数">
-          <el-input-number v-model="reportForm.rejected_qty" :min="0" style="width:100%" />
+          <el-input-number v-model="reportForm.rejected_qty" :min="0" class="w-full" />
         </el-form-item>
         <el-form-item label="工时(h)">
-          <el-input-number v-model="reportForm.labor_hours" :min="0" :step="0.5" :precision="1" style="width:100%" />
+          <el-input-number
+            v-model="reportForm.labor_hours"
+            :min="0"
+            :step="0.5"
+            :precision="1"
+            class="w-full"
+          />
         </el-form-item>
         <el-form-item label="操作人">
           <el-input v-model="reportForm.operator" placeholder="默认：系统" />
@@ -110,21 +220,29 @@
           <el-input v-model="reportForm.remark" placeholder="可选" />
         </el-form-item>
         <el-tag v-if="reportForm.totalUndone > 0" type="warning" effect="plain">
-          完成进度：{{ reportForm.existing_completed + (reportForm.completed_qty||0) }}/{{ reportForm.plan_qty }}
+          完成进度：{{ reportForm.existing_completed + (reportForm.completed_qty||0)
+
+
+
+
+
+
+
+
+
+          }}/{{ reportForm.plan_qty }}
         </el-tag>
-        <el-tag v-else type="success" effect="plain">
-          已完成全部计划
-        </el-tag>
+        <el-tag v-else type="success" effect="plain"> 已完成全部计划 </el-tag>
       </el-form>
       <template #footer>
         <el-button @click="reportVisible=false">取消</el-button>
-        <el-button type="primary" @click="submitReport" :loading="saving">提交报工</el-button>
+        <el-button type="primary" :loading="saving" @click="submitReport">提交报工</el-button>
       </template>
     </el-dialog>
 
     <!-- 报工历史弹窗 -->
     <el-dialog v-model="reportHistoryVisible" :title="`报工历史 - ${hWoNumber}`" width="650px">
-      <el-table :data="reportHistory" stripe border size="small" v-loading="hLoading">
+      <el-table v-loading="hLoading" :data="reportHistory" stripe border size="small">
         <el-table-column prop="report_time" label="报工时间" width="160" />
         <el-table-column prop="completed_qty" label="完成" width="60" align="center" />
         <el-table-column prop="rejected_qty" label="不合格" width="60" align="center" />
@@ -132,47 +250,107 @@
         <el-table-column prop="operator" label="操作人" width="80" />
         <el-table-column prop="remark" label="备注" min-width="120" show-overflow-tooltip />
       </el-table>
-      <div v-if="!hLoading && !reportHistory.length" style="text-align:center;padding:20px;color:#999">暂无报工记录</div>
+      <div
+        v-if="!hLoading && !reportHistory.length"
+        class="text-center p-5 text-[var(--color-text-disabled)]"
+      >
+        暂无报工记录
+      </div>
     </el-dialog>
 
     <!-- 完工就绪检查 -->
     <el-dialog v-model="readinessVisible" :title="`完工就绪检查 - ${rWoNumber}`" width="600px">
-      <div v-if="rLoading" style="text-align:center;padding:30px">检查中...</div>
+      <div v-if="rLoading" class="text-center p-[30px]">检查中...</div>
       <div v-else>
-        <el-alert v-if="readiness.can_complete" type="success" :closable="false" show-icon title="可以完工" style="margin-bottom:16px" />
-        <el-alert v-else type="warning" :closable="false" show-icon title="存在未完成项" style="margin-bottom:16px" />
-        <div v-for="c in readiness.checks" :key="c.name" style="margin-bottom:12px">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-            <el-tag :type="c.status==='OK'?'success':c.status==='WARNING'?'warning':'info'" size="small" round>{{ c.status }}</el-tag>
-            <span style="font-weight:500">{{ c.name }}</span>
-            <span style="color:#999;font-size:12px">{{ c.detail }}</span>
+        <el-alert
+          v-if="readiness.can_complete"
+          type="success"
+          :closable="false"
+          show-icon
+          title="可以完工"
+          class="mb-4"
+        />
+        <el-alert
+          v-else
+          type="warning"
+          :closable="false"
+          show-icon
+          title="存在未完成项"
+          class="mb-4"
+        />
+        <div v-for="c in readiness.checks" :key="c.name" class="mb-3">
+          <div class="flex items-center gap-2 mb-1">
+            <el-tag
+              :type="c.status==='OK'?'success':c.status==='WARNING'?'warning':'info'"
+              size="small"
+              round
+              >{{ c.status }}</el-tag
+            >
+            <span class="font-medium">{{ c.name }}</span>
+            <span class="text-[var(--color-text-disabled)] text-xs">{{ c.detail }}</span>
           </div>
-          <div v-if="c.items" style="margin-left:70px">
-            <div v-for="it in c.items" :key="it.code" style="font-size:12px;color:#666;line-height:1.8">
+          <div v-if="c.items" class="ml-[70px]">
+            <div
+              v-for="it in c.items"
+              :key="it.code"
+              class="text-xs text-[var(--color-text-tertiary)] leading-[1.8]"
+            >
               {{ it.code }} {{ it.name }}: 需 {{ it.required }}，已领 {{ it.issued }}
             </div>
           </div>
         </div>
         <el-divider />
-        <div style="display:flex;justify-content:space-around;text-align:center">
-          <div><span style="color:#999">计划</span><br><span style="font-size:20px;font-weight:bold">{{ readiness.summary?.plan_qty }}</span></div>
-          <div><span style="color:#67c23a">完成</span><br><span style="font-size:20px;font-weight:bold;color:#67c23a">{{ readiness.summary?.completed_qty }}</span></div>
-          <div><span style="color:#f56c6c">不合格</span><br><span style="font-size:20px;font-weight:bold;color:#f56c6c">{{ readiness.summary?.rejected_qty }}</span></div>
-          <div><span style="color:#409eff">工时(h)</span><br><span style="font-size:20px;font-weight:bold;color:#409eff">{{ readiness.summary?.labor_hours }}</span></div>
-          <div><span style="color:#999">报工次数</span><br><span style="font-size:20px;font-weight:bold">{{ readiness.summary?.total_reports }}</span></div>
+        <div class="flex justify-around text-center">
+          <div>
+            <span class="text-[var(--color-text-disabled)]">计划</span><br /><span
+              class="text-xl font-bold"
+              >{{ readiness.summary?.plan_qty }}</span
+            >
+          </div>
+          <div>
+            <span class="text-[#67c23a]">完成</span><br /><span
+              class="text-xl font-bold text-[#67c23a]"
+              >{{ readiness.summary?.completed_qty }}</span
+            >
+          </div>
+          <div>
+            <span class="text-[#f56c6c]">不合格</span><br /><span
+              class="text-xl font-bold text-[#f56c6c]"
+              >{{ readiness.summary?.rejected_qty }}</span
+            >
+          </div>
+          <div>
+            <span class="text-[#409eff]">工时(h)</span><br /><span
+              class="text-xl font-bold text-[#409eff]"
+              >{{ readiness.summary?.labor_hours }}</span
+            >
+          </div>
+          <div>
+            <span class="text-[var(--color-text-disabled)]">报工次数</span><br /><span
+              class="text-xl font-bold"
+              >{{ readiness.summary?.total_reports }}</span
+            >
+          </div>
         </div>
       </div>
       <template #footer>
         <el-button @click="readinessVisible=false">关闭</el-button>
-        <el-button v-if="!rLoading && readiness.can_complete" type="success" @click="doComplete">确认完工入库</el-button>
-        <el-button v-if="!rLoading && !readiness.can_complete" type="warning" @click="forceComplete">强制完工</el-button>
+        <el-button v-if="!rLoading && readiness.can_complete" type="success" @click="doComplete"
+          >确认完工入库</el-button
+        >
+        <el-button v-if="!rLoading && !readiness.can_complete" type="warning" @click="forceComplete"
+          >强制完工</el-button
+        >
       </template>
     </el-dialog>
 
     <!-- 物料管理弹窗 -->
     <el-dialog v-model="materialVisible" :title="`物料清单 - ${materialWoNumber}`" width="700px">
-      <div v-if="matLoading" style="text-align:center;padding:30px">加载中...</div>
-      <div v-else-if="!materials.length" style="text-align:center;color:#999;padding:30px">
+      <div v-if="matLoading" class="text-center p-[30px]">加载中...</div>
+      <div
+        v-else-if="!materials.length"
+        class="text-center text-[var(--color-text-disabled)] p-[30px]"
+      >
         暂无物料需求，请先「开工」生成物料清单
       </div>
       <el-table v-else :data="materials" stripe border size="small">
@@ -181,22 +359,38 @@
         <el-table-column prop="required_qty" label="需求" width="60" align="center" />
         <el-table-column label="已发" width="80" align="center">
           <template #default="{row}">
-            <span :style="{color: row.issued_qty >= row.required_qty ? '#67c23a' : '#e6a23c', fontWeight:'bold'}">{{ row.issued_qty || 0 }}</span>
+            <span
+              :style="{color: row.issued_qty >= row.required_qty ? '#67c23a' : '#e6a23c', fontWeight:'bold'}"
+              >{{ row.issued_qty || 0 }}</span
+            >
           </template>
         </el-table-column>
         <el-table-column label="未发" width="70" align="center">
           <template #default="{row}">
-            <span style="color:#f56c6c">{{ Math.max(0, row.required_qty - (row.issued_qty||0)) }}</span>
+            <span
+              class="text-[#f56c6c]"
+              >{{ Math.max(0, row.required_qty - (row.issued_qty||0)) }}</span
+            >
           </template>
         </el-table-column>
         <el-table-column label="操作" width="160">
           <template #default="{row}">
-            <el-button link type="success" size="small"
+            <el-button
+              link
+              type="success"
+              size="small"
+              :disabled="(row.issued_qty||0) >= row.required_qty"
               @click="openIssueDialog(row)"
-              :disabled="(row.issued_qty||0) >= row.required_qty">领料</el-button>
-            <el-button link type="warning" size="small"
+              >领料</el-button
+            >
+            <el-button
+              link
+              type="warning"
+              size="small"
+              :disabled="!(row.issued_qty > 0)"
               @click="openReturnDialog(row)"
-              :disabled="!(row.issued_qty > 0)">退料</el-button>
+              >退料</el-button
+            >
           </template>
         </el-table-column>
       </el-table>
@@ -205,69 +399,134 @@
     <!-- 领料弹窗 -->
     <el-dialog v-model="issueVisible" title="领料" width="400px">
       <el-form label-width="90px">
-        <el-form-item label="物料"><b>{{ issueForm.material_name }}</b></el-form-item>
+        <el-form-item label="物料"
+          ><b>{{ issueForm.material_name }}</b></el-form-item
+        >
         <el-form-item label="已领">{{ issueForm.issued_qty }}</el-form-item>
         <el-form-item label="需求">{{ issueForm.required_qty }}</el-form-item>
         <el-form-item label="可领数">{{ issueForm.available }}</el-form-item>
         <el-form-item label="本次领料">
-          <el-input-number v-model="issueForm.issue_qty" :min="1" :max="issueForm.available" style="width:150px" />
+          <el-input-number
+            v-model="issueForm.issue_qty"
+            :min="1"
+            :max="issueForm.available"
+            class="w-[150px]"
+          />
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="issueVisible=false">取消</el-button>
-        <el-button type="success" @click="confirmIssue" :loading="matSaving" :disabled="!issueForm.issue_qty">确认领料</el-button>
+        <el-button
+          type="success"
+          :loading="matSaving"
+          :disabled="!issueForm.issue_qty"
+          @click="confirmIssue"
+          >确认领料</el-button
+        >
       </template>
     </el-dialog>
 
     <!-- 退料弹窗 -->
     <el-dialog v-model="returnVisible" title="退料" width="400px">
       <el-form label-width="90px">
-        <el-form-item label="物料"><b>{{ returnForm.material_name }}</b></el-form-item>
+        <el-form-item label="物料"
+          ><b>{{ returnForm.material_name }}</b></el-form-item
+        >
         <el-form-item label="已领">{{ returnForm.issued_qty }}</el-form-item>
         <el-form-item label="本次退回">
-          <el-input-number v-model="returnForm.return_qty" :min="1" :max="returnForm.issued_qty" style="width:150px" />
+          <el-input-number
+            v-model="returnForm.return_qty"
+            :min="1"
+            :max="returnForm.issued_qty"
+            class="w-[150px]"
+          />
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="returnVisible=false">取消</el-button>
-        <el-button type="warning" @click="confirmReturn" :loading="matSaving" :disabled="!returnForm.return_qty">确认退料</el-button>
+        <el-button
+          type="warning"
+          :loading="matSaving"
+          :disabled="!returnForm.return_qty"
+          @click="confirmReturn"
+          >确认退料</el-button
+        >
       </template>
     </el-dialog>
 
     <!-- 工序执行弹窗 -->
     <el-dialog v-model="opVisible" :title="`工序执行 - ${opWoNumber}`" width="800px">
-      <div v-if="opLoading" style="text-align:center;padding:30px">加载中...</div>
-      <div v-else-if="!ops.length" style="text-align:center;padding:30px;color:#999">
+      <div v-if="opLoading" class="text-center p-[30px]">加载中...</div>
+      <div v-else-if="!ops.length" class="text-center p-[30px] text-[var(--color-text-disabled)]">
         暂无工序计划，请先关联工艺路线后「开工」展开工序
       </div>
-      <div v-else style="display:flex;flex-direction:column;gap:12px">
+      <div v-else class="flex flex-col gap-3">
         <div v-for="op in ops" :key="op.id" :class="['op-card', `op-${op.status}`]">
-          <div style="display:flex;align-items:center;gap:12px">
+          <div class="flex items-center gap-3">
             <div :class="['op-seq', `op-seq-${op.status}`]">{{ op.seq_no }}</div>
-            <div style="flex:1;min-width:0">
-              <div style="font-weight:600;font-size:15px">{{ op.operation_name }}</div>
-              <div style="font-size:12px;color:#999;margin-top:4px">
-                <span v-if="op.work_center_name" style="margin-right:12px">📍 {{ op.work_center_name }}</span>
+            <div class="flex-1 min-w-0">
+              <div class="font-semibold text-[15px]">{{ op.operation_name }}</div>
+              <div class="text-xs text-[var(--color-text-disabled)] mt-1">
+                <span v-if="op.work_center_name" class="mr-3">📍 {{ op.work_center_name }}</span>
                 <span v-if="op.actual_start">{{ formatTime(op.actual_start) }}</span>
                 <span v-if="op.actual_end"> → {{ formatTime(op.actual_end) }}</span>
               </div>
-              <div v-if="op.completed_qty > 0 || op.rejected_qty > 0 || op.labor_hours > 0" style="display:flex;gap:16px;margin-top:6px;font-size:13px">
-                <span>良品: <b>{{ op.completed_qty }}</b></span>
-                <span v-if="op.rejected_qty > 0" style="color:#f56c6c">不合格: <b>{{ op.rejected_qty }}</b></span>
-                <span>工时: <b>{{ op.labor_hours }}h</b></span>
-                <span v-if="op.setup_hours > 0">换线: <b>{{ op.setup_hours }}h</b></span>
+              <div
+                v-if="op.completed_qty > 0 || op.rejected_qty > 0 || op.labor_hours > 0"
+                class="flex gap-4 mt-1.5 text-[13px]"
+              >
+                <span
+                  >良品: <b>{{ op.completed_qty }}</b></span
+                >
+                <span v-if="op.rejected_qty > 0" class="text-[#f56c6c]"
+                  >不合格: <b>{{ op.rejected_qty }}</b></span
+                >
+                <span
+                  >工时: <b>{{ op.labor_hours }}h</b></span
+                >
+                <span v-if="op.setup_hours > 0"
+                  >换线: <b>{{ op.setup_hours }}h</b></span
+                >
               </div>
             </div>
-            <el-tag :type="opStatusTag(op.status)" size="small" effect="dark" style="min-width:56px;text-align:center">{{ op.status }}</el-tag>
-            <div style="display:flex;gap:4px;flex-shrink:0">
-              <el-button v-if="op.status==='可开工' || op.status==='待开工'" size="small" type="primary"
-                @click="startOperation(op)" :loading="opSaving===op.id">开工</el-button>
-              <el-button v-if="op.status==='进行中'" size="small" type="warning"
-                @click="openOpReport(op)">报工</el-button>
-              <el-button v-if="op.status==='进行中'" size="small" type="success"
-                @click="completeOperation(op)" :loading="opSaving===op.id">完成</el-button>
-              <el-button v-if="op.status==='待开工' || op.status==='可开工'" size="small" type="info"
-                @click="skipOperation(op)">跳过</el-button>
+            <el-tag
+              :type="opStatusTag(op.status)"
+              size="small"
+              effect="dark"
+              class="min-w-[56px] text-center"
+              >{{ op.status }}</el-tag
+            >
+            <div class="flex gap-1 shrink-0">
+              <el-button
+                v-if="op.status==='可开工' || op.status==='待开工'"
+                size="small"
+                type="primary"
+                :loading="opSaving===op.id"
+                @click="startOperation(op)"
+                >开工</el-button
+              >
+              <el-button
+                v-if="op.status==='进行中'"
+                size="small"
+                type="warning"
+                @click="openOpReport(op)"
+                >报工</el-button
+              >
+              <el-button
+                v-if="op.status==='进行中'"
+                size="small"
+                type="success"
+                :loading="opSaving===op.id"
+                @click="completeOperation(op)"
+                >完成</el-button
+              >
+              <el-button
+                v-if="op.status==='待开工' || op.status==='可开工'"
+                size="small"
+                type="info"
+                @click="skipOperation(op)"
+                >跳过</el-button
+              >
             </div>
           </div>
         </div>
@@ -275,20 +534,36 @@
     </el-dialog>
 
     <!-- 工序报工弹窗 -->
-    <el-dialog v-model="opReportVisible" :title="`工序报工 - ${opReportForm.op_name}`" width="420px">
+    <el-dialog
+      v-model="opReportVisible"
+      :title="`工序报工 - ${opReportForm.op_name}`"
+      width="420px"
+    >
       <el-form label-width="100px">
         <el-form-item label="工序">{{ opReportForm.op_name }}</el-form-item>
         <el-form-item label="本次完成">
-          <el-input-number v-model="opReportForm.completed_qty" :min="0" style="width:100%" />
+          <el-input-number v-model="opReportForm.completed_qty" :min="0" class="w-full" />
         </el-form-item>
         <el-form-item label="不合格数">
-          <el-input-number v-model="opReportForm.rejected_qty" :min="0" style="width:100%" />
+          <el-input-number v-model="opReportForm.rejected_qty" :min="0" class="w-full" />
         </el-form-item>
         <el-form-item label="工时(h)">
-          <el-input-number v-model="opReportForm.labor_hours" :min="0" :step="0.5" :precision="1" style="width:100%" />
+          <el-input-number
+            v-model="opReportForm.labor_hours"
+            :min="0"
+            :step="0.5"
+            :precision="1"
+            class="w-full"
+          />
         </el-form-item>
         <el-form-item label="换线工时(h)">
-          <el-input-number v-model="opReportForm.setup_hours" :min="0" :step="0.5" :precision="1" style="width:100%" />
+          <el-input-number
+            v-model="opReportForm.setup_hours"
+            :min="0"
+            :step="0.5"
+            :precision="1"
+            class="w-full"
+          />
         </el-form-item>
         <el-form-item label="操作人">
           <el-input v-model="opReportForm.operator" placeholder="可选" />
@@ -296,45 +571,80 @@
       </el-form>
       <template #footer>
         <el-button @click="opReportVisible=false">取消</el-button>
-        <el-button type="primary" @click="submitOpReport" :loading="opSaving">提交报工</el-button>
+        <el-button type="primary" :loading="opSaving" @click="submitOpReport">提交报工</el-button>
       </template>
     </el-dialog>
 
     <!-- 成本弹窗 -->
     <el-dialog v-model="costVisible" :title="`成本核算 - ${cost.wo_number}`" width="650px">
-      <div v-if="costLoading" style="text-align:center;padding:30px">计算中...</div>
+      <div v-if="costLoading" class="text-center p-[30px]">计算中...</div>
       <div v-else>
         <!-- 汇总卡片 -->
-        <div style="display:flex;gap:16px;margin-bottom:16px">
-          <div style="flex:1;background:#f0f9eb;border-radius:8px;padding:12px;text-align:center">
-            <div style="font-size:12px;color:#666">实际总成本</div>
-            <div style="font-size:22px;font-weight:bold;color:#67c23a">¥{{ cost.summary?.actual_total?.toFixed(2) }}</div>
+        <div class="flex gap-4 mb-4">
+          <div class="flex-1 bg-[#f0f9eb] rounded-lg p-3 text-center">
+            <div class="text-xs text-[var(--color-text-tertiary)]">实际总成本</div>
+            <div class="text-[22px] font-bold text-[#67c23a]">
+              ¥{{ cost.summary?.actual_total?.toFixed(2) }}
+            </div>
           </div>
-          <div style="flex:1;background:#e6f1fb;border-radius:8px;padding:12px;text-align:center">
-            <div style="font-size:12px;color:#666">标准成本</div>
-            <div style="font-size:22px;font-weight:bold;color:#409eff">¥{{ cost.summary?.standard_total?.toFixed(2) }}</div>
+          <div class="flex-1 bg-[#e6f1fb] rounded-lg p-3 text-center">
+            <div class="text-xs text-[var(--color-text-tertiary)]">标准成本</div>
+            <div class="text-[22px] font-bold text-[#409eff]">
+              ¥{{ cost.summary?.standard_total?.toFixed(2) }}
+            </div>
           </div>
-          <div style="flex:1;background:#fcebeb;border-radius:8px;padding:12px;text-align:center">
-            <div style="font-size:12px;color:#666">差异</div>
-            <div :style="{fontSize:'22px',fontWeight:'bold',color: (cost.summary?.variance||0) > 0 ? '#f56c6c' : '#67c23a'}">
+          <div class="flex-1 bg-[#fcebeb] rounded-lg p-3 text-center">
+            <div class="text-xs text-[var(--color-text-tertiary)]">差异</div>
+            <div
+              :style="{fontSize:'22px',fontWeight:'bold',color: (cost.summary?.variance||0) > 0 ? '#f56c6c' : '#67c23a'}"
+            >
               {{ cost.summary?.variance > 0 ? '+' : '' }}{{ cost.summary?.variance?.toFixed(2) }}
             </div>
           </div>
-          <div style="flex:1;background:#faeeda;border-radius:8px;padding:12px;text-align:center">
-            <div style="font-size:12px;color:#666">单位成本</div>
-            <div style="font-size:22px;font-weight:bold;color:#e6a23c">¥{{ cost.summary?.unit_actual_cost?.toFixed(2) }}</div>
+          <div class="flex-1 bg-[#faeeda] rounded-lg p-3 text-center">
+            <div class="text-xs text-[var(--color-text-tertiary)]">单位成本</div>
+            <div class="text-[22px] font-bold text-[#e6a23c]">
+              ¥{{ cost.summary?.unit_actual_cost?.toFixed(2) }}
+            </div>
           </div>
         </div>
         <!-- 材料明细 -->
         <el-table :data="cost.material_costs?.items||[]" size="small" stripe border>
           <el-table-column prop="material_code" label="编码" width="90" />
-          <el-table-column prop="material_name" label="名称" min-width="110" show-overflow-tooltip />
-          <el-table-column label="单价" width="70" align="right"><template #default="{row}">¥{{ row.unit_price }}</template></el-table-column>
-          <el-table-column label="用量" width="70" align="center"><template #default="{row}">{{ row.issued_qty }}/{{ row.required_qty }}</template></el-table-column>
-          <el-table-column label="实际成本" width="90" align="right"><template #default="{row}" style="font-weight:bold">¥{{ row.actual_cost?.toFixed(2) }}</template></el-table-column>
+          <el-table-column
+            prop="material_name"
+            label="名称"
+            min-width="110"
+            show-overflow-tooltip
+          />
+          <el-table-column label="单价" width="70" align="right"
+            ><template #default="{row}">¥{{ row.unit_price }}</template></el-table-column
+          >
+          <el-table-column label="用量" width="70" align="center"
+            ><template #default="{row}"
+              >{{ row.issued_qty }}/{{ row.required_qty }}</template
+            ></el-table-column
+          >
+          <el-table-column label="实际成本" width="90" align="right"
+            ><template #default="{row}" class="font-bold"
+              >¥{{ row.actual_cost?.toFixed(2) }}</template
+            ></el-table-column
+          >
         </el-table>
-        <div style="margin-top:12px;font-size:13px">
-          <span>人工成本: ¥{{ cost.labor_cost?.toFixed(2) }} (工时 {{ cost.labor_hours }}h × 费率 ¥{{ cost.cost_rates?.labor_rate_per_hour }}/h)</span>
+        <div class="mt-3 text-[13px]">
+          <span
+            >人工成本: ¥{{ cost.labor_cost?.toFixed(2) }} (工时 {{ cost.labor_hours }}h × 费率 ¥{{ cost.cost_rates?.labor_rate_per_hour
+
+
+
+
+
+
+
+
+
+            }}/h)</span
+          >
         </div>
       </div>
     </el-dialog>
@@ -345,6 +655,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '@/api'
+import { undoableDelete } from '@/composables/useUndoable'
 
 const loading = ref(false)
 const saving = ref(false)
@@ -518,10 +829,20 @@ async function forceComplete() {
   } catch (e) { ElMessage.error(e.message || '完工失败') }
 }
 
-// ====== 删除 ======
+// ====== 删除（可撤销） ======
 async function deleteItem(row) {
   await ElMessageBox.confirm('确定删除？', '提示', { type: 'warning' })
-  await api.delete(`/production/orders/${row.id}`)
+  await undoableDelete(
+    async () => {
+      const backup = { ...row }
+      await api.delete(`/production/orders/${row.id}`)
+      return backup
+    },
+    async (backup) => {
+      await api.post('/production/orders', backup)
+    },
+    { label: row.wo_number || '工单' },
+  )
   fetchData()
 }
 
@@ -726,5 +1047,4 @@ onMounted(fetchData)
 .op-seq-进行中 { background:#e6a23c; color:#fff; }
 .op-seq-已完成 { background:#67c23a; color:#fff; }
 .op-seq-跳过 { background:#c0c4cc; color:#fff; }
-
 </style>

@@ -1,5 +1,5 @@
 <template>
-  <div class="login-page" ref="pageRef">
+  <div ref="pageRef" class="login-page">
     <!-- 动态粒子/电路背景 Canvas -->
     <canvas ref="canvasRef" class="bg-canvas"></canvas>
     <!-- 鼠标拖尾 Canvas -->
@@ -8,17 +8,38 @@
     <!-- CSS 几何轨道环（确保可见） -->
     <div class="orbit-ring orbit-outer">
       <svg viewBox="0 0 800 700" class="orbit-svg">
-        <polygon points="400,20 729,209 603,550 197,550 71,209" fill="none" stroke="#3b82f6" stroke-width="1.2" opacity="0.35"/>
+        <polygon
+          points="400,20 729,209 603,550 197,550 71,209"
+          fill="none"
+          stroke="#3b82f6"
+          stroke-width="1.2"
+          opacity="0.35"
+        />
       </svg>
     </div>
     <div class="orbit-ring orbit-mid">
       <svg viewBox="0 0 600 600" class="orbit-svg">
-        <circle cx="300" cy="300" r="220" fill="none" stroke="#6366f1" stroke-width="0.8" stroke-dasharray="10,16" opacity="0.28"/>
+        <circle
+          cx="300"
+          cy="300"
+          r="220"
+          fill="none"
+          stroke="#6366f1"
+          stroke-width="0.8"
+          stroke-dasharray="10,16"
+          opacity="0.28"
+        />
       </svg>
     </div>
     <div class="orbit-ring orbit-inner">
       <svg viewBox="0 0 400 400" class="orbit-svg">
-        <polygon points="200,30 347,115 291,290 109,290 53,115" fill="none" stroke="#3b82f6" stroke-width="1" opacity="0.32"/>
+        <polygon
+          points="200,30 347,115 291,290 109,290 53,115"
+          fill="none"
+          stroke="#3b82f6"
+          stroke-width="1"
+          opacity="0.32"
+        />
       </svg>
     </div>
 
@@ -42,7 +63,12 @@
     </div>
 
     <!-- 玻璃态登录卡片容器 -->
-    <div class="card-container" ref="cardContainerRef" @mousemove="handleCardTilt" @mouseleave="handleCardLeave">
+    <div
+      ref="cardContainerRef"
+      class="card-container"
+      @mousemove="handleCardTilt"
+      @mouseleave="handleCardLeave"
+    >
       <!-- 边框流光 -->
       <div class="card-border-glow"></div>
       <!-- 脉冲光环（卡片外） -->
@@ -51,7 +77,6 @@
 
       <!-- 主卡片（纯表单） -->
       <div class="glass-card" :style="tiltStyle">
-
         <!-- 动态问候 + 时间图标 -->
         <div class="greeting-row">
           <span class="greeting-text">{{ greetingText }}</span>
@@ -63,8 +88,13 @@
           <div v-if="infoMsg" class="info-bar">
             <div class="info-icon">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/>
-                <path d="M8 7.5v-3M8 11v.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                <circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5" />
+                <path
+                  d="M8 7.5v-3M8 11v.01"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                />
               </svg>
             </div>
             <span class="info-text">{{ infoMsg }}</span>
@@ -76,8 +106,13 @@
           <div v-if="errorMsg" class="error-bar">
             <div class="error-icon">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/>
-                <path d="M8 4.5v3.5M8 11v.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                <circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5" />
+                <path
+                  d="M8 4.5v3.5M8 11v.01"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                />
               </svg>
             </div>
             <span class="error-text">{{ errorMsg }}</span>
@@ -89,16 +124,24 @@
           ref="formRef"
           :model="form"
           :rules="rules"
-          @submit.prevent="handleLogin"
           class="login-form"
+          @submit.prevent="handleLogin"
         >
           <!-- 用户名 -->
-          <div class="input-group" :class="{ 'is-floating': form.username || usernameFocused, 'has-error': fieldErrors.username }">
+          <div
+            class="input-group"
+            :class="{ 'is-floating': form.username || usernameFocused, 'has-error': fieldErrors.username }"
+          >
             <div class="input-field">
               <div class="input-icon">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <circle cx="8" cy="5" r="3" stroke="currentColor" stroke-width="1.5"/>
-                  <path d="M3 14c0-2.8 2.2-5 5-5s5 2.2 5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                  <circle cx="8" cy="5" r="3" stroke="currentColor" stroke-width="1.5" />
+                  <path
+                    d="M3 14c0-2.8 2.2-5 5-5s5 2.2 5 5"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                  />
                 </svg>
               </div>
               <label class="float-label">用户名</label>
@@ -113,7 +156,11 @@
               <div class="input-glow"></div>
             </div>
             <transition name="field-err-slide">
-              <span v-if="fieldErrors.username" class="field-error-msg">{{ fieldErrors.username }}</span>
+              <span
+                v-if="fieldErrors.username"
+                class="field-error-msg"
+                >{{ fieldErrors.username }}</span
+              >
             </transition>
           </div>
           <el-form-item prop="username" class="sr-only">
@@ -121,13 +168,29 @@
           </el-form-item>
 
           <!-- 密码 -->
-          <div class="input-group" :class="{ 'is-floating': form.password || passwordFocused, 'has-error': fieldErrors.password }">
+          <div
+            class="input-group"
+            :class="{ 'is-floating': form.password || passwordFocused, 'has-error': fieldErrors.password }"
+          >
             <div class="input-field">
               <div class="input-icon">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <rect x="2.5" y="7" width="11" height="7" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
-                  <path d="M5 7V5a3 3 0 1 1 6 0v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                  <circle cx="8" cy="10.5" r="0.8" fill="currentColor"/>
+                  <rect
+                    x="2.5"
+                    y="7"
+                    width="11"
+                    height="7"
+                    rx="1.5"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                  />
+                  <path
+                    d="M5 7V5a3 3 0 1 1 6 0v2"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                  />
+                  <circle cx="8" cy="10.5" r="0.8" fill="currentColor" />
                 </svg>
               </div>
               <label class="float-label">密码</label>
@@ -143,22 +206,39 @@
               <button
                 type="button"
                 class="input-eye"
-                @click="showPassword = !showPassword"
                 :aria-label="showPassword ? '隐藏密码' : '显示密码'"
+                @click="showPassword = !showPassword"
               >
                 <svg v-if="!showPassword" width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path d="M2 8s2.5-4.5 6-4.5S14 8 14 8s-2.5 4.5-6 4.5S2 8 2 8z" stroke="currentColor" stroke-width="1.5"/>
-                  <circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.5"/>
+                  <path
+                    d="M2 8s2.5-4.5 6-4.5S14 8 14 8s-2.5 4.5-6 4.5S2 8 2 8z"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                  />
+                  <circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.5" />
                 </svg>
                 <svg v-else width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path d="M2 8s2.5-4.5 6-4.5S14 8 14 8s-2.5 4.5-6 4.5S2 8 2 8z" stroke="currentColor" stroke-width="1.5"/>
-                  <path d="M3 3l10 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                  <path
+                    d="M2 8s2.5-4.5 6-4.5S14 8 14 8s-2.5 4.5-6 4.5S2 8 2 8z"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                  />
+                  <path
+                    d="M3 3l10 10"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                  />
                 </svg>
               </button>
               <div class="input-glow"></div>
             </div>
             <transition name="field-err-slide">
-              <span v-if="fieldErrors.password" class="field-error-msg">{{ fieldErrors.password }}</span>
+              <span
+                v-if="fieldErrors.password"
+                class="field-error-msg"
+                >{{ fieldErrors.password }}</span
+              >
             </transition>
           </div>
           <el-form-item prop="password" class="sr-only">
@@ -168,7 +248,7 @@
           <!-- 选项行 -->
           <div class="options-row">
             <label class="remember-label">
-              <input type="checkbox" v-model="rememberMe" class="remember-check" />
+              <input v-model="rememberMe" type="checkbox" class="remember-check" />
               <span class="check-mark"></span>
               <span class="remember-text">记住此设备</span>
             </label>
@@ -188,8 +268,13 @@
             <span class="submit-btn-text" :class="{ 'opacity-0': loading }">登 录</span>
             <span v-if="loading" class="submit-btn-spinner">
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none" class="animate-spin">
-                <circle cx="10" cy="10" r="8" stroke="rgba(255,255,255,0.2)" stroke-width="2.5"/>
-                <path d="M10 2a8 8 0 0 1 8 8" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+                <circle cx="10" cy="10" r="8" stroke="rgba(255,255,255,0.2)" stroke-width="2.5" />
+                <path
+                  d="M10 2a8 8 0 0 1 8 8"
+                  stroke="white"
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                />
               </svg>
             </span>
           </button>
@@ -201,7 +286,12 @@
             <span class="hint-text">演示账号 admin / admin123</span>
             <button class="hint-close" @click="showHint = false">
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                <path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                <path
+                  d="M3 3l6 6M9 3l-6 6"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                />
               </svg>
             </button>
           </div>

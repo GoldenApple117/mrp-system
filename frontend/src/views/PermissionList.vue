@@ -2,7 +2,13 @@
   <div class="perm-page">
     <h2 class="text-lg font-semibold text-[var(--color-text-primary)] mb-4">权限管理</h2>
 
-    <el-table :data="requests" style="width:100%" size="small" v-loading="loading" empty-text="暂无申请记录">
+    <el-table
+      v-loading="loading"
+      :data="requests"
+      class="w-full"
+      size="small"
+      empty-text="暂无申请记录"
+    >
       <el-table-column prop="id" label="ID" width="60" />
       <el-table-column prop="username" label="申请人" width="120" />
       <el-table-column prop="created_at" label="申请时间" width="180">
@@ -25,8 +31,20 @@
       <el-table-column label="操作" width="160" fixed="right">
         <template #default="{ row }">
           <template v-if="row.status === 'pending'">
-            <el-button type="success" size="small" :loading="approvingId === row.id" @click="approve(row.id)">同意</el-button>
-            <el-button type="danger" size="small" :loading="rejectingId === row.id" @click="reject(row.id)">拒绝</el-button>
+            <el-button
+              type="success"
+              size="small"
+              :loading="approvingId === row.id"
+              @click="approve(row.id)"
+              >同意</el-button
+            >
+            <el-button
+              type="danger"
+              size="small"
+              :loading="rejectingId === row.id"
+              @click="reject(row.id)"
+              >拒绝</el-button
+            >
           </template>
           <span v-else class="text-xs text-[var(--color-text-tertiary)]">-</span>
         </template>

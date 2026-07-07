@@ -3,8 +3,14 @@
     <div class="flex items-start justify-between">
       <div class="flex-1 min-w-0">
         <p class="text-xs text-[var(--color-text-tertiary)] mb-1">{{ label }}</p>
-        <div v-if="loading" class="h-7 w-16 bg-[var(--color-bg-overlay)] rounded animate-pulse mt-0.5"></div>
-        <p v-else class="text-2xl font-semibold text-[var(--color-text-primary)] tracking-tight tabular-nums">
+        <div
+          v-if="loading"
+          class="h-7 w-16 bg-[var(--color-bg-overlay)] rounded animate-pulse mt-0.5"
+        ></div>
+        <p
+          v-else
+          class="text-2xl font-semibold text-[var(--color-text-primary)] tracking-tight tabular-nums"
+        >
           {{ formattedValue }}
         </p>
         <div v-if="alert && !loading" class="mt-1.5">

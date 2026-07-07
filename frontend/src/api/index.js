@@ -30,7 +30,7 @@ api.interceptors.response.use(
     const msg = error.response?.data?.detail || error.message || '请求失败'
     ElMessage.error(msg)
     return Promise.reject(error)
-  }
+  },
 )
 
 export default api

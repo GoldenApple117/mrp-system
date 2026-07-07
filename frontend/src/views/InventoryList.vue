@@ -2,13 +2,25 @@
   <div class="page-container space-y-4">
     <!-- 工具栏 + 标签切换 -->
     <div class="flex items-center gap-3 flex-wrap">
-      <el-input v-model="keyword" placeholder="搜索型号/编码" style="width:220px" size="default" clearable @clear="onSearch" @keyup.enter="onSearch">
-        <template #prefix><el-icon><Search /></el-icon></template>
+      <el-input
+        v-model="keyword"
+        placeholder="搜索型号/编码"
+        class="w-[220px]"
+        size="default"
+        clearable
+        @clear="onSearch"
+        @keyup.enter="onSearch"
+      >
+        <template #prefix
+          ><el-icon><Search /></el-icon
+        ></template>
       </el-input>
       <span class="flex-1"></span>
 
       <!-- Pill 风格标签切换 -->
-      <div class="flex rounded-lg bg-[var(--color-bg-overlay)] border border-[var(--color-border-light)] p-0.5">
+      <div
+        class="flex rounded-lg bg-[var(--color-bg-overlay)] border border-[var(--color-border-light)] p-0.5"
+      >
         <button
           v-for="t in tabs"
           :key="t.key"
@@ -19,7 +31,9 @@
               : 'bg-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
           ]"
           @click="switchTab(t.key)"
-        >{{ t.label }}</button>
+        >
+          {{ t.label }}
+        </button>
       </div>
     </div>
 
@@ -27,11 +41,19 @@
     <div v-if="tab === 'parts'" v-loading="loading">
       <!-- 批量操作 -->
       <div v-if="selectedIds.length" class="batch-bar">
-        <span class="text-xs text-[var(--color-text-secondary)]">已选 <b>{{ selectedIds.length }}</b> 项</span>
+        <span class="text-xs text-[var(--color-text-secondary)]"
+          >已选 <b>{{ selectedIds.length }}</b> 项</span
+        >
         <div class="w-px h-4 bg-[var(--color-accent)]/30"></div>
         <span class="text-xs text-[var(--color-text-tertiary)]">安全库存</span>
-        <el-input-number v-model="batchSafetyStock" :min="0" size="small" style="width:100px" />
-        <el-button size="small" type="primary" @click="batchUpdateSafetyStock" :disabled="batchSafetyStock === null">批量更新</el-button>
+        <el-input-number v-model="batchSafetyStock" :min="0" size="small" class="w-[100px]" />
+        <el-button
+          size="small"
+          type="primary"
+          :disabled="batchSafetyStock === null"
+          @click="batchUpdateSafetyStock"
+          >批量更新</el-button
+        >
         <span class="flex-1"></span>
         <el-button size="small" text @click="selectedIds = []">取消</el-button>
       </div>
@@ -40,20 +62,40 @@
       <div v-if="projects.length" class="space-y-3">
         <div v-for="p in projects" :key="p.product_code" class="proj-card">
           <div class="proj-header" @click="p._open = !p._open">
-            <span class="font-semibold text-[15px] text-[var(--color-text-primary)]">{{ p.product_name }}</span>
-            <span class="text-xs text-[var(--color-text-tertiary)] ml-2">{{ p.module_count }} 模块</span>
+            <span
+              class="font-semibold text-[15px] text-[var(--color-text-primary)]"
+              >{{ p.product_name }}</span
+            >
+            <span class="text-xs text-[var(--color-text-tertiary)] ml-2"
+              >{{ p.module_count }} 模块</span
+            >
             <span class="flex-1"></span>
-            <el-icon :size="12" color="var(--color-text-tertiary)" class="transition-transform duration-200" :style="{ transform: p._open ? 'rotate(180deg)' : '' }">
+            <el-icon
+              :size="12"
+              color="var(--color-text-tertiary)"
+              class="transition-transform duration-200"
+              :style="{ transform: p._open ? 'rotate(180deg)' : '' }"
+            >
               <ArrowDown />
             </el-icon>
           </div>
           <div v-show="p._open" class="px-3 pb-3 space-y-2">
             <div v-for="m in p.modules" :key="m.module_code" class="mod-card">
               <div class="mod-header" @click="m._open = !m._open">
-                <span class="font-medium text-[var(--color-text-primary)]">{{ m.module_name }}</span>
-                <span class="text-xs text-[var(--color-text-tertiary)] ml-2">{{ m.parts.length }} 项零件</span>
+                <span
+                  class="font-medium text-[var(--color-text-primary)]"
+                  >{{ m.module_name }}</span
+                >
+                <span class="text-xs text-[var(--color-text-tertiary)] ml-2"
+                  >{{ m.parts.length }} 项零件</span
+                >
                 <span class="flex-1"></span>
-                <el-icon :size="11" color="var(--color-text-tertiary)" class="transition-transform duration-200" :style="{ transform: m._open ? 'rotate(180deg)' : '' }">
+                <el-icon
+                  :size="11"
+                  color="var(--color-text-tertiary)"
+                  class="transition-transform duration-200"
+                  :style="{ transform: m._open ? 'rotate(180deg)' : '' }"
+                >
                   <ArrowDown />
                 </el-icon>
               </div>
@@ -62,22 +104,33 @@
                   :data="getParts(m)"
                   size="small"
                   stripe
-                  @selection-change="(rows) => onTableSel(rows, m.module_code)"
                   max-height="400"
+                  @selection-change="(rows) => onTableSel(rows, m.module_code)"
                 >
                   <el-table-column type="selection" width="38" />
                   <el-table-column prop="material_code" label="物料编码" width="120" />
-                  <el-table-column prop="material_name" label="物料型号" min-width="120" show-overflow-tooltip />
+                  <el-table-column
+                    prop="material_name"
+                    label="物料型号"
+                    min-width="120"
+                    show-overflow-tooltip
+                  />
                   <el-table-column prop="unit" label="单位" width="50" align="center" />
 
                   <!-- 库存 + 进度条 -->
                   <el-table-column label="库存" width="140" align="center">
                     <template #default="{ row }">
                       <div class="flex items-center gap-2">
-                        <span class="text-sm font-semibold tabular-nums" :class="row.on_hand > 0 ? 'text-[var(--color-text-primary)]' : 'text-[var(--color-text-disabled)]'">
+                        <span
+                          class="text-sm font-semibold tabular-nums"
+                          :class="row.on_hand > 0 ? 'text-[var(--color-text-primary)]' : 'text-[var(--color-text-disabled)]'"
+                        >
                           {{ row.on_hand || 0 }}
                         </span>
-                        <div v-if="row.safety_stock > 0" class="flex-1 h-1.5 bg-[var(--color-bg-overlay)] rounded-full overflow-hidden">
+                        <div
+                          v-if="row.safety_stock > 0"
+                          class="flex-1 h-1.5 bg-[var(--color-bg-overlay)] rounded-full overflow-hidden"
+                        >
                           <div
                             class="h-full rounded-full transition-all duration-300"
                             :class="stockLevelClass(row)"
@@ -92,8 +145,13 @@
                   <el-table-column label="最近入库" width="140">
                     <template #default="{ row }">
                       <div v-if="row.last_received_date" class="text-xs space-y-0.5">
-                        <span class="text-[var(--color-success-text)]">+{{ row.last_received_qty }} {{ row.unit }}</span>
-                        <span class="block text-[var(--color-text-tertiary)]">{{ row.last_received_date?.slice(0, 16) }}</span>
+                        <span class="text-[var(--color-success-text)]"
+                          >+{{ row.last_received_qty }} {{ row.unit }}</span
+                        >
+                        <span
+                          class="block text-[var(--color-text-tertiary)]"
+                          >{{ row.last_received_date?.slice(0, 16) }}</span
+                        >
                       </div>
                       <span v-else class="text-xs text-[var(--color-text-disabled)]">—</span>
                     </template>
@@ -101,8 +159,12 @@
 
                   <el-table-column label="操作" width="120" fixed="right" align="center">
                     <template #default="{ row }">
-                      <el-button size="small" type="success" link @click="quickIn(row)">入库</el-button>
-                      <el-button size="small" type="danger" link @click="quickOut(row)">出库</el-button>
+                      <el-button size="small" type="success" link @click="quickIn(row)"
+                        >入库</el-button
+                      >
+                      <el-button size="small" type="danger" link @click="quickOut(row)"
+                        >出库</el-button
+                      >
                     </template>
                   </el-table-column>
                 </el-table>
@@ -112,17 +174,32 @@
         </div>
       </div>
 
-      <el-empty v-if="!loading && !projects.length" description="暂无库存数据" />
+      <el-empty v-if="!loading && !projects.length" description="暂无库存数据">
+        <template #image>
+          <el-icon :size="48" color="var(--color-text-disabled)"><Box /></el-icon>
+        </template>
+        <router-link to="/materials">
+          <el-button type="primary">新增库存</el-button>
+        </router-link>
+      </el-empty>
     </div>
 
     <!-- ═══════ 产品管理 ═══════ -->
     <div v-if="tab === 'products'" v-loading="loading">
       <el-table :data="productStock" size="small" stripe empty-text="暂无产品库存">
         <el-table-column prop="material_code" label="产品编码" width="130" />
-        <el-table-column prop="material_name" label="产品名称" min-width="150" show-overflow-tooltip />
+        <el-table-column
+          prop="material_name"
+          label="产品名称"
+          min-width="150"
+          show-overflow-tooltip
+        />
         <el-table-column label="库存" width="100" align="center">
           <template #default="{ row }">
-            <span class="font-semibold tabular-nums" :class="row.on_hand > 0 ? 'text-[var(--color-success-text)]' : 'text-[var(--color-text-disabled)]'">
+            <span
+              class="font-semibold tabular-nums"
+              :class="row.on_hand > 0 ? 'text-[var(--color-success-text)]' : 'text-[var(--color-text-disabled)]'"
+            >
               {{ row.on_hand || 0 }}
             </span>
           </template>
@@ -178,7 +255,13 @@
       <!-- 查询 -->
       <div class="flex items-center gap-3">
         <span class="text-sm text-[var(--color-text-secondary)]">呆滞天数阈值</span>
-        <el-input-number v-model="obsoleteDays" :min="1" :max="365" size="small" style="width:100px" />
+        <el-input-number
+          v-model="obsoleteDays"
+          :min="1"
+          :max="365"
+          size="small"
+          class="w-[100px]"
+        />
         <span class="text-xs text-[var(--color-text-tertiary)]">天未操作</span>
         <el-button type="primary" size="small" @click="fetchObsolete">查询</el-button>
       </div>
@@ -186,21 +269,31 @@
       <!-- 表格 -->
       <el-table :data="obsoleteData" stripe size="small" max-height="400" empty-text="暂无呆滞物料">
         <el-table-column prop="material_code" label="物料编码" width="120" />
-        <el-table-column prop="material_name" label="物料型号" min-width="130" show-overflow-tooltip />
+        <el-table-column
+          prop="material_name"
+          label="物料型号"
+          min-width="130"
+          show-overflow-tooltip
+        />
         <el-table-column prop="on_hand" label="库存量" width="70" align="center" />
         <el-table-column label="闲置天数" width="100" align="center">
           <template #default="{ row }">
             <span
               class="font-bold text-lg tabular-nums"
               :class="row.idle_days > 180 ? 'text-[var(--color-danger)]' : row.idle_days > 90 ? 'text-[var(--color-warning)]' : 'text-[var(--color-text-tertiary)]'"
-            >{{ row.idle_days }}</span>
+              >{{ row.idle_days }}</span
+            >
             <span class="text-xs text-[var(--color-text-tertiary)] ml-0.5">天</span>
           </template>
         </el-table-column>
         <el-table-column prop="last_action" label="最近操作" width="80" align="center" />
         <el-table-column label="最近日期" width="100" align="center">
           <template #default="{ row }">
-            <span v-if="row.last_date" class="text-xs text-[var(--color-text-tertiary)]">{{ row.last_date.slice(0, 10) }}</span>
+            <span
+              v-if="row.last_date"
+              class="text-xs text-[var(--color-text-tertiary)]"
+              >{{ row.last_date.slice(0, 10) }}</span
+            >
             <span v-else class="text-xs text-[var(--color-danger-text)]">从未操作</span>
           </template>
         </el-table-column>
@@ -210,7 +303,8 @@
               :type="row.level === '⚠️严重' ? 'danger' : row.level === '⚡关注' ? 'warning' : 'info'"
               size="small"
               effect="dark"
-            >{{ row.level }}</el-tag>
+              >{{ row.level }}</el-tag
+            >
           </template>
         </el-table-column>
       </el-table>
@@ -218,31 +312,58 @@
 
     <!-- ═══════ 出入库流水 ═══════ -->
     <div v-if="tab === 'tx'">
-      <el-table :data="txData" v-loading="loading" stripe size="small" max-height="500" empty-text="暂无流水记录">
+      <el-table
+        v-loading="loading"
+        :data="txData"
+        stripe
+        size="small"
+        max-height="500"
+        empty-text="暂无流水记录"
+      >
         <el-table-column label="时间" width="145">
           <template #default="{ row }">
-            <span class="text-xs text-[var(--color-text-tertiary)]">{{ row.created_at?.slice(0, 16)?.replace('T', ' ') }}</span>
+            <span
+              class="text-xs text-[var(--color-text-tertiary)]"
+              >{{ row.created_at?.slice(0, 16)?.replace('T', ' ') }}</span
+            >
           </template>
         </el-table-column>
         <el-table-column prop="material_code" label="物料编码" width="110" />
-        <el-table-column prop="material_name" label="物料型号" min-width="100" show-overflow-tooltip />
+        <el-table-column
+          prop="material_name"
+          label="物料型号"
+          min-width="100"
+          show-overflow-tooltip
+        />
         <el-table-column label="类型" width="80" align="center">
           <template #default="{ row }">
-            <el-tag :type="row.transaction_type.includes('出') ? 'danger' : 'success'" size="small" effect="dark">
+            <el-tag
+              :type="row.transaction_type.includes('出') ? 'danger' : 'success'"
+              size="small"
+              effect="dark"
+            >
               {{ row.transaction_type }}
             </el-tag>
           </template>
         </el-table-column>
         <el-table-column label="数量" width="70" align="center">
           <template #default="{ row }">
-            <span class="font-semibold tabular-nums" :class="row.quantity > 0 ? 'text-[var(--color-success-text)]' : 'text-[var(--color-danger-text)]'">
+            <span
+              class="font-semibold tabular-nums"
+              :class="row.quantity > 0 ? 'text-[var(--color-success-text)]' : 'text-[var(--color-danger-text)]'"
+            >
               {{ row.quantity > 0 ? '+' + row.quantity : row.quantity }}
             </span>
           </template>
         </el-table-column>
         <el-table-column label="单号" width="130">
           <template #default="{ row }">
-            <el-tag v-if="row.reference_no" size="small" effect="plain">{{ row.reference_no }}</el-tag>
+            <el-tag
+              v-if="row.reference_no"
+              size="small"
+              effect="plain"
+              >{{ row.reference_no }}</el-tag
+            >
             <span v-else class="text-[var(--color-text-disabled)]">—</span>
           </template>
         </el-table-column>
@@ -252,10 +373,16 @@
     </div>
 
     <!-- ═══ 快速出入库对话框 ═══ -->
-    <el-dialog v-model="quickDialogVisible" :title="quickType === 'in' ? '快速入库' : '快速出库'" width="420px">
+    <el-dialog
+      v-model="quickDialogVisible"
+      :title="quickType === 'in' ? '快速入库' : '快速出库'"
+      width="420px"
+    >
       <el-form label-width="80px" label-position="top">
         <el-form-item label="物料">
-          <span class="text-sm font-medium text-[var(--color-text-primary)]">{{ quickForm.material_code }} {{ quickForm.material_name }}</span>
+          <span class="text-sm font-medium text-[var(--color-text-primary)]"
+            >{{ quickForm.material_code }} {{ quickForm.material_name }}</span
+          >
         </el-form-item>
         <el-form-item label="当前库存">
           <el-tag :type="quickForm.on_hand > 0 ? 'success' : 'danger'" size="large" effect="dark">
@@ -263,20 +390,37 @@
           </el-tag>
         </el-form-item>
         <el-form-item :label="quickType === 'in' ? '入库数量' : '出库数量'">
-          <el-input-number v-model="quickForm.qty" :min="1" :max="quickType === 'out' ? quickForm.on_hand : 99999" size="large" style="width:160px" />
+          <el-input-number
+            v-model="quickForm.qty"
+            :min="1"
+            :max="quickType === 'out' ? quickForm.on_hand : 99999"
+            size="large"
+            class="w-[160px]"
+          />
         </el-form-item>
         <el-form-item label="操作人">
           <el-input v-model="quickForm.operator" placeholder="操作人姓名" />
         </el-form-item>
-        <el-form-item v-if="quickForm.qty > 0" :label="quickType === 'in' ? '入库后库存' : '出库后库存'">
-          <span class="text-lg font-bold" :class="(quickType === 'in' ? quickForm.on_hand + quickForm.qty : quickForm.on_hand - quickForm.qty) > 0 ? 'text-[var(--color-success-text)]' : 'text-[var(--color-danger-text)]'">
+        <el-form-item
+          v-if="quickForm.qty > 0"
+          :label="quickType === 'in' ? '入库后库存' : '出库后库存'"
+        >
+          <span
+            class="text-lg font-bold"
+            :class="(quickType === 'in' ? quickForm.on_hand + quickForm.qty : quickForm.on_hand - quickForm.qty) > 0 ? 'text-[var(--color-success-text)]' : 'text-[var(--color-danger-text)]'"
+          >
             {{ quickType === 'in' ? quickForm.on_hand + quickForm.qty : quickForm.on_hand - quickForm.qty }}
           </span>
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="quickDialogVisible = false">取消</el-button>
-        <el-button :type="quickType === 'in' ? 'success' : 'danger'" @click="doQuickTx" :loading="quickSaving">确认</el-button>
+        <el-button
+          :type="quickType === 'in' ? 'success' : 'danger'"
+          :loading="quickSaving"
+          @click="doQuickTx"
+          >确认</el-button
+        >
       </template>
     </el-dialog>
   </div>

@@ -24,14 +24,22 @@
       <!-- Kanban 看板 -->
       <el-col :span="16">
         <el-card shadow="never">
-          <template #header><span style="font-weight:600">工单看板</span></template>
+          <template #header><span class="font-semibold">工单看板</span></template>
           <div class="kanban-row">
             <div v-for="(wos, status) in kanban.columns" :key="status" class="kanban-col">
-              <div class="kanban-header">{{ status }} <span class="kanban-count">{{ wos.length }}</span></div>
-              <div v-for="w in wos" :key="w.id" :class="['kanban-card', `priority-${w.priority || 0}`]">
+              <div class="kanban-header">
+                {{ status }} <span class="kanban-count">{{ wos.length }}</span>
+              </div>
+              <div
+                v-for="w in wos"
+                :key="w.id"
+                :class="['kanban-card', `priority-${w.priority || 0}`]"
+              >
                 <div class="kanban-wo">{{ w.wo_number }}</div>
                 <div class="kanban-mat">{{ w.material_name }}</div>
-                <div class="kanban-bar-bg"><div class="kanban-bar" :style="{width: w.progress + '%'}"></div></div>
+                <div class="kanban-bar-bg">
+                  <div class="kanban-bar" :style="{width: w.progress + '%'}"></div>
+                </div>
                 <div class="kanban-info">{{ w.completed_qty }}/{{ w.plan_qty }}</div>
                 <div v-if="w.work_center_name" class="kanban-wc">{{ w.work_center_name }}</div>
               </div>
@@ -43,20 +51,30 @@
 
       <!-- OEE + 安灯 -->
       <el-col :span="8">
-        <el-card shadow="never" style="margin-bottom:16px">
-          <template #header><span style="font-weight:600">OEE 设备效率</span></template>
+        <el-card shadow="never" class="mb-4">
+          <template #header><span class="font-semibold">OEE 设备效率</span></template>
           <div v-for="o in oee.items" :key="o.work_center_id" class="oee-row">
             <div class="oee-name">{{ o.center_name }}</div>
-            <div class="oee-bar-bg"><div class="oee-bar" :style="{width: o.oee + '%', background: o.oee < 50 ? '#f56c6c' : o.oee < 75 ? '#e6a23c' : '#67c23a'}"></div></div>
+            <div class="oee-bar-bg">
+              <div
+                class="oee-bar"
+                :style="{width: o.oee + '%', background: o.oee < 50 ? '#f56c6c' : o.oee < 75 ? '#e6a23c' : '#67c23a'}"
+              ></div>
+            </div>
             <div class="oee-val">{{ o.oee }}%</div>
           </div>
         </el-card>
 
         <el-card shadow="never">
-          <template #header><span style="font-weight:600">工作中心负荷</span></template>
+          <template #header><span class="font-semibold">工作中心负荷</span></template>
           <div v-for="w in load.items" :key="w.work_center_id" class="oee-row">
             <div class="oee-name">{{ w.center_name }}</div>
-            <div class="oee-bar-bg"><div class="oee-bar" :style="{width: Math.min(w.load_pct, 100) + '%', background: w.load_pct > 100 ? '#f56c6c' : w.load_pct > 80 ? '#e6a23c' : '#67c23a'}"></div></div>
+            <div class="oee-bar-bg">
+              <div
+                class="oee-bar"
+                :style="{width: Math.min(w.load_pct, 100) + '%', background: w.load_pct > 100 ? '#f56c6c' : w.load_pct > 80 ? '#e6a23c' : '#67c23a'}"
+              ></div>
+            </div>
             <div class="oee-val">{{ w.load_pct }}%</div>
           </div>
         </el-card>
@@ -64,28 +82,56 @@
     </el-row>
 
     <!-- 安灯事件列表 -->
-    <el-card shadow="never" style="margin-top:16px">
+    <el-card shadow="never" class="mt-4">
       <template #header>
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          <span style="font-weight:600">安灯事件</span>
+        <div class="flex justify-between items-center">
+          <span class="font-semibold">安灯事件</span>
           <el-button size="small" type="danger" @click="showAndonDialog">触发安灯</el-button>
         </div>
       </template>
-      <el-table :data="andons" stripe border size="small" v-loading="aLoading">
+      <el-table v-loading="aLoading" :data="andons" stripe border size="small">
         <el-table-column prop="event_no" label="编号" width="160" />
         <el-table-column prop="event_type" label="类型" width="90" />
-        <el-table-column label="严重度" width="80"><template #default="{row}">
-          <el-tag :type="row.severity==='红色'?'danger':row.severity==='黄色'?'warning':'info'" size="small">{{ row.severity }}</el-tag>
-        </template></el-table-column>
+        <el-table-column label="严重度" width="80"
+          ><template #default="{row}">
+            <el-tag
+              :type="row.severity==='红色'?'danger':row.severity==='黄色'?'warning':'info'"
+              size="small"
+              >{{ row.severity }}</el-tag
+            >
+          </template></el-table-column
+        >
         <el-table-column prop="description" label="描述" min-width="140" show-overflow-tooltip />
         <el-table-column prop="handler" label="响应人" width="80" />
-        <el-table-column label="状态" width="80"><template #default="{row}">
-          <el-tag :type="row.status==='已解决'?'success':row.status==='处理中'?'warning':'danger'" size="small">{{ row.status }}</el-tag>
-        </template></el-table-column>
-        <el-table-column label="操作" width="160"><template #default="{row}">
-          <el-button v-if="row.status==='待响应'" link size="small" type="primary" @click="respondAndon(row)">响应</el-button>
-          <el-button v-if="row.status==='处理中'" link size="small" type="success" @click="resolveAndon(row)">解决</el-button>
-        </template></el-table-column>
+        <el-table-column label="状态" width="80"
+          ><template #default="{row}">
+            <el-tag
+              :type="row.status==='已解决'?'success':row.status==='处理中'?'warning':'danger'"
+              size="small"
+              >{{ row.status }}</el-tag
+            >
+          </template></el-table-column
+        >
+        <el-table-column label="操作" width="160"
+          ><template #default="{row}">
+            <el-button
+              v-if="row.status==='待响应'"
+              link
+              size="small"
+              type="primary"
+              @click="respondAndon(row)"
+              >响应</el-button
+            >
+            <el-button
+              v-if="row.status==='处理中'"
+              link
+              size="small"
+              type="success"
+              @click="resolveAndon(row)"
+              >解决</el-button
+            >
+          </template></el-table-column
+        >
       </el-table>
     </el-card>
 
@@ -93,21 +139,29 @@
     <el-dialog v-model="andonVisible" title="触发安灯" width="420px">
       <el-form :model="andonForm" label-width="80px">
         <el-form-item label="类型">
-          <el-select v-model="andonForm.event_type" style="width:100%">
+          <el-select v-model="andonForm.event_type" class="w-full">
             <el-option label="缺料" value="缺料" /><el-option label="设备故障" value="设备故障" />
-            <el-option label="质量问题" value="质量问题" /><el-option label="安全" value="安全" /><el-option label="其他" value="其他" />
+            <el-option label="质量问题" value="质量问题" /><el-option
+              label="安全"
+              value="安全"
+            /><el-option label="其他" value="其他" />
           </el-select>
         </el-form-item>
         <el-form-item label="严重度">
-          <el-select v-model="andonForm.severity" style="width:100%">
-            <el-option label="🔴 红色（停线）" value="红色" /><el-option label="🟡 黄色（预警）" value="黄色" /><el-option label="🔵 蓝色（请求）" value="蓝色" />
+          <el-select v-model="andonForm.severity" class="w-full">
+            <el-option label="🔴 红色（停线）" value="红色" /><el-option
+              label="🟡 黄色（预警）"
+              value="黄色"
+            /><el-option label="🔵 蓝色（请求）" value="蓝色" />
           </el-select>
         </el-form-item>
-        <el-form-item label="描述"><el-input v-model="andonForm.description" type="textarea" /></el-form-item>
+        <el-form-item label="描述"
+          ><el-input v-model="andonForm.description" type="textarea"
+        /></el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="andonVisible=false">取消</el-button>
-        <el-button type="danger" @click="createAndon" :loading="saving">触发</el-button>
+        <el-button type="danger" :loading="saving" @click="createAndon">触发</el-button>
       </template>
     </el-dialog>
   </div>

@@ -1,6 +1,5 @@
 <template>
   <div class="page-container space-y-5">
-
     <!-- ═══════ 第一部分：数据就绪状态 ═══════ -->
     <div class="grid grid-cols-4 gap-4">
       <div class="stat-card flex items-center justify-between">
@@ -14,7 +13,9 @@
         <div
           :class="['w-9 h-9 rounded-lg flex items-center justify-center', readiness.mpsCount > 0 ? 'bg-emerald-500/10' : 'bg-amber-500/10']"
         >
-          <el-icon :size="18" :color="readiness.mpsCount > 0 ? '#22c55e' : '#f59e0b'"><Calendar /></el-icon>
+          <el-icon :size="18" :color="readiness.mpsCount > 0 ? '#22c55e' : '#f59e0b'"
+            ><Calendar
+          /></el-icon>
         </div>
       </div>
 
@@ -29,7 +30,9 @@
         <div
           :class="['w-9 h-9 rounded-lg flex items-center justify-center', readiness.bomCount > 0 ? 'bg-emerald-500/10' : 'bg-amber-500/10']"
         >
-          <el-icon :size="18" :color="readiness.bomCount > 0 ? '#22c55e' : '#f59e0b'"><Connection /></el-icon>
+          <el-icon :size="18" :color="readiness.bomCount > 0 ? '#22c55e' : '#f59e0b'"
+            ><Connection
+          /></el-icon>
         </div>
       </div>
 
@@ -44,7 +47,9 @@
         <div
           :class="['w-9 h-9 rounded-lg flex items-center justify-center', readiness.invCount > 0 ? 'bg-emerald-500/10' : 'bg-amber-500/10']"
         >
-          <el-icon :size="18" :color="readiness.invCount > 0 ? '#22c55e' : '#f59e0b'"><List /></el-icon>
+          <el-icon :size="18" :color="readiness.invCount > 0 ? '#22c55e' : '#f59e0b'"
+            ><List
+          /></el-icon>
         </div>
       </div>
 
@@ -59,31 +64,43 @@
               class="w-1.5 h-1.5 rounded-full"
               :class="readiness.allReady ? 'bg-[var(--color-success)]' : 'bg-[var(--color-warning)]'"
             ></span>
-            <span class="text-sm font-medium" :class="readiness.allReady ? 'text-[var(--color-success-text)]' : 'text-[var(--color-warning-text)]'">
+            <span
+              class="text-sm font-medium"
+              :class="readiness.allReady ? 'text-[var(--color-success-text)]' : 'text-[var(--color-warning-text)]'"
+            >
               {{ readiness.allReady ? '可以运算' : '缺少数据' }}
             </span>
           </div>
         </div>
-        <el-button size="small" text @click="checkReadiness" :loading="checking">
+        <el-button size="small" text :loading="checking" @click="checkReadiness">
           <el-icon :size="14"><Refresh /></el-icon>
         </el-button>
       </div>
 
       <!-- 缺少数据的引导提示 -->
-      <div v-if="readyChecked && !readiness.allReady" class="col-span-4 py-3 px-4 rounded-lg bg-[var(--color-warning-muted)] border border-[var(--color-warning)]/20">
+      <div
+        v-if="readyChecked && !readiness.allReady"
+        class="col-span-4 py-3 px-4 rounded-lg bg-[var(--color-warning-muted)] border border-[var(--color-warning)]/20"
+      >
         <div class="flex items-center gap-2 text-sm text-[var(--color-warning-text)]">
           <el-icon :size="14"><WarningFilled /></el-icon>
           <span>数据不完整，请先补充：</span>
           <template v-if="readiness.mpsCount === 0">
-            <router-link to="/mps" class="text-[var(--color-accent)] hover:underline text-xs">录入 MPS 计划</router-link>
+            <router-link to="/mps" class="text-[var(--color-accent)] hover:underline text-xs"
+              >录入 MPS 计划</router-link
+            >
             <span class="text-[var(--color-text-disabled)]">|</span>
           </template>
           <template v-if="readiness.bomCount === 0">
-            <router-link to="/bom" class="text-[var(--color-accent)] hover:underline text-xs">创建 BOM</router-link>
+            <router-link to="/bom" class="text-[var(--color-accent)] hover:underline text-xs"
+              >创建 BOM</router-link
+            >
             <span class="text-[var(--color-text-disabled)]">|</span>
           </template>
           <template v-if="readiness.invCount === 0">
-            <router-link to="/inventory" class="text-[var(--color-accent)] hover:underline text-xs">录入库存</router-link>
+            <router-link to="/inventory" class="text-[var(--color-accent)] hover:underline text-xs"
+              >录入库存</router-link
+            >
           </template>
         </div>
       </div>
@@ -102,7 +119,7 @@
               :max="180"
               :step="1"
               :show-tooltip="true"
-              style="width:200px"
+              class="w-[200px]"
             />
             <el-input-number
               v-model="horizonDays"
@@ -110,7 +127,7 @@
               :max="180"
               size="small"
               controls-position="right"
-              style="width:72px"
+              class="w-[72px]"
             />
           </div>
         </div>
@@ -125,7 +142,7 @@
               :max="30"
               :step="1"
               :show-tooltip="true"
-              style="width:160px"
+              class="w-[160px]"
             />
             <el-input-number
               v-model="timeFenceDays"
@@ -133,7 +150,7 @@
               :max="30"
               size="small"
               controls-position="right"
-              style="width:64px"
+              class="w-[64px]"
             />
           </div>
         </div>
@@ -147,7 +164,10 @@
           :disabled="running || !readiness.allReady"
           @click="runMrp"
         >
-          <span v-if="running" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+          <span
+            v-if="running"
+            class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"
+          ></span>
           <el-icon v-else :size="16"><Cpu /></el-icon>
           {{ running ? '计算中...' : '一键 MRP 运算' }}
         </button>
@@ -155,30 +175,43 @@
         <div v-if="running" class="flex-1">
           <div class="flex items-center gap-3">
             <div class="flex-1 h-1.5 bg-[var(--color-bg-overlay)] rounded-full overflow-hidden">
-              <div class="h-full bg-gradient-to-r from-blue-500 to-blue-400 rounded-full transition-all duration-700 ease-out"
-                   :style="{ width: progressPct + '%' }"></div>
+              <div
+                class="h-full bg-gradient-to-r from-blue-500 to-blue-400 rounded-full transition-all duration-700 ease-out"
+                :style="{ width: progressPct + '%' }"
+              ></div>
             </div>
-            <span class="text-xs text-[var(--color-text-tertiary)] font-mono min-w-[60px]">{{ progressStep }}</span>
+            <span
+              class="text-xs text-[var(--color-text-tertiary)] font-mono min-w-[60px]"
+              >{{ progressStep }}</span
+            >
           </div>
         </div>
       </div>
 
       <!-- 参数说明 -->
-      <div class="mt-3 pt-3 border-t border-[var(--color-border-subtle)] flex items-center gap-4 text-xs text-[var(--color-text-tertiary)]">
-        <span class="flex items-center gap-1"><el-icon :size="12"><InfoFilled /></el-icon>基于 MPS 主计划 + BOM 物料清单 + 库存现存量，按时间倒推计算各层级物料需求</span>
+      <div
+        class="mt-3 pt-3 border-t border-[var(--color-border-subtle)] flex items-center gap-4 text-xs text-[var(--color-text-tertiary)]"
+      >
+        <span class="flex items-center gap-1"
+          ><el-icon :size="12"><InfoFilled /></el-icon>基于 MPS 主计划 + BOM 物料清单 +
+          库存现存量，按时间倒推计算各层级物料需求</span
+        >
       </div>
     </div>
 
     <!-- ═══════ 第三部分：运算结果 ═══════ -->
     <template v-if="summary">
-
       <!-- KPI 结果卡片 -->
       <div class="grid grid-cols-4 gap-4">
         <div class="stat-card flex flex-col gap-1">
           <div class="text-xs text-[var(--color-text-tertiary)]">计划订单</div>
-          <div class="text-2xl font-bold text-[var(--color-text-primary)] tabular-nums">{{ summary.total_orders }}</div>
+          <div class="text-2xl font-bold text-[var(--color-text-primary)] tabular-nums">
+            {{ summary.total_orders }}
+          </div>
           <div class="flex items-center gap-1.5 text-xs">
-            <span class="text-[var(--color-accent-text)]">{{ summary.production_orders }} 生产</span>
+            <span class="text-[var(--color-accent-text)]"
+              >{{ summary.production_orders }} 生产</span
+            >
             <span class="text-[var(--color-text-disabled)]">·</span>
             <span class="text-[var(--color-warning-text)]">{{ summary.purchase_orders }} 采购</span>
           </div>
@@ -186,37 +219,65 @@
 
         <div class="stat-card flex flex-col gap-1">
           <div class="text-xs text-[var(--color-text-tertiary)]">例外信息</div>
-          <div class="text-2xl font-bold tabular-nums" :class="summary.error_count > 0 ? 'text-[var(--color-danger)]' : 'text-[var(--color-warning-text)]'">
+          <div
+            class="text-2xl font-bold tabular-nums"
+            :class="summary.error_count > 0 ? 'text-[var(--color-danger)]' : 'text-[var(--color-warning-text)]'"
+          >
             {{ summary.exceptions_count }}
           </div>
           <div class="flex items-center gap-1.5 text-xs">
-            <span class="text-[var(--color-danger-text)]" v-if="summary.error_count > 0">{{ summary.error_count }} 错误</span>
-            <span class="text-[var(--color-warning-text)]" v-if="summary.warning_count > 0">{{ summary.warning_count }} 警告</span>
-            <span class="text-[var(--color-success-text)]" v-if="summary.error_count === 0 && summary.warning_count === 0">无异常</span>
+            <span v-if="summary.error_count > 0" class="text-[var(--color-danger-text)]"
+              >{{ summary.error_count }} 错误</span
+            >
+            <span v-if="summary.warning_count > 0" class="text-[var(--color-warning-text)]"
+              >{{ summary.warning_count }} 警告</span
+            >
+            <span
+              v-if="summary.error_count === 0 && summary.warning_count === 0"
+              class="text-[var(--color-success-text)]"
+              >无异常</span
+            >
           </div>
         </div>
 
         <div class="stat-card flex flex-col gap-1">
           <div class="text-xs text-[var(--color-text-tertiary)]">运算耗时</div>
-          <div class="text-2xl font-bold text-[var(--color-text-primary)] tabular-nums">{{ summary.run_time_ms }}</div>
+          <div class="text-2xl font-bold text-[var(--color-text-primary)] tabular-nums">
+            {{ summary.run_time_ms }}
+          </div>
           <div class="text-xs text-[var(--color-text-tertiary)]">毫秒完成</div>
         </div>
 
         <div class="stat-card flex flex-col gap-1">
           <div class="text-xs text-[var(--color-text-tertiary)]">展望范围</div>
-          <div class="text-2xl font-bold text-[var(--color-text-primary)] tabular-nums">{{ summary.horizon_days }}</div>
-          <div class="text-xs text-[var(--color-text-tertiary)]">天 {{ stepFrozen ? '· 时界: ' + stepFrozen + '天 冻结' : '' }}</div>
+          <div class="text-2xl font-bold text-[var(--color-text-primary)] tabular-nums">
+            {{ summary.horizon_days }}
+          </div>
+          <div class="text-xs text-[var(--color-text-tertiary)]">
+            天 {{ stepFrozen ? '· 时界: ' + stepFrozen + '天 冻结' : '' }}
+          </div>
         </div>
       </div>
 
       <!-- 例外信息 -->
       <div v-if="exceptions.length" class="stat-card">
-        <div class="flex items-center justify-between mb-3 cursor-pointer" @click="exceptionsOpen = !exceptionsOpen">
+        <div
+          class="flex items-center justify-between mb-3 cursor-pointer"
+          @click="exceptionsOpen = !exceptionsOpen"
+        >
           <h3 class="flex items-center gap-2 text-sm font-medium">
-            <span class="w-2 h-2 rounded-full" :class="summary.error_count > 0 ? 'bg-[var(--color-danger)]' : 'bg-[var(--color-warning)]'"></span>
+            <span
+              class="w-2 h-2 rounded-full"
+              :class="summary.error_count > 0 ? 'bg-[var(--color-danger)]' : 'bg-[var(--color-warning)]'"
+            ></span>
             例外信息（{{ exceptions.length }}）
           </h3>
-          <el-icon :size="14" color="var(--color-text-tertiary)" class="transition-transform duration-200" :style="{ transform: exceptionsOpen ? 'rotate(180deg)' : '' }">
+          <el-icon
+            :size="14"
+            color="var(--color-text-tertiary)"
+            class="transition-transform duration-200"
+            :style="{ transform: exceptionsOpen ? 'rotate(180deg)' : '' }"
+          >
             <ArrowDown />
           </el-icon>
         </div>
@@ -254,8 +315,8 @@
             type="primary"
             size="small"
             :loading="converting"
-            @click="convertToOrders"
             :disabled="!plannedOrders.length"
+            @click="convertToOrders"
           >
             一键转为采购/工单
           </el-button>
@@ -269,7 +330,12 @@
           empty-text="暂无计划订单"
         >
           <el-table-column prop="item_code" label="物料编码" width="120" />
-          <el-table-column prop="material_name" label="物料型号" min-width="140" show-overflow-tooltip />
+          <el-table-column
+            prop="material_name"
+            label="物料型号"
+            min-width="140"
+            show-overflow-tooltip
+          />
           <el-table-column label="订单类型" width="90" align="center">
             <template #default="{ row }">
               <el-tag
@@ -291,25 +357,33 @@
           </el-table-column>
         </el-table>
       </div>
-
     </template>
 
     <!-- ═══════ 空状态：引导式空白 ═══════ -->
-    <div v-if="!running && !summary && readyChecked" class="stat-card flex flex-col items-center justify-center py-16 space-y-4">
+    <div
+      v-if="!running && !summary && readyChecked"
+      class="stat-card flex flex-col items-center justify-center py-16 space-y-4"
+    >
       <div class="w-16 h-16 rounded-full bg-blue-500/10 flex items-center justify-center">
         <el-icon :size="28" color="#3b82f6"><Cpu /></el-icon>
       </div>
       <div class="text-center space-y-1">
         <h3 class="text-[var(--color-text-primary)] font-medium text-sm">准备开始物料需求计算</h3>
-        <p class="text-xs text-[var(--color-text-tertiary)]">配置参数后，点击「一键 MRP 运算」生成采购/生产建议</p>
+        <p class="text-xs text-[var(--color-text-tertiary)]">
+          配置参数后，点击「一键 MRP 运算」生成采购/生产建议
+        </p>
       </div>
     </div>
 
-    <div v-if="!readyChecked && !running && !summary" class="stat-card flex items-center justify-center py-10">
-      <div class="w-5 h-5 border-2 border-[var(--color-accent)] border-t-transparent rounded-full animate-spin"></div>
+    <div
+      v-if="!readyChecked && !running && !summary"
+      class="stat-card flex items-center justify-center py-10"
+    >
+      <div
+        class="w-5 h-5 border-2 border-[var(--color-accent)] border-t-transparent rounded-full animate-spin"
+      ></div>
       <span class="ml-3 text-sm text-[var(--color-text-tertiary)]">检查数据状态...</span>
     </div>
-
   </div>
 </template>
 

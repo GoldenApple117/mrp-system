@@ -1,23 +1,40 @@
 <template>
   <div class="page-container">
     <div class="page-toolbar">
-      <el-input v-model="keyword" placeholder="搜索供应商" style="width:240px" clearable 
-        @clear="fetchData" @keyup.enter="fetchData">
-        <template #prefix><el-icon><Search /></el-icon></template>
+      <el-input
+        v-model="keyword"
+        placeholder="搜索供应商"
+        class="w-[240px]"
+        clearable
+        @clear="fetchData"
+        @keyup.enter="fetchData"
+      >
+        <template #prefix
+          ><el-icon><Search /></el-icon
+        ></template>
       </el-input>
-      <el-button type="primary" @click="search"><el-icon><Search /></el-icon> 搜索</el-button>
-      <span style="flex:1"></span>
-      <el-button type="primary" @click="showDialog(null)"><el-icon><Plus /></el-icon> 新增供应商</el-button>
+      <el-button type="primary" @click="search"
+        ><el-icon><Search /></el-icon> 搜索</el-button
+      >
+      <span class="flex-1"></span>
+      <el-button type="primary" @click="showDialog(null)"
+        ><el-icon><Plus /></el-icon> 新增供应商</el-button
+      >
     </div>
 
-    <el-table :data="tableData" v-loading="loading" stripe border>
+    <el-table v-loading="loading" :data="tableData" stripe border>
       <el-table-column prop="supplier_code" label="编码" width="140" />
       <el-table-column prop="supplier_name" label="供应商名称" min-width="140" />
       <el-table-column label="购买链接" min-width="200">
         <template #default="{row}">
-          <a v-if="row.purchase_link" :href="row.purchase_link" target="_blank" 
-            style="color:#409eff;font-size:12px;word-break:break-all">{{ row.purchase_link }}</a>
-          <span v-else style="color:#c0c4cc;font-size:12px">—</span>
+          <a
+            v-if="row.purchase_link"
+            :href="row.purchase_link"
+            target="_blank"
+            class="text-[#409eff] text-xs break-all"
+            >{{ row.purchase_link }}</a
+          >
+          <span v-else class="text-[#c0c4cc] text-xs">—</span>
         </template>
       </el-table-column>
       <el-table-column prop="contact_person" label="联系人" width="100" />
@@ -32,8 +49,14 @@
       </el-table-column>
     </el-table>
 
-    <el-pagination v-model:current-page="page" v-model:page-size="pageSize" :total="total"
-      layout="total,prev,pager,next" @change="fetchData" style="margin-top:16px;justify-content:flex-end" />
+    <el-pagination
+      v-model:current-page="page"
+      v-model:page-size="pageSize"
+      :total="total"
+      layout="total,prev,pager,next"
+      class="mt-4 justify-end"
+      @change="fetchData"
+    />
 
     <!-- 新增/编辑弹窗 -->
     <el-dialog v-model="dialogVisible" :title="editId?'编辑供应商':'新增供应商'" width="520px">
@@ -41,7 +64,11 @@
         <el-row :gutter="16">
           <el-col :span="12">
             <el-form-item label="编码" prop="supplier_code">
-              <el-input v-model="form.supplier_code" :disabled="!!editId" placeholder="如: SUP-三菱" />
+              <el-input
+                v-model="form.supplier_code"
+                :disabled="!!editId"
+                placeholder="如: SUP-三菱"
+              />
             </el-form-item>
           </el-col>
           <el-col :span="12">
@@ -66,12 +93,15 @@
           <el-input v-model="form.address" />
         </el-form-item>
         <el-form-item label="购买链接">
-          <el-input v-model="form.purchase_link" placeholder="如: https://item.taobao.com/item..." />
+          <el-input
+            v-model="form.purchase_link"
+            placeholder="如: https://item.taobao.com/item..."
+          />
         </el-form-item>
         <el-row :gutter="16">
           <el-col :span="12">
             <el-form-item label="交期(天)">
-              <el-input-number v-model="form.lead_time_days" :min="0" style="width:100%" />
+              <el-input-number v-model="form.lead_time_days" :min="0" class="w-full" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
@@ -83,7 +113,7 @@
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible=false">取消</el-button>
-        <el-button type="primary" @click="submitForm" :loading="saving">保存</el-button>
+        <el-button type="primary" :loading="saving" @click="submitForm">保存</el-button>
       </template>
     </el-dialog>
   </div>

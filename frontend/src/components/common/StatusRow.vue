@@ -2,10 +2,7 @@
   <div class="flex items-center justify-between text-xs py-1">
     <span class="text-[var(--color-text-tertiary)]">{{ label }}</span>
     <div class="flex items-center gap-1.5">
-      <span
-        class="w-1.5 h-1.5 rounded-full"
-        :class="dotClass"
-      ></span>
+      <span class="w-1.5 h-1.5 rounded-full" :class="dotClass"></span>
       <span :class="textClass">{{ statusLabel }}</span>
     </div>
   </div>

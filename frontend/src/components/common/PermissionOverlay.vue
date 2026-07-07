@@ -3,7 +3,9 @@
     <div class="perm-overlay-card">
       <el-icon :size="48" class="text-[var(--color-text-disabled)] mb-3"><Lock /></el-icon>
       <p class="text-sm text-[var(--color-text-primary)] font-medium mb-1">暂无操作权限</p>
-      <p class="text-xs text-[var(--color-text-tertiary)] mb-4">请联系管理员申请权限后查看和编辑数据</p>
+      <p class="text-xs text-[var(--color-text-tertiary)] mb-4">
+        请联系管理员申请权限后查看和编辑数据
+      </p>
       <el-button
         v-if="status !== 'pending'"
         type="primary"

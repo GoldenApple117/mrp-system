@@ -37,6 +37,20 @@ def get_full_config():
         db.close()
 
 
+def get_smtp_config():
+    """获取邮件配置（密码脱敏），供 API 调用"""
+    cfg = get_full_config()
+    return {
+        "host": cfg.host,
+        "port": cfg.port,
+        "username": cfg.username,
+        "password": "***" if cfg.password else "",
+        "from_addr": cfg.from_addr,
+        "to_email": cfg.to_email,
+        "use_tls": bool(cfg.use_tls),
+    }
+
+
 def configure_smtp(**kwargs):
     """保存邮件配置到数据库"""
     db = SessionLocal()

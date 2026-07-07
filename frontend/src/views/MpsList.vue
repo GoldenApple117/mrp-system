@@ -1,24 +1,48 @@
 <template>
   <div class="page-container">
     <div class="page-toolbar">
-      <el-button type="primary" @click="showDialog(null)"><el-icon><Plus /></el-icon> 添加计划</el-button>
-      <el-button @click="showBatchDialog"><el-icon><List /></el-icon> 批量添加</el-button>
-      <el-date-picker v-model="dateRange" type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期"
-        value-format="YYYY-MM-DD" style="width:280px" @change="fetchData" />
-      <span style="color:#909399;font-size:13px">提示：MPS只需录入成品计划，MRP引擎会自动展开到所有物料</span>
+      <el-button type="primary" @click="showDialog(null)"
+        ><el-icon><Plus /></el-icon> 添加计划</el-button
+      >
+      <el-button @click="showBatchDialog"
+        ><el-icon><List /></el-icon> 批量添加</el-button
+      >
+      <el-date-picker
+        v-model="dateRange"
+        type="daterange"
+        range-separator="至"
+        start-placeholder="开始日期"
+        end-placeholder="结束日期"
+        value-format="YYYY-MM-DD"
+        class="w-[280px]"
+        @change="fetchData"
+      />
+      <span class="text-[#909399] text-[13px]"
+        >提示：MPS只需录入成品计划，MRP引擎会自动展开到所有物料</span
+      >
     </div>
 
     <!-- 批量操作栏 -->
     <div v-if="selectedIds.length" class="batch-bar">
-      <el-tag type="info" style="margin-right:8px">已选 {{ selectedIds.length }} 项</el-tag>
+      <el-tag type="info" class="mr-2">已选 {{ selectedIds.length }} 项</el-tag>
       <el-button size="small" type="danger" @click="batchDelete">批量删除</el-button>
       <el-button size="small" @click="selectedIds = []">取消选择</el-button>
     </div>
 
-    <el-empty v-if="!loading &amp;&amp; tableData.length === 0" description="暂无 MPS 主计划，请先创建" />
+    <el-empty v-if="!loading && tableData.length === 0" description="暂无MPS主计划">
+      <template #image>
+        <el-icon :size="48" color="var(--color-text-disabled)"><Box /></el-icon>
+      </template>
+      <el-button type="primary" @click="showDialog(null)">创建主计划</el-button>
+    </el-empty>
 
-    <el-table :data="tableData" v-loading="loading" stripe border
-      @selection-change="(rows) => selectedIds = rows.map(r => r.id)">
+    <el-table
+      v-loading="loading"
+      :data="tableData"
+      stripe
+      border
+      @selection-change="(rows) => selectedIds = rows.map(r => r.id)"
+    >
       <el-table-column type="selection" width="50" />
       <el-table-column prop="material_code" label="成品编码" width="130" />
       <el-table-column prop="material_name" label="成品名称" min-width="160" />
@@ -33,12 +57,20 @@
       <el-table-column prop="source_id" label="销售订单号" width="150" />
       <el-table-column label="状态" width="90">
         <template #default="{row}">
-          <el-tag :type="row.status==='已完成'?'success':'warning'" size="small">{{ row.status||'进行中' }}</el-tag>
+          <el-tag
+            :type="row.status==='已完成'?'success':'warning'"
+            size="small"
+            >{{ row.status||'进行中' }}</el-tag
+          >
         </template>
       </el-table-column>
       <el-table-column label="冻结" width="80">
         <template #default="{row}">
-          <el-tag :type="row.is_frozen?'warning':'info'" size="small">{{ row.is_frozen?'已冻结':'正常' }}</el-tag>
+          <el-tag
+            :type="row.is_frozen?'warning':'info'"
+            size="small"
+            >{{ row.is_frozen?'已冻结':'正常' }}</el-tag
+          >
         </template>
       </el-table-column>
       <el-table-column label="操作" width="160" fixed="right">
@@ -49,31 +81,52 @@
       </el-table-column>
     </el-table>
 
-    <el-pagination v-model:current-page="page" v-model:page-size="pageSize" :total="total"
-      layout="total,sizes,prev,pager,next" @change="fetchData" style="margin-top:16px;justify-content:flex-end" />
+    <el-pagination
+      v-model:current-page="page"
+      v-model:page-size="pageSize"
+      :total="total"
+      layout="total,sizes,prev,pager,next"
+      class="mt-4 justify-end"
+      @change="fetchData"
+    />
 
     <!-- 批量添加弹窗 -->
     <el-dialog v-model="batchDialogVisible" title="批量添加MPS(每周一条)" width="520px">
       <el-form label-width="100px">
         <el-form-item label="成品物料" required>
-          <el-select v-model="batchForm.item_id" filterable placeholder="选择成品" style="width:100%">
-            <el-option v-for="m in productOptions" :key="m.id" :label="`${m.material_code} ${m.material_name}`" :value="m.id" />
+          <el-select v-model="batchForm.item_id" filterable placeholder="选择成品" class="w-full">
+            <el-option
+              v-for="m in productOptions"
+              :key="m.id"
+              :label="`${m.material_code} ${m.material_name}`"
+              :value="m.id"
+            />
           </el-select>
         </el-form-item>
         <el-row :gutter="16">
           <el-col :span="12">
             <el-form-item label="开始日期" required>
-              <el-date-picker v-model="batchForm.start_date" type="date" value-format="YYYY-MM-DD" style="width:100%" />
+              <el-date-picker
+                v-model="batchForm.start_date"
+                type="date"
+                value-format="YYYY-MM-DD"
+                class="w-full"
+              />
             </el-form-item>
           </el-col>
           <el-col :span="12">
             <el-form-item label="结束日期" required>
-              <el-date-picker v-model="batchForm.end_date" type="date" value-format="YYYY-MM-DD" style="width:100%" />
+              <el-date-picker
+                v-model="batchForm.end_date"
+                type="date"
+                value-format="YYYY-MM-DD"
+                class="w-full"
+              />
             </el-form-item>
           </el-col>
         </el-row>
         <el-form-item label="每周数量">
-          <el-input-number v-model="batchForm.weekly_qty" :min="1" style="width:100%" />
+          <el-input-number v-model="batchForm.weekly_qty" :min="1" class="w-full" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -84,19 +137,35 @@
 
     <!-- 编辑弹窗 -->
     <el-dialog v-model="dialogVisible" :title="isEdit?'编辑计划':'添加计划'" width="450px">
-      <el-alert v-if="form.source_type==='销售订单' && isEdit" type="info" :closable="false" show-icon
-        title="此计划关联销售订单，修改数量/日期将自动同步到对应订单" style="margin-bottom:12px" />
+      <el-alert
+        v-if="form.source_type==='销售订单' && isEdit"
+        type="info"
+        :closable="false"
+        show-icon
+        title="此计划关联销售订单，修改数量/日期将自动同步到对应订单"
+        class="mb-3"
+      />
       <el-form ref="formRef" :model="form" :rules="rules" label-width="90px">
         <el-form-item label="成品物料" prop="item_id">
-          <el-select v-model="form.item_id" filterable placeholder="选择成品" style="width:100%">
-            <el-option v-for="m in productOptions" :key="m.id" :label="`${m.material_code} ${m.material_name}`" :value="m.id" />
+          <el-select v-model="form.item_id" filterable placeholder="选择成品" class="w-full">
+            <el-option
+              v-for="m in productOptions"
+              :key="m.id"
+              :label="`${m.material_code} ${m.material_name}`"
+              :value="m.id"
+            />
           </el-select>
         </el-form-item>
         <el-form-item label="计划日期" prop="plan_date">
-          <el-date-picker v-model="form.plan_date" type="date" value-format="YYYY-MM-DD" style="width:100%" />
+          <el-date-picker
+            v-model="form.plan_date"
+            type="date"
+            value-format="YYYY-MM-DD"
+            class="w-full"
+          />
         </el-form-item>
         <el-form-item label="计划数量" prop="quantity">
-          <el-input-number v-model="form.quantity" :min="0" style="width:100%" />
+          <el-input-number v-model="form.quantity" :min="0" class="w-full" />
         </el-form-item>
         <el-form-item label="来源">
           <el-select v-model="form.source_type">
@@ -111,7 +180,7 @@
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible=false">取消</el-button>
-        <el-button type="primary" @click="submitForm" :loading="saving">保存</el-button>
+        <el-button type="primary" :loading="saving" @click="submitForm">保存</el-button>
       </template>
     </el-dialog>
   </div>

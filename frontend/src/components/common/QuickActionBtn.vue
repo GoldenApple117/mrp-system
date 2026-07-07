@@ -7,7 +7,9 @@
       colorClasses.bg
     ]"
   >
-    <div :class="['w-7 h-7 rounded flex items-center justify-center flex-shrink-0', colorClasses.iconBg]">
+    <div
+      :class="['w-7 h-7 rounded flex items-center justify-center flex-shrink-0', colorClasses.iconBg]"
+    >
       <el-icon :size="13" :color="colorClasses.iconColor">
         <component :is="iconComponent" />
       </el-icon>
@@ -16,7 +18,11 @@
       <div class="text-xs font-medium text-[var(--color-text-primary)]">{{ label }}</div>
       <div class="text-2xs text-[var(--color-text-tertiary)] truncate">{{ desc }}</div>
     </div>
-    <el-icon :size="12" color="var(--color-text-disabled)" class="opacity-0 group-hover:opacity-100 transition-opacity">
+    <el-icon
+      :size="12"
+      color="var(--color-text-disabled)"
+      class="opacity-0 group-hover:opacity-100 transition-opacity"
+    >
       <ArrowRight />
     </el-icon>
   </router-link>

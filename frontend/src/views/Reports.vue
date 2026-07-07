@@ -10,34 +10,59 @@
       <div class="stat-card">
         <div class="flex items-center justify-between mb-3">
           <h4 class="text-sm font-medium text-[var(--color-text-primary)]">订单准时交付率 (OTD)</h4>
-          <el-tag size="small" effect="dark" :type="otdRate >= 80 ? 'success' : otdRate >= 60 ? 'warning' : 'danger'">
+          <el-tag
+            size="small"
+            effect="dark"
+            :type="otdRate >= 80 ? 'success' : otdRate >= 60 ? 'warning' : 'danger'"
+          >
             {{ otdRate }}%
           </el-tag>
         </div>
-        <div v-if="otdData.length" ref="otdChart" style="height: 300px"></div>
-        <div v-else class="flex items-center justify-center h-[300px] text-xs text-[var(--color-text-tertiary)]">
+        <div v-if="otdData.length" ref="otdChart" class="h-[300px]"></div>
+        <div
+          v-else
+          class="flex items-center justify-center h-[300px] text-xs text-[var(--color-text-tertiary)]"
+        >
           暂无订单数据
         </div>
       </div>
 
       <!-- 库存概览 -->
       <div class="stat-card">
-        <h4 class="text-sm font-medium text-[var(--color-text-primary)] mb-3">库存概览（按物料类型）</h4>
-        <div v-if="invData.length" ref="inventoryChart" style="height: 300px"></div>
-        <div v-else class="flex items-center justify-center h-[300px] text-xs text-[var(--color-text-tertiary)]">
+        <h4 class="text-sm font-medium text-[var(--color-text-primary)] mb-3">
+          库存概览（按物料类型）
+        </h4>
+        <div v-if="invData.length" ref="inventoryChart" class="h-[300px]"></div>
+        <div
+          v-else
+          class="flex items-center justify-center h-[300px] text-xs text-[var(--color-text-tertiary)]"
+        >
           暂无库存数据
         </div>
       </div>
 
       <!-- 缺料统计 -->
       <div class="stat-card">
-        <h4 class="text-sm font-medium text-[var(--color-text-primary)] mb-3 flex items-center gap-2">
+        <h4
+          class="text-sm font-medium text-[var(--color-text-primary)] mb-3 flex items-center gap-2"
+        >
           <span class="w-1.5 h-1.5 rounded-full bg-[var(--color-danger)]"></span>
           缺料 / 低库存物料
         </h4>
-        <el-table :data="lowStockItems" stripe size="small" max-height="260" v-if="lowStockItems.length">
+        <el-table
+          v-if="lowStockItems.length"
+          :data="lowStockItems"
+          stripe
+          size="small"
+          max-height="260"
+        >
           <el-table-column prop="material_code" label="物料编码" width="110" />
-          <el-table-column prop="material_name" label="物料型号" min-width="130" show-overflow-tooltip />
+          <el-table-column
+            prop="material_name"
+            label="物料型号"
+            min-width="130"
+            show-overflow-tooltip
+          />
           <el-table-column prop="on_hand" label="现有库存" width="80" align="center" />
           <el-table-column prop="safety_stock" label="安全库存" width="80" align="center" />
           <el-table-column prop="available" label="可用量" width="80" align="center" />
@@ -49,14 +74,24 @@
             </template>
           </el-table-column>
         </el-table>
-        <el-empty v-else description="暂无低库存物料" :image-size="60" />
+        <el-empty v-else description="暂无低库存物料">
+          <template #image>
+            <el-icon :size="48" color="var(--color-text-disabled)"><Box /></el-icon>
+          </template>
+          <router-link to="/inventory">
+            <el-button type="primary">查看库存</el-button>
+          </router-link>
+        </el-empty>
       </div>
 
       <!-- 工单状态 -->
       <div class="stat-card">
         <h4 class="text-sm font-medium text-[var(--color-text-primary)] mb-3">工单状态分布</h4>
-        <div v-if="woData.length" ref="woChart" style="height: 300px"></div>
-        <div v-else class="flex items-center justify-center h-[300px] text-xs text-[var(--color-text-tertiary)]">
+        <div v-if="woData.length" ref="woChart" class="h-[300px]"></div>
+        <div
+          v-else
+          class="flex items-center justify-center h-[300px] text-xs text-[var(--color-text-tertiary)]"
+        >
           暂无工单数据
         </div>
       </div>
