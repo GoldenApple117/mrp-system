@@ -340,122 +340,58 @@ def where_used(item_id: int, db: Session = Depends(get_db)):
 @router.post("/import/excel")
 async def import_bom_from_excel(
     file: UploadFile = File(...),
+    product_code: str = Query("", description="产品编码，留空自动生成"),
+    product_name: str = Query("", description="产品名称，留空用文件名"),
     db: Session = Depends(get_db),
 ):
-    """从Excel导入BOM（自动创建物料）"""
+    """
+    从 Excel 文件导入产品 BOM。
+    
+    支持两种格式：
+    1. 多 Sheet 格式：每个 Sheet = 一个模块，自动构建三层结构
+    2. 单 Sheet 格式：扁平 BOM，自动检测表头
+    
+    支持的列名：编码/物料编码/编号/型号, 名称/品名/物料名称/名称规格, 
+               规格/型号, 数量/单台数量/用量
+    """
     if not file.filename.endswith(('.xlsx', '.xls')):
-        raise HTTPException(status_code=400, detail="仅支持 .xlsx / .xls 文件")
+        raise HTTPException(400, "仅支持 .xlsx / .xls 文件")
 
-    file_path = os.path.join(UPLOAD_DIR, f"bom_import_{date.today().isoformat()}.xlsx")
-    with open(file_path, "wb") as f:
-        content = await file.read()
-        f.write(content)
+    import openpyxl
+    wb = openpyxl.load_workbook(file.file, data_only=True)
 
-    importer = ExcelImporter(file_path)
+    if not product_name:
+        product_name = file.filename.rstrip('.xlsx').rstrip('.xls')
+    if not product_code:
+        product_code = f"PRD-{datetime.now().strftime('%Y%m%d%H%M%S')}"
 
-    # Step 1: 先导入物料主数据（自动创建不存在的物料）
-    materials, mat_errors = importer.import_materials()
-    mat_created = 0
-    for mat_data in materials:
-        existing = db.query(MaterialMaster).filter(
-            MaterialMaster.material_code == mat_data["material_code"]
-        ).first()
-        if not existing:
-            mat = MaterialMaster(
-                material_code=mat_data["material_code"],
-                material_name=mat_data["material_name"],
-                specification=mat_data.get("specification", ""),
-                unit=mat_data.get("unit", "个"),
-                material_type=mat_data.get("material_type", "原材料"),
-                lead_time=mat_data.get("lead_time", 0),
-                safety_stock=mat_data.get("safety_stock", 0),
-                lot_size_rule=mat_data.get("lot_size_rule", "LFL"),
-                lot_size_qty=mat_data.get("lot_size_qty", 1),
-                min_order_qty=mat_data.get("min_order_qty", 0),
-                max_order_qty=mat_data.get("max_order_qty", 0),
-                scrap_rate=mat_data.get("scrap_rate", 0),
-                is_purchased=mat_data.get("is_purchased", True),
-            )
-            db.add(mat)
-            mat_created += 1
-    if mat_created:
-        db.commit()
+    sheets = []
+    for ws in wb.worksheets:
+        sheet_name = ws.title
+        rows = []
+        for row in ws.iter_rows(values_only=True):
+            row_list = [str(c).strip() if c is not None else "" for c in row]
+            if any(v for v in row_list):
+                rows.append(row_list)
+        if len(rows) >= 2:
+            header_idx = 0
+            for idx, r in enumerate(rows):
+                row_text = "|".join(r).lower()
+                if any(kw in row_text for kw in ["物料编码", "物料名称", "名称规格", "单台数量"]) \
+                   or (("序号" in row_text or "编码" in row_text or "型号" in row_text)
+                       and ("名称" in row_text or "数量" in row_text)):
+                    header_idx = idx
+                    break
+            if header_idx > 0:
+                rows = rows[header_idx:]
+            sheets.append({"name": sheet_name, "rows": rows})
 
-    # Step 2: 读取BOM行
-    bom_lines, errors = importer.import_bom()
+    wb.close()
 
-    if errors:
-        return {"success": False, "message": "导入验证失败", "errors": errors}
+    if not sheets:
+        raise HTTPException(400, "Excel 中未找到有效数据")
 
-    if not bom_lines:
-        return {"success": False, "message": "未读取到BOM数据", "errors": ["请检查Excel中的BOM工作表"]}
-
-    # 获取所有涉及的物料编码，按成品分组
-    all_parents = set(line["parent_code"] for line in bom_lines if line["parent_code"])
-    all_children = set(line["child_code"] for line in bom_lines)
-
-    # 顶层物料 = 出现在父物料中但不出现为子物料的
-    top_level = all_parents - all_children
-
-    imported_count = 0
-    for top_code in top_level:
-        # 查找成品物料
-        product = db.query(MaterialMaster).filter(
-            MaterialMaster.material_code == top_code
-        ).first()
-        if not product:
-            continue
-
-        # 跳过已存在的BOM（防止重复导入报错）
-        if db.query(BomHeader).filter(BomHeader.bom_code == f"BOM-{top_code}").first():
-            continue
-
-        # 创建BOM头
-        header = BomHeader(
-            bom_code=f"BOM-{top_code}",
-            product_id=product.id,
-            version="A",
-            status="草稿",
-        )
-        db.add(header)
-        db.flush()
-
-        # 递归添加BOM行
-        def add_lines(parent_code, parent_item_id=None, level=0):
-            count = 0
-            for bl in bom_lines:
-                if bl["parent_code"] == parent_code:
-                    child_mat = db.query(MaterialMaster).filter(
-                        MaterialMaster.material_code == bl["child_code"]
-                    ).first()
-                    if child_mat:
-                        line = BomLine(
-                            bom_header_id=header.id,
-                            parent_item_id=parent_item_id,
-                            item_id=child_mat.id,
-                            quantity=bl["quantity_per"],
-                            position=bl["position"],
-                            is_substitute=bl.get("is_substitute", False),
-                            scrap_rate=bl.get("scrap_rate", 0),
-                            level=level,
-                            sort_order=count + 1,
-                            remark=bl.get("remark", ""),
-                        )
-                        db.add(line)
-                        db.flush()
-                        count += 1
-                        # 递归子物料
-                        add_lines(bl["child_code"], child_mat.id, level + 1)
-            return count
-
-        add_lines(top_code, product.id, 0)
-        imported_count += 1
-
-    db.commit()
-    msg = f"成功导入 {imported_count} 个BOM，新建物料 {mat_created} 个"
-    if mat_errors:
-        msg += f"，物料错误 {len(mat_errors)} 条"
-    return {"success": True, "message": msg, "imported_count": imported_count, "mat_created": mat_created}
+    return _do_import_workbook(product_code, product_name, sheets, db)
 
 
 @router.get("/template")
@@ -972,87 +908,19 @@ _IMPORTED_FROM_KDOCS_HEADERS = {
 @router.post("/import/kdocs-workbook")
 def import_bom_from_kdocs_workbook(data: dict, db: Session = Depends(get_db)):
     """
-    一键导入金山文档 Workbook——文档=产品, Sheet=模块, 行=零件
-    
-    自动构建产品→模块→零件的三层BOM结构。
-    
-    请求体:
-    {
-        "url": "https://www.kdocs.cn/l/xxx",
-        "product_code": "[可选] 产品编码，留空自动生成",
-        "product_name": "[可选] 产品名称，留空用文档名",
-        "sheets": "[可选] 直接传入解析后的sheet数据 {name, rows[{col:val}]}",
-        "overwrite": false  // [可选] 是否覆盖已有BOM
-    }
+    从金山文档链接导入 BOM（文档=产品, Sheet=模块, 行=零件）
+    已合并到 /import/excel — 推荐直接上传 Excel 文件
     """
-    url = data.get("url", "")
-    product_code = data.get("product_code", "")
-    product_name = data.get("product_name", "")
-    sheets_input = data.get("sheets", None)
-    overwrite = data.get("overwrite", False)
+    return {
+        "success": False,
+        "message": "该接口已合并到 /import/excel，请直接上传 Excel 文件，或在金山文档中导出为 .xlsx 后上传",
+    }
+
+
+def _do_import_workbook(product_code: str, product_name: str, sheets: list, db) -> dict:
+    """Workbook 导入核心逻辑 — 产品→模块→零件三层 BOM 结构"""
     stats = {"materials_created": 0, "materials_found": 0,
              "modules_created": 0, "bom_lines_created": 0, "errors": []}
-
-    # 阶段1: 获取工作表数据
-    sheet_data = []
-    if sheets_input:
-        # 直接使用传入的数据
-        sheet_data = sheets_input
-    elif url:
-        # 尝试通过金山API读取文档
-        try:
-            import requests
-            import re
-            # 解析链接
-            m = re.search(r'kdocs\.cn/l/([a-zA-Z0-9_-]+)', url)
-            if not m:
-                return {"success": False, "message": "无法解析金山文档链接"}
-            file_id = m.group(1)
-
-            # 读取文档元信息
-            meta_url = f"https://www.kdocs.cn/api/v3/share/file/{file_id}"
-            resp = requests.get(meta_url, timeout=15, headers={
-                "User-Agent": "MRP-System-BOM-Importer/1.0"
-            })
-            if resp.status_code != 200:
-                return {"success": False, "message": f"无法读取金山文档 (HTTP {resp.status_code})",
-                        "hint": "请确认链接可公开访问，或使用 sheets 参数直接提供数据"}
-            meta = resp.json()
-            doc_name = meta.get("data", {}).get("name", "") or meta.get("name", "")
-            if not product_name and doc_name:
-                product_name = doc_name.rstrip(".xlsx").rstrip(".xls").rstrip(".et")
-
-            # 尝试读取内容（不同文档类型格式不同）
-            try:
-                content_url = f"https://www.kdocs.cn/api/v3/share/file/{file_id}/content"
-                content_resp = requests.get(content_url, timeout=30, headers={
-                    "User-Agent": "MRP-System-BOM-Importer/1.0"
-                })
-                if content_resp.status_code == 200:
-                    raw = content_resp.json()
-                    # 尝试解析 json/xml 格式
-                    sheet_data = _extract_sheets_from_kdocs(raw)
-            except Exception:
-                pass
-        except Exception as e:
-            stats["errors"].append(f"读取文档失败: {e}")
-    else:
-        return {"success": False, "message": "请提供 url 或 sheets 参数"}
-
-    if not sheet_data:
-        # 兜底：如果没有成功读取，给明确的错误引导
-        return {
-            "success": False,
-            "message": "未能读取工作表数据，请通过系统上传金山文档的导出Excel文件",
-            "hint": "在金山文档中: 文件 → 导出为 → Excel(.xlsx)，然后使用 BOM 管理的 Excel 导入功能",
-            "stats": stats,
-        }
-
-    # 阶段2: 确定产品物料
-    if not product_name:
-        product_name = "新产品"
-    if not product_code:
-        product_code = f"PRD-{datetime.now().strftime('%Y%m%d%H%M%S')}"
 
     # 查找或创建产品物料
     product = db.query(MaterialMaster).filter(
@@ -1062,109 +930,78 @@ def import_bom_from_kdocs_workbook(data: dict, db: Session = Depends(get_db)):
         product = MaterialMaster(
             material_code=product_code,
             material_name=product_name,
-            material_type="成品",
-            level_type="产品",
-            unit="台",
-            is_purchased=False,
-            is_active=True,
+            material_type="成品", level_type="产品", unit="台",
+            is_purchased=False, is_active=True,
         )
-        db.add(product)
-        db.flush()
+        db.add(product); db.flush()
         stats["materials_created"] += 1
     else:
         stats["materials_found"] += 1
 
-    # 阶段3: 处理每个Sheet(模块)
-    module_items = []
-    for sheet_idx, sheet in enumerate(sheet_data):
+    # 处理每个 Sheet = 模块
+    for sheet_idx, sheet in enumerate(sheets):
         sheet_name = sheet.get("name", "").strip()
         rows = sheet.get("rows", [])
-
-        # 跳过空表或太短的表
         if len(rows) < 2:
             continue
 
-        # 提取列名(第一行)
         header_row = rows[0]
         col_map = _map_kdocs_columns(header_row)
         has_code = any(v == "material_code" for v in col_map.values())
         has_name = any(v == "material_name" for v in col_map.values())
         if not has_name and not has_code:
-            continue  # 无法识别的表
+            continue
 
-        # 模块名: 用sheet名, 如果为空或默认名则用"模块N"
         if not sheet_name or sheet_name.startswith("Sheet"):
             sheet_name = f"模块{sheet_idx + 1}"
         module_code = f"{product_code}-MOD-{sheet_idx + 1:02d}"
 
-        # 查找或创建模块物料
         module = db.query(MaterialMaster).filter(
             MaterialMaster.material_code == module_code
         ).first()
         if not module:
             module = MaterialMaster(
-                material_code=module_code,
-                material_name=sheet_name,
-                material_type="半成品",
-                level_type="模块",
-                unit="套",
-                is_purchased=False,
-                is_active=True,
+                material_code=module_code, material_name=sheet_name,
+                material_type="半成品", level_type="模块", unit="套",
+                is_purchased=False, is_active=True,
             )
-            db.add(module)
-            db.flush()
+            db.add(module); db.flush()
             stats["modules_created"] += 1
 
-        # 阶段4: 创建模块→产品的BOM头(产品→模块)
+        # 产品→模块 BOM
         product_bom = db.query(BomHeader).filter(
             BomHeader.product_id == product.id,
             BomHeader.bom_code == f"BOM-{product_code}",
         ).first()
         if not product_bom:
             product_bom = BomHeader(
-                bom_code=f"BOM-{product_code}",
-                product_id=product.id,
-                version="A",
-                status="发布",
-                effective_date=date.today(),
+                bom_code=f"BOM-{product_code}", product_id=product.id,
+                version="A", status="发布", effective_date=date.today(),
             )
-            db.add(product_bom)
-            db.flush()
+            db.add(product_bom); db.flush()
 
-        # 添加产品→模块的BOM行
-        existing_pm = db.query(BomLine).filter(
+        if not db.query(BomLine).filter(
             BomLine.bom_header_id == product_bom.id,
             BomLine.item_id == module.id,
-        ).first()
-        if not existing_pm:
-            bl = BomLine(
-                bom_header_id=product_bom.id,
-                parent_item_id=product.id,
-                item_id=module.id,
-                quantity=1,
-                level=1,
-                sort_order=sheet_idx + 1,
-            )
-            db.add(bl)
+        ).first():
+            db.add(BomLine(
+                bom_header_id=product_bom.id, parent_item_id=product.id,
+                item_id=module.id, quantity=1, level=1, sort_order=sheet_idx + 1,
+            ))
             stats["bom_lines_created"] += 1
 
-        # 阶段5: 创建模块→零件的BOM
-        module_bom_code = f"BOM-{module_code}"
+        # 模块→零件 BOM
         module_bom = db.query(BomHeader).filter(
-            BomHeader.bom_code == module_bom_code,
+            BomHeader.bom_code == f"BOM-{module_code}",
         ).first()
         if not module_bom:
             module_bom = BomHeader(
-                bom_code=module_bom_code,
-                product_id=module.id,
-                version="A",
-                status="发布",
-                effective_date=date.today(),
+                bom_code=f"BOM-{module_code}", product_id=module.id,
+                version="A", status="发布", effective_date=date.today(),
             )
-            db.add(module_bom)
-            db.flush()
+            db.add(module_bom); db.flush()
 
-        # 阶段6: 逐行解析零件
+        # 逐行解析零件
         for row_idx in range(1, len(rows)):
             row = rows[row_idx]
             if isinstance(row, dict):
@@ -1175,7 +1012,6 @@ def import_bom_from_kdocs_workbook(data: dict, db: Session = Depends(get_db)):
             else:
                 continue
 
-            # 提取关键字段
             code = _get_kdocs_val(row_data, col_map, "material_code")
             name = _get_kdocs_val(row_data, col_map, "material_name")
             qty = _safe_float_kdocs(_get_kdocs_val(row_data, col_map, "quantity"), 1)
@@ -1184,13 +1020,10 @@ def import_bom_from_kdocs_workbook(data: dict, db: Session = Depends(get_db)):
             remark = _get_kdocs_val(row_data, col_map, "remark")
 
             if not name and not code:
-                continue  # 空行跳过
-
-            # 确定物料编码
+                continue
             if not code:
                 code = f"{module_code}-{row_idx:04d}"
 
-            # 查找或创建零件物料
             part = db.query(MaterialMaster).filter(
                 MaterialMaster.material_code == code
             ).first()
@@ -1198,39 +1031,25 @@ def import_bom_from_kdocs_workbook(data: dict, db: Session = Depends(get_db)):
                 part = MaterialMaster(
                     material_code=code,
                     material_name=name or f"零件{row_idx}",
-                    specification=spec or "",
-                    unit=unit,
-                    material_type="原材料",
-                    level_type="零件",
-                    is_purchased=True,
-                    is_active=True,
+                    specification=spec or "", unit=unit,
+                    material_type="原材料", level_type="零件",
+                    is_purchased=True, is_active=True,
                 )
-                db.add(part)
-                db.flush()
+                db.add(part); db.flush()
                 stats["materials_created"] += 1
             else:
                 stats["materials_found"] += 1
 
-            # 添加模块→零件的BOM行
-            existing_ml = db.query(BomLine).filter(
+            if not db.query(BomLine).filter(
                 BomLine.bom_header_id == module_bom.id,
                 BomLine.item_id == part.id,
-            ).first()
-            if not existing_ml or overwrite:
-                if existing_ml and overwrite:
-                    existing_ml.quantity = qty
-                else:
-                    bl = BomLine(
-                        bom_header_id=module_bom.id,
-                        parent_item_id=module.id,
-                        item_id=part.id,
-                        quantity=qty,
-                        level=2,
-                        sort_order=row_idx,
-                        remark=remark or "",
-                    )
-                    db.add(bl)
-                    stats["bom_lines_created"] += 1
+            ).first():
+                db.add(BomLine(
+                    bom_header_id=module_bom.id, parent_item_id=module.id,
+                    item_id=part.id, quantity=qty, level=2,
+                    sort_order=row_idx, remark=remark or "",
+                ))
+                stats["bom_lines_created"] += 1
 
     db.commit()
     return {
@@ -1344,63 +1163,8 @@ async def import_bom_from_workbook_excel(
     product_name: str = Query("", description="产品名称，留空用文件名"),
     db: Session = Depends(get_db),
 ):
-    """
-    从 Excel 文件导入多 Sheet BOM 产品。
-
-    Excel 中每个 Sheet = 一个模块，Sheet 内的行 = 零件。
-    一行 API 调用即可将整个 Excel Workbook 转为三层 BOM 结构。
-
-    支持的列名: 编码/物料编码/编号, 名称/品名/物料名称, 规格/型号, 数量/用量
-    """
-    if not file.filename.endswith(('.xlsx', '.xls')):
-        raise HTTPException(400, "仅支持 .xlsx / .xls 文件")
-
-    import openpyxl
-    wb = openpyxl.load_workbook(file.file, data_only=True)
-
-    if not product_name:
-        product_name = file.filename.rstrip('.xlsx').rstrip('.xls')
-    if not product_code:
-        product_code = f"PRD-{datetime.now().strftime('%Y%m%d%H%M%S')}"
-
-    sheets = []
-    for ws in wb.worksheets:
-        sheet_name = ws.title
-        rows = []
-        for row in ws.iter_rows(values_only=True):
-            row_list = [str(c).strip() if c is not None else "" for c in row]
-            # 跳过全空行
-            if any(v for v in row_list):
-                rows.append(row_list)
-        if len(rows) >= 2:  # 至少表头 + 一行数据
-            # 跳过前导标题行，找到真正的表头行
-            header_idx = 0
-            for idx, r in enumerate(rows):
-                row_text = "|".join(r).lower()
-                # 常见的表头关键字: 编码, 名称, 序号+型号, 物料编码, 数量, 序号+名称
-                if any(kw in row_text for kw in ["物料编码", "物料名称", "名称规格", "单台数量"]) \
-                   or (("序号" in row_text or "编码" in row_text or "型号" in row_text)
-                       and ("名称" in row_text or "数量" in row_text)):
-                    header_idx = idx
-                    break
-            # 交换表头行到第一行
-            if header_idx > 0:
-                rows = rows[header_idx:]
-            sheets.append({"name": sheet_name, "rows": rows})
-
-    wb.close()
-
-    if not sheets:
-        raise HTTPException(400, "Excel 中未找到有效数据")
-
-    # 复用 kdocs-workbook 的导入逻辑
-    result = import_bom_from_kdocs_workbook({
-        "product_code": product_code,
-        "product_name": product_name,
-        "sheets": sheets,
-    }, db)
-
-    return result
+    """已合并到 /import/excel — 重定向"""
+    return await import_bom_from_excel(file, product_code, product_name, db)
     """将kdc格式的行数据转为行列列表"""
     result = []
 
