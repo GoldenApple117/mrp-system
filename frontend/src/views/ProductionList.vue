@@ -32,12 +32,13 @@
         </template>
       </el-table-column>
       <el-table-column prop="work_center_name" label="工作中心" width="100" show-overflow-tooltip />
-      <el-table-column label="操作" width="400">
+      <el-table-column label="操作" width="440">
         <template #default="{row}">
           <el-button v-if="row.status==='已下达'" link type="primary" size="small" @click="startOrder(row)">开工</el-button>
           <el-button v-if="['已下达','进行中'].includes(row.status)" link type="success" size="small" @click="openMaterials(row)">物料</el-button>
+          <el-button v-if="['已下达','进行中'].includes(row.status) && row.routing_id" link type="primary" size="small" @click="openOperations(row)">工序</el-button>
           <el-button v-if="row.status==='进行中'" link type="warning" size="small" @click="openReport(row)">报工</el-button>
-          <el-button v-if="row.status==='进行中'" link type="primary" size="small" @click="openReportHistory(row)">记录</el-button>
+          <el-button v-if="row.status==='进行中'" link type="info" size="small" @click="openReportHistory(row)">记录</el-button>
           <el-button v-if="row.status==='进行中'" link type="success" size="small" @click="checkReadiness(row)">完工</el-button>
           <el-button v-if="!['待下达'].includes(row.status)" link type="info" size="small" @click="showCost(row)">成本</el-button>
           <el-button v-if="row.status==='待下达'" link type="danger" size="small" @click="deleteItem(row)">删除</el-button>
@@ -230,6 +231,72 @@
       <template #footer>
         <el-button @click="returnVisible=false">取消</el-button>
         <el-button type="warning" @click="confirmReturn" :loading="matSaving" :disabled="!returnForm.return_qty">确认退料</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 工序执行弹窗 -->
+    <el-dialog v-model="opVisible" :title="`工序执行 - ${opWoNumber}`" width="800px">
+      <div v-if="opLoading" style="text-align:center;padding:30px">加载中...</div>
+      <div v-else-if="!ops.length" style="text-align:center;padding:30px;color:#999">
+        暂无工序计划，请先关联工艺路线后「开工」展开工序
+      </div>
+      <div v-else style="display:flex;flex-direction:column;gap:12px">
+        <div v-for="op in ops" :key="op.id" :class="['op-card', `op-${op.status}`]">
+          <div style="display:flex;align-items:center;gap:12px">
+            <div :class="['op-seq', `op-seq-${op.status}`]">{{ op.seq_no }}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:600;font-size:15px">{{ op.operation_name }}</div>
+              <div style="font-size:12px;color:#999;margin-top:4px">
+                <span v-if="op.work_center_name" style="margin-right:12px">📍 {{ op.work_center_name }}</span>
+                <span v-if="op.actual_start">{{ formatTime(op.actual_start) }}</span>
+                <span v-if="op.actual_end"> → {{ formatTime(op.actual_end) }}</span>
+              </div>
+              <div v-if="op.completed_qty > 0 || op.rejected_qty > 0 || op.labor_hours > 0" style="display:flex;gap:16px;margin-top:6px;font-size:13px">
+                <span>良品: <b>{{ op.completed_qty }}</b></span>
+                <span v-if="op.rejected_qty > 0" style="color:#f56c6c">不合格: <b>{{ op.rejected_qty }}</b></span>
+                <span>工时: <b>{{ op.labor_hours }}h</b></span>
+                <span v-if="op.setup_hours > 0">换线: <b>{{ op.setup_hours }}h</b></span>
+              </div>
+            </div>
+            <el-tag :type="opStatusTag(op.status)" size="small" effect="dark" style="min-width:56px;text-align:center">{{ op.status }}</el-tag>
+            <div style="display:flex;gap:4px;flex-shrink:0">
+              <el-button v-if="op.status==='可开工' || op.status==='待开工'" size="small" type="primary"
+                @click="startOperation(op)" :loading="opSaving===op.id">开工</el-button>
+              <el-button v-if="op.status==='进行中'" size="small" type="warning"
+                @click="openOpReport(op)">报工</el-button>
+              <el-button v-if="op.status==='进行中'" size="small" type="success"
+                @click="completeOperation(op)" :loading="opSaving===op.id">完成</el-button>
+              <el-button v-if="op.status==='待开工' || op.status==='可开工'" size="small" type="info"
+                @click="skipOperation(op)">跳过</el-button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </el-dialog>
+
+    <!-- 工序报工弹窗 -->
+    <el-dialog v-model="opReportVisible" :title="`工序报工 - ${opReportForm.op_name}`" width="420px">
+      <el-form label-width="100px">
+        <el-form-item label="工序">{{ opReportForm.op_name }}</el-form-item>
+        <el-form-item label="本次完成">
+          <el-input-number v-model="opReportForm.completed_qty" :min="0" style="width:100%" />
+        </el-form-item>
+        <el-form-item label="不合格数">
+          <el-input-number v-model="opReportForm.rejected_qty" :min="0" style="width:100%" />
+        </el-form-item>
+        <el-form-item label="工时(h)">
+          <el-input-number v-model="opReportForm.labor_hours" :min="0" :step="0.5" :precision="1" style="width:100%" />
+        </el-form-item>
+        <el-form-item label="换线工时(h)">
+          <el-input-number v-model="opReportForm.setup_hours" :min="0" :step="0.5" :precision="1" style="width:100%" />
+        </el-form-item>
+        <el-form-item label="操作人">
+          <el-input v-model="opReportForm.operator" placeholder="可选" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="opReportVisible=false">取消</el-button>
+        <el-button type="primary" @click="submitOpReport" :loading="opSaving">提交报工</el-button>
       </template>
     </el-dialog>
 
@@ -550,12 +617,114 @@ async function showCost(row) {
   } finally { costLoading.value = false }
 }
 
+// ====== 工序执行 ======
+const opVisible = ref(false)
+const opWoNumber = ref('')
+const opWoId = ref(null)
+const ops = ref([])
+const opLoading = ref(false)
+const opSaving = ref(null)
+
+function formatTime(t) { return t ? t.slice(0, 19).replace('T', ' ') : '' }
+
+function opStatusTag(s) {
+  const map = { '待开工': 'info', '可开工': 'primary', '进行中': 'warning', '待检验': '', '已完成': 'success', '跳过': 'danger' }
+  return map[s] || ''
+}
+
+async function openOperations(row) {
+  opWoId.value = row.id
+  opWoNumber.value = row.wo_number
+  opVisible.value = true
+  opLoading.value = true
+  try {
+    const res = await api.get(`/production/orders/${row.id}/operations`)
+    ops.value = res.items || []
+  } finally { opLoading.value = false }
+}
+
+async function startOperation(op) {
+  opSaving.value = op.id
+  try {
+    const res = await api.post(`/production/orders/${opWoId.value}/operations/${op.id}/start`)
+    ElMessage.success(res.message)
+    const refresh = await api.get(`/production/orders/${opWoId.value}/operations`)
+    ops.value = refresh.items || []
+  } catch (e) { ElMessage.error(e.message || '开工失败') } finally { opSaving.value = null }
+}
+
+// 工序报工
+const opReportVisible = ref(false)
+const opReportForm = reactive({
+  op_id: null, op_name: '', completed_qty: 0, rejected_qty: 0,
+  labor_hours: 0, setup_hours: 0, operator: '',
+})
+
+function openOpReport(op) {
+  Object.assign(opReportForm, {
+    op_id: op.id, op_name: op.operation_name,
+    completed_qty: 0, rejected_qty: 0, labor_hours: 0, setup_hours: 0, operator: '',
+  })
+  opReportVisible.value = true
+}
+
+async function submitOpReport() {
+  const { completed_qty, rejected_qty, labor_hours, setup_hours, operator } = opReportForm
+  if (!completed_qty && !rejected_qty && !labor_hours && !setup_hours) return ElMessage.warning('请至少填报一项')
+  opSaving.value = opReportForm.op_id
+  try {
+    const res = await api.post(`/production/orders/${opWoId.value}/operations/${opReportForm.op_id}/report`, {
+      completed_qty, rejected_qty, labor_hours, setup_hours, operator,
+    })
+    ElMessage.success(res.message)
+    opReportVisible.value = false
+    const refresh = await api.get(`/production/orders/${opWoId.value}/operations`)
+    ops.value = refresh.items || []
+  } catch (e) { ElMessage.error(e.message || '报工失败') } finally { opSaving.value = null }
+}
+
+async function completeOperation(op) {
+  await ElMessageBox.confirm(`确认完成工序「${op.operation_name}」？`, '完成工序', { type: 'info' })
+  opSaving.value = op.id
+  try {
+    const res = await api.post(`/production/orders/${opWoId.value}/operations/${op.id}/complete`)
+    ElMessage.success(res.message)
+    const refresh = await api.get(`/production/orders/${opWoId.value}/operations`)
+    ops.value = refresh.items || []
+    fetchData()
+  } catch (e) { ElMessage.error(e.message || '操作失败') } finally { opSaving.value = null }
+}
+
+async function skipOperation(op) {
+  await ElMessageBox.confirm(`确认跳过工序「${op.operation_name}」？`, '跳过工序', { type: 'warning' })
+  opSaving.value = op.id
+  try {
+    const res = await api.post(`/production/orders/${opWoId.value}/operations/${op.id}/skip`)
+    ElMessage.success(res.message)
+    const refresh = await api.get(`/production/orders/${opWoId.value}/operations`)
+    ops.value = refresh.items || []
+  } catch (e) { ElMessage.error(e.message || '操作失败') } finally { opSaving.value = null }
+}
+
 onMounted(fetchData)
 </script>
 
 <style scoped>
 .page-container { padding: 0; }
 .page-toolbar { display:flex; gap:12px; margin-bottom:16px; align-items:center; }
-/* 允许表格在列宽总和小于容器时自然滚动，避免固定列与相邻列重叠 */
-:deep(.el-table__body-wrapper) { overflow-x: auto; }
+/* 工序执行卡片 */
+.op-card { padding: 14px 18px; border-radius: 10px; border: 1px solid #ebeef5; transition: all 0.2s; }
+.op-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+.op-待开工 { border-left: 4px solid #909399; background:#fafafa; }
+.op-可开工 { border-left: 4px solid #409eff; background:#ecf5ff; }
+.op-进行中 { border-left: 4px solid #e6a23c; background:#fdf6ec; }
+.op-已完成 { border-left: 4px solid #67c23a; background:#f0f9eb; }
+.op-跳过 { border-left: 4px solid #c0c4cc; background:#f5f7fa; opacity:0.7; }
+.op-seq { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; flex-shrink:0; }
+.op-seq-待开工 { background:#e4e7ed; color:#909399; }
+.op-seq-可开工 { background:#409eff; color:#fff; }
+.op-seq-进行中 { background:#e6a23c; color:#fff; }
+.op-seq-已完成 { background:#67c23a; color:#fff; }
+.op-seq-跳过 { background:#c0c4cc; color:#fff; }
+
 </style>

@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from typing import Optional
 
 from app.core.database import get_db
-from app.models.order import WorkOrder, WorkOrderMaterial, WorkOrderReport
+from app.models.order import WorkOrder, WorkOrderMaterial, WorkOrderReport, WorkOrderOperation
 from app.models.routing import WorkCenter, RoutingHeader, RoutingOperation
 from app.models.material import MaterialMaster
 from app.models.inventory import InventoryRecord, InventoryTransaction, Warehouse
@@ -219,11 +219,38 @@ def start_work_order(order_id: int, db: Session = Depends(get_db)):
     # 更新在制量
     _update_on_production_qty(db, wo.item_id, wo.plan_qty)
 
+    # 如果有工艺路线，自动生成工序执行计划
+    operation_count = 0
+    if wo.routing_id:
+        routing = db.query(RoutingHeader).filter(RoutingHeader.id == wo.routing_id).first()
+        if routing:
+            operations = db.query(RoutingOperation).filter(
+                RoutingOperation.routing_header_id == routing.id
+            ).order_by(RoutingOperation.seq_no).all()
+            for op in operations:
+                existing = db.query(WorkOrderOperation).filter(
+                    WorkOrderOperation.work_order_id == wo.id,
+                    WorkOrderOperation.seq_no == op.seq_no,
+                ).first()
+                if not existing:
+                    wo_op = WorkOrderOperation(
+                        work_order_id=wo.id,
+                        routing_operation_id=op.id,
+                        seq_no=op.seq_no,
+                        operation_name=op.operation_name,
+                        work_center_id=op.work_center_id,
+                        status="待开工",
+                        plan_start=wo.start_date,
+                        plan_end=wo.end_date,
+                    )
+                    db.add(wo_op)
+                    operation_count += 1
+
     db.commit()
     issued_count = len(wo.materials) if hasattr(wo, 'materials') else 0
     return {
         "success": True,
-        "message": f"工单已开工，{issued_count}种物料已发料",
+        "message": f"工单已开工，{issued_count}种物料已发料" + (f"，{operation_count}道工序已展开" if operation_count else ""),
         "actual_start": now.isoformat(),
     }
 
@@ -613,6 +640,276 @@ def return_material_from_work_order(order_id: int, data: dict, db: Session = Dep
             "required_qty": wom.required_qty,
             "on_hand_after": inv.on_hand_qty,
         },
+    }
+
+
+# ====== 工序级执行 ======
+
+@router.post("/orders/{order_id}/operations/init")
+def init_work_order_operations(order_id: int, db: Session = Depends(get_db)):
+    """根据工单的工艺路线手动初始化工序执行计划"""
+    wo = db.query(WorkOrder).filter(WorkOrder.id == order_id).first()
+    if not wo:
+        raise HTTPException(status_code=404, detail="工单不存在")
+    if not wo.routing_id:
+        return {"success": False, "message": "该工单未关联工艺路线，无法展开工序"}
+
+    routing = db.query(RoutingHeader).filter(RoutingHeader.id == wo.routing_id).first()
+    if not routing:
+        return {"success": False, "message": "关联工艺路线已不存在"}
+
+    # 删除已有工序计划（重新生成）
+    db.query(WorkOrderOperation).filter(
+        WorkOrderOperation.work_order_id == wo.id
+    ).delete()
+
+    operations = db.query(RoutingOperation).filter(
+        RoutingOperation.routing_header_id == routing.id
+    ).order_by(RoutingOperation.seq_no).all()
+
+    count = 0
+    for op in operations:
+        wo_op = WorkOrderOperation(
+            work_order_id=wo.id,
+            routing_operation_id=op.id,
+            seq_no=op.seq_no,
+            operation_name=op.operation_name,
+            work_center_id=op.work_center_id,
+            status="待开工",
+            plan_start=wo.start_date,
+            plan_end=wo.end_date,
+        )
+        db.add(wo_op)
+        count += 1
+
+    # 首道工序自动置为可开工
+    if count > 0:
+        first_op = db.query(WorkOrderOperation).filter(
+            WorkOrderOperation.work_order_id == wo.id,
+            WorkOrderOperation.seq_no == 1,
+        ).first()
+        if first_op:
+            first_op.status = "可开工"
+
+    db.commit()
+    return {"success": True, "message": f"已生成 {count} 道工序", "count": count}
+
+
+@router.get("/orders/{order_id}/operations")
+def get_work_order_operations(order_id: int, db: Session = Depends(get_db)):
+    """查看工单工序列表"""
+    ops = db.query(WorkOrderOperation).filter(
+        WorkOrderOperation.work_order_id == order_id
+    ).order_by(WorkOrderOperation.seq_no).all()
+
+    return {
+        "items": [
+            {
+                "id": op.id,
+                "seq_no": op.seq_no,
+                "operation_name": op.operation_name,
+                "work_center_id": op.work_center_id,
+                "work_center_name": op.work_center.center_name if op.work_center else "",
+                "status": op.status,
+                "plan_start": op.plan_start.isoformat() if op.plan_start else None,
+                "plan_end": op.plan_end.isoformat() if op.plan_end else None,
+                "actual_start": op.actual_start.isoformat() if op.actual_start else None,
+                "actual_end": op.actual_end.isoformat() if op.actual_end else None,
+                "completed_qty": op.completed_qty or 0,
+                "rejected_qty": op.rejected_qty or 0,
+                "labor_hours": op.labor_hours or 0,
+                "setup_hours": op.setup_hours or 0,
+                "operator": op.operator or "",
+                "remark": op.remark or "",
+            }
+            for op in ops
+        ],
+        "total": len(ops),
+    }
+
+
+@router.post("/orders/{order_id}/operations/{op_id}/start")
+def start_work_order_operation(order_id: int, op_id: int, db: Session = Depends(get_db)):
+    """开始某道工序"""
+    op = db.query(WorkOrderOperation).filter(
+        WorkOrderOperation.id == op_id,
+        WorkOrderOperation.work_order_id == order_id,
+    ).first()
+    if not op:
+        raise HTTPException(status_code=404, detail="工序不存在")
+
+    if op.status == "进行中":
+        return {"success": False, "message": "工序正在进行中，不可重复启动"}
+    if op.status == "已完成":
+        return {"success": False, "message": "工序已完成，无法启动"}
+    if op.status == "跳过":
+        return {"success": False, "message": "工序已跳过，无法启动"}
+
+    # 检查上游工序是否完成
+    if op.seq_no > 1:
+        prev_op = db.query(WorkOrderOperation).filter(
+            WorkOrderOperation.work_order_id == order_id,
+            WorkOrderOperation.seq_no == op.seq_no - 1,
+        ).first()
+        if prev_op and prev_op.status not in ("已完成", "跳过"):
+            return {
+                "success": False,
+                "message": f"上游工序「{prev_op.operation_name}」尚未完成（状态：{prev_op.status}）",
+            }
+
+    # 如果工单还未进入"进行中"，自动改为"进行中"
+    wo = db.query(WorkOrder).filter(WorkOrder.id == order_id).first()
+    if wo and wo.status not in ("进行中",):
+        wo.status = "进行中"
+        wo.actual_start = wo.actual_start or datetime.now()
+
+    now = datetime.now()
+    op.status = "进行中"
+    op.actual_start = now
+    db.commit()
+
+    return {
+        "success": True,
+        "message": f"工序「{op.operation_name}」已开工",
+        "actual_start": now.isoformat(),
+    }
+
+
+@router.post("/orders/{order_id}/operations/{op_id}/report")
+def report_work_order_operation(order_id: int, op_id: int, data: dict, db: Session = Depends(get_db)):
+    """工序报工 — 报告本工序的完成数量、不合格数和工时"""
+    op = db.query(WorkOrderOperation).filter(
+        WorkOrderOperation.id == op_id,
+        WorkOrderOperation.work_order_id == order_id,
+    ).first()
+    if not op:
+        raise HTTPException(status_code=404, detail="工序不存在")
+    if op.status not in ("进行中",):
+        raise HTTPException(status_code=400, detail=f"当前状态({op.status})不能报工，需先开工")
+
+    completed = float(data.get("completed_qty", 0))
+    rejected = float(data.get("rejected_qty", 0))
+    labor = float(data.get("labor_hours", 0))
+    setup = float(data.get("setup_hours", 0))
+    operator = data.get("operator", "")
+
+    if completed <= 0 and rejected <= 0 and labor <= 0 and setup <= 0:
+        raise HTTPException(status_code=422, detail="请至少填报一项数据")
+
+    if completed > 0:
+        op.completed_qty = (op.completed_qty or 0) + completed
+    if rejected > 0:
+        op.rejected_qty = (op.rejected_qty or 0) + rejected
+    if labor > 0:
+        op.labor_hours = (op.labor_hours or 0) + labor
+    if setup > 0:
+        op.setup_hours = (op.setup_hours or 0) + setup
+
+    if operator:
+        op.operator = operator
+
+    # 同步累计到工单
+    wo = db.query(WorkOrder).filter(WorkOrder.id == order_id).first()
+    if wo:
+        # 重新汇总所有工序的数据到工单
+        all_ops = db.query(WorkOrderOperation).filter(
+            WorkOrderOperation.work_order_id == wo.id
+        ).all()
+        wo.completed_qty = sum(o.completed_qty or 0 for o in all_ops)
+        wo.rejected_qty = sum(o.rejected_qty or 0 for o in all_ops)
+        wo.labor_hours = sum(o.labor_hours or 0 for o in all_ops)
+
+    db.commit()
+    return {
+        "success": True,
+        "message": f"工序报工：良品+{completed}，不合格{rejected}，工时{labor}h",
+        "data": {
+            "op_id": op.id,
+            "op_name": op.operation_name,
+            "completed_qty": op.completed_qty,
+            "rejected_qty": op.rejected_qty or 0,
+            "labor_hours": op.labor_hours or 0,
+            "setup_hours": op.setup_hours or 0,
+        },
+    }
+
+
+@router.post("/orders/{order_id}/operations/{op_id}/complete")
+def complete_work_order_operation(order_id: int, op_id: int, db: Session = Depends(get_db)):
+    """完成某道工序 — 完成后自动将下一道工序置为可开工"""
+    op = db.query(WorkOrderOperation).filter(
+        WorkOrderOperation.id == op_id,
+        WorkOrderOperation.work_order_id == order_id,
+    ).first()
+    if not op:
+        raise HTTPException(status_code=404, detail="工序不存在")
+    if op.status == "已完成":
+        return {"success": False, "message": "工序已完成"}
+    if op.status != "进行中":
+        return {"success": False, "message": f"当前状态({op.status})不能完成"}
+
+    now = datetime.now()
+    op.status = "已完成"
+    op.actual_end = now
+
+    # 下一道工序自动变为"可开工"
+    next_op = db.query(WorkOrderOperation).filter(
+        WorkOrderOperation.work_order_id == order_id,
+        WorkOrderOperation.seq_no == op.seq_no + 1,
+    ).first()
+    next_name = ""
+    if next_op and next_op.status == "待开工":
+        next_op.status = "可开工"
+        next_name = next_op.operation_name
+
+    # 检查是否所有工序都完成了 → 自动完工检查
+    remaining = db.query(WorkOrderOperation).filter(
+        WorkOrderOperation.work_order_id == order_id,
+        WorkOrderOperation.status.in_(["待开工", "可开工", "进行中"]),
+    ).count()
+
+    db.commit()
+    msg = f"工序「{op.operation_name}」已完成"
+    if next_name:
+        msg += f"，下一道「{next_name}」可开工"
+    if remaining == 0:
+        msg += "，全部工序已完成"
+    return {
+        "success": True,
+        "message": msg,
+        "all_completed": remaining == 0,
+        "next_operation": next_name,
+    }
+
+
+@router.post("/orders/{order_id}/operations/{op_id}/skip")
+def skip_work_order_operation(order_id: int, op_id: int, data: dict = None, db: Session = Depends(get_db)):
+    """跳过某道工序（如不需要执行的工序）"""
+    op = db.query(WorkOrderOperation).filter(
+        WorkOrderOperation.id == op_id,
+        WorkOrderOperation.work_order_id == order_id,
+    ).first()
+    if not op:
+        raise HTTPException(status_code=404, detail="工序不存在")
+    if op.status in ("已完成", "跳过"):
+        return {"success": False, "message": f"工序已{op.status}"}
+
+    op.status = "跳过"
+    op.remark = (data or {}).get("reason", op.remark or "手动跳过")
+
+    # 跳过后，下一道工序可开工
+    next_op = db.query(WorkOrderOperation).filter(
+        WorkOrderOperation.work_order_id == order_id,
+        WorkOrderOperation.seq_no == op.seq_no + 1,
+    ).first()
+    if next_op and next_op.status == "待开工":
+        next_op.status = "可开工"
+
+    db.commit()
+    return {
+        "success": True,
+        "message": f"工序「{op.operation_name}」已跳过",
+        "next_operation": next_op.operation_name if next_op else None,
     }
 
 

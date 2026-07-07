@@ -2,7 +2,7 @@ from app.models.material import MaterialMaster
 from app.models.bom import BomHeader, BomLine, BomEcn
 from app.models.inventory import InventoryRecord, InventoryTransaction, Warehouse
 from app.models.mps import MpsEntry
-from app.models.order import PurchaseOrder, WorkOrder, WorkOrderMaterial, WorkOrderReport
+from app.models.order import PurchaseOrder, WorkOrder, WorkOrderMaterial, WorkOrderReport, WorkOrderOperation
 from app.models.routing import WorkCenter, RoutingHeader, RoutingOperation
 from app.models.supplier import Supplier
 from app.models.inspection import InspectionRecord, StockCount
@@ -17,7 +17,7 @@ __all__ = [
     "BomHeader", "BomLine", "BomEcn",
     "InventoryRecord", "InventoryTransaction", "Warehouse",
     "MpsEntry",
-    "PurchaseOrder", "WorkOrder",
+    "PurchaseOrder", "WorkOrder", "WorkOrderOperation",
     "WorkCenter", "RoutingHeader", "RoutingOperation",
     "Supplier",
     "InspectionRecord", "StockCount",

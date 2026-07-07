@@ -95,3 +95,32 @@ class WorkOrderMaterial(Base):
     created_at = Column(DateTime, default=datetime.now)
 
     item = relationship("MaterialMaster", lazy="selectin")
+
+
+class WorkOrderOperation(Base):
+    """工单工序执行记录 — 将工单按工艺路线展开为逐序执行"""
+    __tablename__ = "work_order_operation"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    work_order_id = Column(Integer, ForeignKey("work_order.id"), nullable=False, comment="工单ID")
+    routing_operation_id = Column(Integer, ForeignKey("routing_operation.id"), nullable=True, comment="关联工艺工序")
+    seq_no = Column(Integer, nullable=False, comment="工序序号")
+    operation_name = Column(String(100), nullable=False, comment="工序名称")
+    work_center_id = Column(Integer, ForeignKey("work_center.id"), nullable=True, comment="执行工作中心")
+    status = Column(String(20), default="待开工", comment="状态：待开工/进行中/待检验/已完成/跳过")
+    plan_start = Column(Date, nullable=True, comment="计划开始")
+    plan_end = Column(Date, nullable=True, comment="计划完成")
+    actual_start = Column(DateTime, nullable=True, comment="实际开始时间")
+    actual_end = Column(DateTime, nullable=True, comment="实际完成时间")
+    completed_qty = Column(Float, default=0, comment="本工序完成数量")
+    rejected_qty = Column(Float, default=0, comment="本工序不合格数量")
+    labor_hours = Column(Float, default=0, comment="本工序总工时")
+    setup_hours = Column(Float, default=0, comment="换线/准备工时")
+    operator = Column(String(50), default="", comment="操作人")
+    remark = Column(String(500), default="", comment="备注")
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+    work_order = relationship("WorkOrder", lazy="selectin")
+    routing_operation = relationship("RoutingOperation", lazy="selectin")
+    work_center = relationship("WorkCenter", lazy="selectin")

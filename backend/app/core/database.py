@@ -85,6 +85,9 @@ def init_db():
                 alembic_cfg = Config(alembic_cfg_path)
                 alembic_cmd.upgrade(alembic_cfg, "head")
                 logger.info("Alembic 迁移执行成功")
+                # create_all 补充 Alembic 未覆盖的新表/列（如 WorkOrderOperation）
+                Base.metadata.create_all(bind=engine)
+                logger.info("create_all 已执行（补充新表）")
         except Exception as e:
             logger.warning(f"Alembic 迁移失败（{e}），回退到 create_all")
             Base.metadata.create_all(bind=engine)
