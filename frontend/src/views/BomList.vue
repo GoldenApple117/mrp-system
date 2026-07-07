@@ -188,121 +188,62 @@
       </template>
     </el-dialog>
 
-    <!-- ====== 导入BOM引导弹窗 ====== -->
+    <!-- ====== 导入BOM弹窗 ====== -->
     <el-dialog v-model="importDialogVisible" title="导入BOM" width="640px" @close="resetImport">
-      <el-tabs v-model="importTab">
-        <!-- Tab 1: 上传Excel -->
-        <el-tab-pane label="上传Excel" name="excel">
-          <el-upload
-            ref="uploadRef"
-            :auto-upload="false"
-            :limit="1"
-            accept=".xlsx,.xls"
-            :on-change="onFileChange"
-            drag
-          >
-            <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
-            <div style="margin:8px 0">将Excel文件拖到此处，或<em>点击选择</em></div>
-            <template #tip>
-              <div style="color:#999;font-size:12px">支持 .xlsx / .xls 格式，表头须包含：父物料编码、子物料编码、用量</div>
-            </template>
-          </el-upload>
-          <div v-if="importFile" style="margin:8px 0;color:#409eff">已选择: {{ importFile.name }}</div>
-        </el-tab-pane>
+      <el-alert type="info" :closable="false" show-icon style="margin-bottom:16px;font-size:13px;">
+        支持 Multi-Sheet Excel 文件（.xlsx / .xls）—— 每个 Sheet 自动作为一个模块，一键创建产品→模块→零件三层 BOM 结构。
+        <a href="javascript:void(0)" @click="showCloudGuide = !showCloudGuide" style="color:#409eff;margin-left:4px;">从云端文档导入？</a>
+      </el-alert>
 
-        <!-- Tab 2: 在线链接引导 -->
-        <el-tab-pane label="在线链接" name="cloud">
-          <el-input
-            v-model="cloudLink"
-            placeholder="粘贴金山文档 / WPS / 腾讯文档等分享链接"
-            clearable
-            @input="identifyLink"
-            style="margin-bottom:12px"
-          >
-            <template #prefix><el-icon><Link /></el-icon></template>
-          </el-input>
+      <!-- 云端文档导入指引（可折叠） -->
+      <div v-if="showCloudGuide" style="background:#f0f9ff;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;line-height:1.8;">
+        <el-input v-model="cloudLink" placeholder="粘贴金山文档 / WPS / 腾讯文档等分享链接" clearable @input="identifyLink" style="margin-bottom:8px">
+          <template #prefix><el-icon><Link /></el-icon></template>
+        </el-input>
+        <div v-if="identified.platform" style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+          <span style="font-size:20px">{{ identified.icon }}</span>
+          <span style="font-weight:500">{{ identified.platform }}</span>
+        </div>
+        <div v-for="(step,si) in identified.steps" :key="si" style="display:flex;align-items:flex-start;gap:8px;margin:4px 0;">
+          <span style="background:#409eff;color:#fff;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;">{{ si+1 }}</span>
+          <span>{{ step }}</span>
+        </div>
+      </div>
 
-          <div v-if="identified.platform" class="cloud-guide-card">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
-              <span style="font-size:20px">{{ identified.icon }}</span>
-              <span style="font-weight:500">已识别：{{ identified.platform }}</span>
-            </div>
-            <div style="background:#f0f9ff;border-radius:8px;padding:12px 16px;margin-bottom:12px;font-size:13px;line-height:1.8;">
-              <div v-for="(step,si) in identified.steps" :key="si" style="display:flex;align-items:flex-start;gap:8px;margin:4px 0;">
-                <span style="background:#409eff;color:#fff;border-radius:50%;width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;">{{ si+1 }}</span>
-                <span>{{ step }}</span>
-              </div>
-            </div>
-            <el-upload
-              :auto-upload="false"
-              :limit="1"
-              accept=".xlsx,.xls"
-              :on-change="onFileChange"
-            >
-              <el-button type="primary"><el-icon><Upload /></el-icon> 选择下载好的Excel文件</el-button>
-            </el-upload>
-            <div v-if="importFile" style="margin-top:8px;color:#409eff">已选择: {{ importFile.name }}</div>
-          </div>
-        </el-tab-pane>
+      <!-- 产品编码/名称（可选） -->
+      <el-form :model="importOpts" label-width="90px" style="margin-bottom:12px;">
+        <el-form-item label="产品编码">
+          <el-input v-model="importOpts.product_code" placeholder="留空自动生成" />
+        </el-form-item>
+        <el-form-item label="产品名称">
+          <el-input v-model="importOpts.product_name" placeholder="留空使用文件名" />
+        </el-form-item>
+      </el-form>
 
-        <!-- Tab 3: 粘贴数据 -->
-        <el-tab-pane label="粘贴数据" name="paste">
-          <div style="color:#666;font-size:13px;margin-bottom:8px;">
-            请按以下格式粘贴数据（每行一条，逗号分隔）：<br>
-            <code style="background:#333;padding:2px 6px;border-radius:4px;font-size:12px;">父物料编码,子物料编码,用量,位号</code>
+      <!-- Excel 上传 -->
+      <el-upload ref="uploadRef" :auto-upload="false" :limit="1" accept=".xlsx,.xls" :on-change="onFileChange" drag>
+        <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
+        <div style="margin:8px 0">将 Excel 文件拖到此处，或<em>点击选择</em></div>
+        <template #tip>
+          <div style="color:#999;font-size:12px;line-height:1.6;">
+            每个 Sheet &rarr; 一个模块，自动识别列名（编码/名称/规格/数量）。
+            <br>支持单 Sheet 扁平 BOM、多 Sheet 模块化 BOM。
           </div>
-          <el-input
-            v-model="pasteData"
-            type="textarea"
-            :rows="8"
-            placeholder="FG-001,SA-001,1,A1&#10;FG-001,SA-002,1,A2&#10;SA-001,RM-001,1,"
-          />
-        </el-tab-pane>
+        </template>
+      </el-upload>
+      <div v-if="importFile" style="margin-top:8px;padding:8px 12px;background:#f0f9ff;border-radius:6px;color:#409eff;display:flex;align-items:center;gap:8px;">
+        <el-icon><Document /></el-icon> {{ importFile.name }}
+      </div>
 
-        <!-- Tab 4: 导入采购BOM（固定模板） -->
-        <el-tab-pane label="导入采购BOM" name="procurement">
-          <div style="color:#666;font-size:13px;margin-bottom:12px;line-height:1.6;">
-            上传多个CSV文件，系统将按文件名自动识别模块并创建
-            <strong style="color:#333;">产品 → 模块 → 零件</strong> 三层级BOM。
-            <div style="background:#f0f9ff;border-radius:6px;padding:8px 12px;margin-top:8px;font-size:12px;">
-              ✅ 从金山文档逐表导出CSV，全选后一次性上传<br>
-              ✅ 文件名包含「外购件/电气/量具」等即自动匹配模块<br>
-              ✅ 支持 .csv / .xlsx 混传
-            </div>
-          </div>
-          <el-input v-model="procurementProductName" placeholder="输入产品名称（如：三工位-15台）" style="margin-bottom:12px" />
-          <el-upload
-            ref="procurementUploadRef"
-            :auto-upload="false"
-            multiple
-            accept=".csv,.xlsx,.xls"
-            :on-change="onProcurementFileChange"
-            drag
-          >
-            <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
-            <div style="margin:8px 0">将CSV文件拖到此处（可多选），或<em>点击选择</em></div>
-          </el-upload>
-          <div v-if="procurementFiles.length" style="margin:8px 0;">
-            <el-tag v-for="f in procurementFiles" :key="f.name" size="small" style="margin-right:6px;margin-bottom:4px;">{{ f.name }}</el-tag>
-          </div>
-          <div v-if="procurementResult" style="margin-top:12px;border-radius:8px;padding:12px;background:#1a3a1a;border-color:#2d6b2d;font-size:13px;white-space:pre-wrap;">{{ procurementResult }}</div>
-          <div v-if="procurementErrors && procurementErrors.length" style="margin-top:8px;max-height:120px;overflow-y:auto;">
-            <p v-for="(e,i) in procurementErrors" :key="i" style="color:#e6a23c;font-size:12px;margin:2px 0;">⚠️ {{ e }}</p>
-          </div>
-          <div v-if="procurementWarnings && procurementWarnings.length" style="margin-top:4px;max-height:100px;overflow-y:auto;">
-            <p v-for="(w,i) in procurementWarnings" :key="i" style="color:#999;font-size:11px;margin:2px 0;">⏭️ {{ w }}</p>
-          </div>
-        </el-tab-pane>
-      </el-tabs>
+      <!-- 导入结果 -->
+      <div v-if="importResult" :style="{marginTop:'12px',padding:'12px 16px',borderRadius:'8px',fontSize:'13px',lineHeight:'1.6',background:importResult.success?'#f0f9eb':'#fef0f0',color:importResult.success?'#67c23a':'#f56c6c'}">
+        <div style="font-weight:500;">{{ importResult.success ? '✅ 导入成功' : '❌ 导入失败' }}</div>
+        <div style="margin-top:4px;white-space:pre-wrap;">{{ importResult.message }}</div>
+      </div>
 
       <template #footer>
         <el-button @click="importDialogVisible = false">取消</el-button>
-        <el-button v-if="importTab !== 'procurement'" type="primary" @click="submitImport" :loading="importLoading">
-          {{ importTab === 'paste' ? '开始导入' : '开始导入' }}
-        </el-button>
-        <el-button v-else type="primary" @click="submitImportProcurement" :loading="importLoading">
-          开始导入采购BOM
-        </el-button>
+        <el-button type="primary" @click="submitImport" :loading="importLoading">开始导入</el-button>
       </template>
     </el-dialog>
   </div>
@@ -447,52 +388,25 @@ async function fetchData() {
   }
 }
 
-async function handleExcelUpload(file) {
-  const formData = new FormData()
-  formData.append('file', file)
-  try {
-    const res = await api.post('/bom/import/excel', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    })
-    if (res.success) {
-      ElMessage.success(res.message || '导入成功')
-      fetchData()
-    } else {
-      ElMessage.error(res.message || '导入失败')
-      if (res.errors && res.errors.length) {
-        ElMessageBox.alert(res.errors.slice(0, 10).join('\n'), '导入错误')
-      }
-    }
-  } catch {
-    ElMessage.error('导入失败')
-  }
-  return false
-}
-
-// ====== 导入弹窗（云文档引导 + 粘贴数据） ======
+// ====== 导入BOM弹窗 ======
 const importDialogVisible = ref(false)
-const importTab = ref('excel')
 const importLoading = ref(false)
 const importFile = ref(null)
 const cloudLink = ref('')
-const pasteData = ref('')
 const identified = reactive({ platform: '', icon: '📄', steps: [] })
 
 function showImportDialog() {
   importDialogVisible.value = true
-  importTab.value = 'excel'
   resetImport()
 }
 
 function resetImport() {
   importFile.value = null
-  procurementFiles.value = []
-  procurementProductName.value = ''
-  procurementResult.value = ''
-  procurementErrors.value = []
-  procurementWarnings.value = []
+  importResult.value = null
+  importOpts.product_code = ''
+  importOpts.product_name = ''
   cloudLink.value = ''
-  pasteData.value = ''
+  showCloudGuide.value = false
   identified.platform = ''
   identified.icon = '📄'
   identified.steps = []
@@ -500,212 +414,57 @@ function resetImport() {
 
 function onFileChange(uploadFile) {
   importFile.value = uploadFile.raw
+  importResult.value = null
+  if (!importOpts.product_name) {
+    importOpts.product_name = uploadFile.name.replace(/\.(xlsx|xls)$/i, '')
+  }
   return false
 }
 
 function identifyLink() {
   const url = cloudLink.value.trim()
-  if (!url) {
-    identified.platform = ''
-    identified.icon = '📄'
-    identified.steps = []
-    return
+  if (!url) { identified.platform = ''; identified.steps = []; return }
+  const guides = {
+    'kdocs.cn': ['金山文档 / WPS', ['在浏览器中打开该链接', '点击「文件」→「导出」→「下载为 Excel (.xlsx)」', '将下载的 .xlsx 文件拖入上方区域']],
+    'docs.wps.cn': ['金山文档 / WPS', ['在浏览器中打开该链接', '点击工具栏「导出」→「下载为 Excel」', '将下载的 .xlsx 文件拖入上方区域']],
+    'docs.qq.com': ['腾讯文档', ['在浏览器中打开该链接', '点击「文件」→「导出为」→「本地 Excel (.xlsx)」', '将下载的 .xlsx 文件拖入上方区域']],
+    'shimo.im': ['石墨文档', ['在浏览器中打开该链接', '点击「···」→「导出」→「导出为 Excel」', '将下载的 .xlsx 文件拖入上方区域']],
   }
-
-  if (url.includes('kdocs.cn') || url.includes('docs.wps.cn') || url.includes('wps.cn')) {
-    identified.platform = '金山文档 / WPS'
-    identified.steps = [
-      '在浏览器中打开该链接',
-      '点击工具栏「导出 / 下载」→「下载为 Excel (.xlsx)」',
-      '将下载的 .xlsx 文件拖入下方区域',
-    ]
-  } else if (url.includes('docs.qq.com')) {
-    identified.platform = '腾讯文档'
-    identified.steps = [
-      '在浏览器中打开该链接',
-      '点击「文件」→「导出为」→「本地 Excel 表格 (.xlsx)」',
-      '将下载的 .xlsx 文件拖入下方区域',
-    ]
-  } else if (url.includes('shimo.im') || url.includes('石墨文档')) {
-    identified.platform = '石墨文档'
-    identified.steps = [
-      '在浏览器中打开该链接',
-      '点击右上角「···」→「导出」→「导出为 Excel」',
-      '将下载的 .xlsx 文件拖入下方区域',
-    ]
-  } else if (url.includes('aliyundoc') || url.includes('alibabacloud')) {
-    identified.platform = '阿里云文档'
-    identified.steps = [
-      '在浏览器中打开该链接',
-      '点击「导出」→「下载为 Excel」',
-      '将下载的 .xlsx 文件拖入下方区域',
-    ]
-  } else {
-    identified.platform = '其他云文档平台'
-    identified.steps = [
-      '在浏览器中打开该链接',
-      '查找「导出」或「下载」功能，导出为 Excel (.xlsx) 格式',
-      '将下载的 .xlsx 文件拖入下方区域',
-    ]
+  for (const [domain, [p, steps]] of Object.entries(guides)) {
+    if (url.includes(domain)) { identified.platform = p; identified.steps = steps; return }
   }
+  identified.platform = '其他云文档平台'
+  identified.steps = ['在浏览器中打开该链接', '查找「导出」功能，导出为 Excel (.xlsx)', '将下载的 .xlsx 文件拖入上方区域']
 }
 
-// ====== 采购BOM导入（多CSV文件）======
-const procurementUploadRef = ref(null)
-const procurementFiles = ref([])
-const procurementProductName = ref('')
-const procurementResult = ref('')
-const procurementErrors = ref([])
-const procurementWarnings = ref([])
-
-function onProcurementFileChange(uploadFile, uploadFiles) {
-  // 收集所有已选文件
-  procurementFiles.value = uploadFiles.map(f => f.raw || f)
-  procurementResult.value = ''
-  procurementErrors.value = []
-  procurementWarnings.value = []
-  // 自动从第一个文件名推断产品名
-  if (procurementFiles.value.length && !procurementProductName.value) {
-    let name = procurementFiles.value[0].name.replace(/\.[^/.]+$/, '')
-    // 去除模块后缀
-    for (const sfx of ['BOM表', 'BOM', '表']) {
-      if (name.endsWith(sfx)) name = name.slice(0, -sfx.length)
-    }
-    procurementProductName.value = name.trim()
-  }
-  return false
-}
-
-async function submitImportProcurement() {
-  if (!procurementFiles.value.length) {
-    ElMessage.warning('请先选择CSV文件')
-    return
-  }
-  const name = procurementProductName.value.trim()
-  if (!name) {
-    ElMessage.warning('请输入产品名称')
-    return
-  }
-  importLoading.value = true
-  procurementResult.value = ''
-  procurementErrors.value = []
-  procurementWarnings.value = []
-  try {
-    const formData = new FormData()
-    procurementFiles.value.forEach(f => formData.append('files', f))
-    formData.append('product_name', name)
-
-    const res = await api.post('/bom/import/procurement', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    })
-    if (res.success) {
-      procurementResult.value = '✅ ' + (res.message || '导入成功')
-      if (res.stats) {
-        procurementResult.value += `\n📊 产品: ${res.stats.product || 0} | 模块: ${res.stats.modules || 0} | 零件: ${res.stats.parts || 0} | BOM行: ${res.stats.bom_lines || 0}`
-      }
-      procurementErrors.value = res.errors || []
-      procurementWarnings.value = res.warnings || []
-      fetchData()
-    } else {
-      procurementResult.value = '❌ ' + (res.message || '导入失败')
-      procurementErrors.value = res.errors || []
-      procurementWarnings.value = res.warnings || []
-    }
-  } catch (e) {
-    procurementResult.value = '❌ 导入失败: ' + (e.message || e)
-  } finally {
-    importLoading.value = false
-  }
-}
+// ====== BOM 导入状态 ======
+const importResult = ref(null)
+const showCloudGuide = ref(false)
+const importOpts = reactive({ product_code: '', product_name: '' })
 
 async function submitImport() {
-  if (importTab.value === 'paste') {
-    const lines = pasteData.value.trim().split('\n').filter(l => l.trim())
-    if (lines.length === 0) {
-      ElMessage.warning('请粘贴BOM数据')
-      return
-    }
-    importLoading.value = true
-    try {
-      // Parse CSV: parent_code,child_code,quantity,position
-      const pairs = []
-      for (let i = 0; i < lines.length; i++) {
-        const parts = lines[i].split(',').map(s => s.trim())
-        if (parts.length >= 2) {
-          pairs.push({
-            parent_code: parts[0], child_code: parts[1],
-            quantity: parseFloat(parts[2]) || 1, position: parts[3] || '',
-          })
-        }
-      }
-      if (pairs.length === 0) { ElMessage.error('没有有效数据'); return }
-
-      // Group by parent
-      const groups = {}
-      pairs.forEach(p => {
-        if (!groups[p.parent_code]) groups[p.parent_code] = []
-        groups[p.parent_code].push(p)
-      })
-
-      // Get all materials
-      const matRes = await api.get('/materials/all')
-      const matMap = {}
-      matRes.items.forEach(m => { matMap[m.material_code] = m })
-
-      let success = 0
-      for (const [parentCode, children] of Object.entries(groups)) {
-        const product = matMap[parentCode]
-        if (!product) { ElMessage.warning(`物料 ${parentCode} 不存在，跳过`); continue }
-        // Create BOM with lines in one call
-        const linesPayload = children.map(c => ({
-          parent_item_id: product.id,
-          item_id: matMap[c.child_code]?.id || null,
-          quantity: c.quantity,
-          position: c.position,
-          level: 1,
-          sort_order: 0,
-        })).filter(l => l.item_id)
-        if (linesPayload.length === 0) continue
-        const r = await api.post('/bom/headers', {
-          bom_code: `BOM-${parentCode}`,
-          product_id: product.id,
-          version: 'A',
-          status: '生效',
-          lines: linesPayload,
-        })
-        if (r.success) success++
-      }
-      ElMessage.success(`成功导入 ${success} 个BOM`)
-      importDialogVisible.value = false
-      fetchData()
-    } catch (e) {
-      ElMessage.error('导入失败: ' + (e.message || e))
-    } finally {
-      importLoading.value = false
-    }
-    return
-  }
-
-  // Excel mode
   if (!importFile.value) { ElMessage.warning('请先选择Excel文件'); return }
   importLoading.value = true
+  importResult.value = null
   try {
     const formData = new FormData()
     formData.append('file', importFile.value)
+    const params = {}
+    if (importOpts.product_code) params.product_code = importOpts.product_code
+    if (importOpts.product_name) params.product_name = importOpts.product_name
     const res = await api.post('/bom/import/excel', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
+      params,
     })
+    importResult.value = res
     if (res.success) {
       ElMessage.success(res.message || '导入成功')
-      importDialogVisible.value = false
       fetchData()
     } else {
       ElMessage.error(res.message || '导入失败')
-      if (res.errors?.length) {
-        ElMessageBox.alert(res.errors.slice(0, 10).join('\n'), '导入错误')
-      }
     }
   } catch (e) {
+    importResult.value = { success: false, message: e.message || '导入失败' }
     ElMessage.error('导入失败: ' + (e.message || e))
   } finally {
     importLoading.value = false
