@@ -5,7 +5,7 @@ from app.models.mps import MpsEntry
 from app.models.order import PurchaseOrder, WorkOrder, WorkOrderMaterial, WorkOrderReport, WorkOrderOperation
 from app.models.routing import WorkCenter, RoutingHeader, RoutingOperation
 from app.models.supplier import Supplier
-from app.models.inspection import InspectionRecord, StockCount
+from app.models.inspection import InspectionRecord, InspectionStandard, InspectionDefect, NcrRecord, StockCount
 
 from app.models.user import User
 from app.models.permission import PermissionRequest
@@ -20,5 +20,5 @@ __all__ = [
     "PurchaseOrder", "WorkOrder", "WorkOrderOperation",
     "WorkCenter", "RoutingHeader", "RoutingOperation",
     "Supplier",
-    "InspectionRecord", "StockCount",
+    "InspectionRecord", "InspectionStandard", "InspectionDefect", "NcrRecord", "StockCount",
 ]
