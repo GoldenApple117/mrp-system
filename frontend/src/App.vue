@@ -66,6 +66,7 @@
           <NavItem to="/sales" icon="Sell" label="销售管理" :collapse="isCollapse" :active="activeMenu === '/sales'" />
           <NavItem to="/purchase" icon="ShoppingCart" label="采购管理" :collapse="isCollapse" :active="activeMenu === '/purchase'" />
           <NavItem to="/production" icon="SetUp" label="生产管理" :collapse="isCollapse" :active="activeMenu === '/production'" />
+          <NavItem to="/shop-floor" icon="Monitor" label="生产看板" :collapse="isCollapse" :active="activeMenu === '/shop-floor'" />
         </NavGroup>
 
         <!-- 分析与监控 -->
