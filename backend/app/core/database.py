@@ -124,6 +124,12 @@ def init_db():
                 # v1.9 — 生产报工模块
                 "ALTER TABLE work_order ADD COLUMN rejected_qty FLOAT DEFAULT 0",
                 "ALTER TABLE work_order ADD COLUMN labor_hours FLOAT DEFAULT 0",
+                # v2.0 — 检验模块字段补齐
+                "ALTER TABLE inspection_record ADD COLUMN inspection_type VARCHAR(10) DEFAULT 'IQC'",
+                "ALTER TABLE inspection_record ADD COLUMN purchase_order_id INT DEFAULT NULL",
+                # v2.0 — NCR 字段补齐
+                "ALTER TABLE ncr_record ADD COLUMN inspection_id INT DEFAULT NULL",
+                "ALTER TABLE ncr_record ADD COLUMN disposition_qty FLOAT DEFAULT 0",
                 # v1.9 — 工单物料需求表 (兼容SQLite和MySQL)
                 """CREATE TABLE IF NOT EXISTS work_order_material (
                     id INTEGER PRIMARY KEY,
