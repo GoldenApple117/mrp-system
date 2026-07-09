@@ -124,9 +124,10 @@ def init_db():
                 # v1.9 — 生产报工模块
                 "ALTER TABLE work_order ADD COLUMN rejected_qty FLOAT DEFAULT 0",
                 "ALTER TABLE work_order ADD COLUMN labor_hours FLOAT DEFAULT 0",
-                # v2.0 — 检验模块字段补齐
+                # v2.0 — 检验模块字段补齐（按需逐个加，MySQL 不会自动新增列）
                 "ALTER TABLE inspection_record ADD COLUMN inspection_type VARCHAR(10) DEFAULT 'IQC'",
                 "ALTER TABLE inspection_record ADD COLUMN source_type VARCHAR(20) DEFAULT '采购单'",
+                "ALTER TABLE inspection_record ADD COLUMN source_id INT DEFAULT NULL",
                 "ALTER TABLE inspection_record ADD COLUMN standard_id INT DEFAULT NULL",
                 "ALTER TABLE inspection_record ADD COLUMN purchase_order_id INT DEFAULT NULL",
                 # v2.0 — NCR 字段补齐
