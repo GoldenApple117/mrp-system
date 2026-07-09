@@ -22,6 +22,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem('token')
       localStorage.removeItem('user')
+      localStorage.removeItem('mrp_remember_login')  // 清理「记住此设备」缓存，防止循环
       if (window.location.pathname !== '/login') {
         window.location.href = '/login'
       }

@@ -1,9 +1,11 @@
 """MRP II 系统 — FastAPI 主入口"""
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from starlette.middleware.base import BaseHTTPMiddleware
 import os
 import logging
 
@@ -48,15 +50,42 @@ app = FastAPI(
 )
 
 # CORS — 开发环境放开 localhost，生产环境由前端同源代理或 Railway 处理
-import os
-_cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:8000")
+CORS_origins = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:8000")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[o.strip() for o in _cors_origins.split(",") if o.strip()],
+    allow_origins=[o.strip() for o in CORS_origins.split(",") if o.strip()],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# GZip 压缩 — 大幅减少传输体积（JS/CSS 可压缩 70-80%）
+app.add_middleware(GZipMiddleware, minimum_size=500)
+
+
+# 浏览器缓存中间件 — 让静态资源加载后在浏览器本地缓存
+class StaticCacheMiddleware(BaseHTTPMiddleware):
+    """为带 hash 的静态文件设置长期缓存，大幅减少重复加载"""
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        path = request.url.path
+
+        # /assets/ 下的 JS/CSS 文件名带 hash，可长期缓存
+        if "/assets/" in path:
+            ext = os.path.splitext(path)[1].lower()
+            if ext in (".js", ".css", ".woff", ".woff2"):
+                response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+            elif ext in (".png", ".svg", ".jpg", ".ico"):
+                response.headers["Cache-Control"] = "public, max-age=86400"
+
+        # HTML 不缓存，确保始终取到最新版本
+        if path.endswith(".html") or path == "/":
+            response.headers["Cache-Control"] = "no-cache, must-revalidate"
+            response.headers["Pragma"] = "no-cache"
+
+        return response
+
+app.add_middleware(StaticCacheMiddleware)
 
 # 注册路由 — auth 无需认证
 app.include_router(auth.router)
