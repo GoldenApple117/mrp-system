@@ -6,6 +6,7 @@ from app.core.database import get_db
 from app.models.user import User
 from app.models.permission import PermissionRequest, UserModulePermission
 from app.api.deps import get_current_user, MODULE_LABELS
+from app.core.security import hash_password
 
 router = APIRouter(prefix="/api/permissions", tags=["权限管理"])
 
@@ -150,7 +151,67 @@ def list_users(
     """返回全部用户列表（管理员用）"""
     require_admin(current_user)
     users = db.query(User).order_by(User.id).all()
-    return [{"id": u.id, "username": u.username, "role": u.role} for u in users]
+    return [{
+        "id": u.id, "username": u.username,
+        "role": u.role, "is_approved": bool(u.is_approved),
+        "created_at": u.created_at.isoformat() if u.created_at else None,
+    } for u in users]
+
+
+@router.post("/users")
+def create_user(
+    data: dict,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """管理员创建新用户"""
+    require_admin(current_user)
+    username = data.get("username", "").strip()
+    password = data.get("password", "").strip()
+    role = data.get("role", "normal")
+    if not username or not password:
+        raise HTTPException(400, "用户名和密码不能为空")
+    if len(password) < 4:
+        raise HTTPException(400, "密码至少 4 位")
+    if db.query(User).filter(User.username == username).first():
+        raise HTTPException(409, "用户名已存在")
+    user = User(
+        username=username,
+        password_hash=hash_password(password),
+        role=role,
+        is_approved=1,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return {"id": user.id, "username": user.username, "message": f"用户 {username} 创建成功"}
+
+
+@router.put("/users/{uid}")
+def update_user(
+    uid: int,
+    data: dict,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """管理员更新用户信息（显示名、角色、密码）"""
+    require_admin(current_user)
+    user = db.query(User).filter(User.id == uid).first()
+    if not user:
+        raise HTTPException(404, "用户不存在")
+
+    if "display_name" in data:
+        user.display_name = data["display_name"].strip() or user.display_name
+    if "role" in data and data["role"] in ("admin", "normal"):
+        user.role = data["role"]
+    if "password" in data and data["password"].strip():
+        pwd = data["password"].strip()
+        if len(pwd) < 4:
+            raise HTTPException(400, "密码至少 4 位")
+        user.password_hash = hash_password(pwd)
+
+    db.commit()
+    return {"message": f"用户 {user.username} 已更新"}
 
 
 @router.get("/modules")
