@@ -148,11 +148,12 @@
               >{{ auth.user?.username || 'admin' }}</span
             >
             <button
-              class="text-[var(--color-text-tertiary)] hover:text-[var(--color-accent)] transition-colors cursor-pointer bg-transparent border-0 py-0.5 px-1 rounded"
+              class="flex items-center gap-1 h-7 px-2.5 rounded text-xs bg-transparent text-[var(--color-text-tertiary)] hover:bg-red-50 hover:text-red-600 border border-transparent hover:border-red-200 transition-all duration-150 cursor-pointer"
               title="退出登录"
               @click="handleLogout"
             >
               <el-icon :size="14"><SwitchButton /></el-icon>
+              <span>退出</span>
             </button>
           </div>
         </header>
