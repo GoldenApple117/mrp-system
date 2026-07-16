@@ -359,7 +359,7 @@ onMounted(() => {
     if (saved) {
       const data = JSON.parse(saved)
       if (data.token && data.expiresAt && Date.now() < data.expiresAt) {
-        auth.setAuth(data.token, data.user || { username: data.username || '' })
+        auth.setAuth(data.token, data.user || { username: data.username || '' }, data.module_permissions || [])
         router.replace('/dashboard')
         return
       } else {
@@ -645,7 +645,7 @@ async function handleLogin(e) {
       username: form.username,
       password: form.password,
     })
-    auth.setAuth(res.access_token, res.user)
+    auth.setAuth(res.access_token, res.user, res.module_permissions || [])
 
     // 记住我：持久化 token 到 localStorage，7 天有效
     if (rememberMe.value) {

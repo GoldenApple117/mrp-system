@@ -1,11 +1,11 @@
-"""权限管理 API — 申请/审批"""
+"""权限管理 API — 申请/审批 + 模块权限管理"""
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.models.user import User
-from app.models.permission import PermissionRequest
-from app.api.deps import get_current_user
+from app.models.permission import PermissionRequest, UserModulePermission
+from app.api.deps import get_current_user, MODULE_LABELS
 
 router = APIRouter(prefix="/api/permissions", tags=["权限管理"])
 
@@ -137,3 +137,81 @@ def pending_count(
         return {"count": 0}
     count = db.query(PermissionRequest).filter(PermissionRequest.status == "pending").count()
     return {"count": count}
+
+
+# ====== 模块权限管理 ======
+
+
+@router.get("/users")
+def list_users(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """返回全部用户列表（管理员用）"""
+    require_admin(current_user)
+    users = db.query(User).order_by(User.id).all()
+    return [{"id": u.id, "username": u.username, "role": u.role} for u in users]
+
+
+@router.get("/modules")
+def list_modules():
+    """返回全部模块清单（前端渲染权限勾选框用）"""
+    return {"modules": [{"key": k, "label": v} for k, v in MODULE_LABELS.items()]}
+
+
+@router.get("/users/{uid}/modules")
+def get_user_modules(
+    uid: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """查询指定用户的模块权限列表"""
+    require_admin(current_user)
+    user = db.query(User).filter(User.id == uid).first()
+    if not user:
+        raise HTTPException(404, "用户不存在")
+
+    if user.role == "admin":
+        return {"user_id": uid, "username": user.username, "module_permissions": list(MODULE_LABELS.keys())}
+
+    perms = db.query(UserModulePermission).filter(
+        UserModulePermission.user_id == uid).all()
+    return {
+        "user_id": uid,
+        "username": user.username,
+        "module_permissions": [p.module_name for p in perms],
+    }
+
+
+@router.put("/users/{uid}/modules")
+def set_user_modules(
+    uid: int,
+    data: dict,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """管理员设置用户的模块权限"""
+    require_admin(current_user)
+    user = db.query(User).filter(User.id == uid).first()
+    if not user:
+        raise HTTPException(404, "用户不存在")
+    if user.role == "admin":
+        raise HTTPException(400, "管理员拥有全部权限，无需设置")
+
+    modules = data.get("modules", [])
+    # 校验模块名
+    valid_modules = set(MODULE_LABELS.keys())
+    for m in modules:
+        if m not in valid_modules:
+            raise HTTPException(400, f"无效的模块名: {m}")
+
+    # 全删重建
+    db.query(UserModulePermission).filter(UserModulePermission.user_id == uid).delete()
+    for m in modules:
+        db.add(UserModulePermission(
+            user_id=uid,
+            module_name=m,
+            granted_by=current_user.username,
+        ))
+    db.commit()
+    return {"message": f"已更新用户 {user.username} 的模块权限", "modules": modules}

@@ -12,7 +12,7 @@ import logging
 from app.core.database import init_db
 from app.core.config import UPLOAD_DIR
 from app.api import materials, bom, inventory, mps, mrp, purchase, production, crp, inspection, sales, cost, finance, exceptions, system as system_api, auth, permissions, trace, shop_floor, equipment
-from app.api.deps import require_approved
+from app.api.deps import require_approved, require_module
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -93,25 +93,25 @@ app.include_router(auth.router)
 # 权限 API — 无需审批检查（自身管理权限）
 app.include_router(permissions.router)
 
-# 业务 API — 全部需要审批（admin直接过，normal需审批）
-_auth = [Depends(require_approved)]
-app.include_router(materials.router, dependencies=_auth)
-app.include_router(bom.router, dependencies=_auth)
-app.include_router(inventory.router, dependencies=_auth)
-app.include_router(mps.router, dependencies=_auth)
-app.include_router(mrp.router, dependencies=_auth)
-app.include_router(purchase.router, dependencies=_auth)
-app.include_router(production.router, dependencies=_auth)
-app.include_router(crp.router, dependencies=_auth)
-app.include_router(inspection.router, dependencies=_auth)
-app.include_router(sales.router, dependencies=_auth)
-app.include_router(cost.router, dependencies=_auth)
-app.include_router(finance.router, dependencies=_auth)
-app.include_router(exceptions.router, dependencies=_auth)
-app.include_router(system_api.router, dependencies=_auth)
-app.include_router(trace.router, dependencies=_auth)
-app.include_router(shop_floor.router, dependencies=_auth)
-app.include_router(equipment.router, dependencies=_auth)
+# 业务 API — 按模块独立检查权限
+app.include_router(materials.router,  dependencies=[Depends(require_module("materials"))])
+app.include_router(bom.router,         dependencies=[Depends(require_module("bom"))])
+app.include_router(inventory.router,   dependencies=[Depends(require_module("inventory"))])
+app.include_router(mps.router,         dependencies=[Depends(require_module("mps"))])
+app.include_router(mrp.router,         dependencies=[Depends(require_module("mrp"))])
+app.include_router(purchase.router,    dependencies=[Depends(require_module("purchase"))])
+app.include_router(production.router,  dependencies=[Depends(require_module("production"))])
+app.include_router(crp.router,         dependencies=[Depends(require_module("crp"))])
+app.include_router(inspection.router,   dependencies=[Depends(require_module("inspection"))])
+app.include_router(sales.router,       dependencies=[Depends(require_module("sales"))])
+app.include_router(cost.router,        dependencies=[Depends(require_module("cost"))])
+app.include_router(finance.router,     dependencies=[Depends(require_module("finance"))])
+app.include_router(exceptions.router,   dependencies=[Depends(require_module("exceptions"))])
+# 以下模块暂未加入模块权限体系，保持 require_approved
+app.include_router(system_api.router,   dependencies=[Depends(require_approved)])
+app.include_router(trace.router,        dependencies=[Depends(require_approved)])
+app.include_router(shop_floor.router,   dependencies=[Depends(require_approved)])
+app.include_router(equipment.router,    dependencies=[Depends(require_approved)])
 
 # 上传文件静态访问
 os.makedirs(UPLOAD_DIR, exist_ok=True)

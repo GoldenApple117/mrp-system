@@ -108,7 +108,7 @@ const router = createRouter({
   routes,
 })
 
-// 路由守卫：未登录跳转登录页
+// 路由守卫：未登录跳转登录页 + 模块权限检查
 router.beforeEach((to, _from, next) => {
   const token = localStorage.getItem('token')
   if (to.meta.noAuth) {
@@ -117,6 +117,26 @@ router.beforeEach((to, _from, next) => {
     return next()
   }
   if (!token) return next('/login')
+
+  // 模块权限检查
+  const MODULE_ROUTES = {
+    '/materials': 'materials', '/bom': 'bom',
+    '/inventory': 'inventory', '/routings': 'routings',
+    '/mps': 'mps', '/mrp': 'mrp', '/crp': 'crp',
+    '/sales': 'sales', '/purchase': 'purchase',
+    '/production': 'production', '/inspection': 'inspection',
+    '/cost': 'cost', '/finance': 'finance',
+    '/exceptions': 'exceptions',
+  }
+  const moduleName = MODULE_ROUTES[to.path]
+  if (moduleName) {
+    const user = JSON.parse(localStorage.getItem('user') || 'null')
+    const perms = JSON.parse(localStorage.getItem('module_permissions') || '[]')
+    if (user?.role !== 'admin' && !perms.includes(moduleName)) {
+      return next('/dashboard')
+    }
+  }
+
   next()
 })
 

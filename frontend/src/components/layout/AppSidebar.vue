@@ -42,28 +42,28 @@
       <div v-if="!isCollapse" class="my-2 mx-3 border-t border-[var(--color-border-subtle)]" />
 
       <NavGroup label="基础数据" :collapse="isCollapse">
-        <NavItem
+        <NavItem v-if="auth.hasModule('materials')"
           to="/materials"
           icon="Box"
           label="物料管理"
           :collapse="isCollapse"
           :active="activeMenu === '/materials'"
         />
-        <NavItem
+        <NavItem v-if="auth.hasModule('bom')"
           to="/bom"
           icon="Connection"
           label="BOM 管理"
           :collapse="isCollapse"
           :active="activeMenu === '/bom'"
         />
-        <NavItem
+        <NavItem v-if="auth.hasModule('inventory')"
           to="/inventory"
           icon="List"
           label="库存管理"
           :collapse="isCollapse"
           :active="activeMenu === '/inventory'"
         />
-        <NavItem
+        <NavItem v-if="auth.hasModule('routings')"
           to="/routings"
           icon="Operation"
           label="工艺路线"
@@ -73,42 +73,42 @@
       </NavGroup>
 
       <NavGroup label="计划与执行" :collapse="isCollapse">
-        <NavItem
+        <NavItem v-if="auth.hasModule('mps')"
           to="/mps"
           icon="Calendar"
           label="MPS 主计划"
           :collapse="isCollapse"
           :active="activeMenu === '/mps'"
         />
-        <NavItem
+        <NavItem v-if="auth.hasModule('mrp')"
           to="/mrp"
           icon="Cpu"
           label="MRP 运算"
           :collapse="isCollapse"
           :active="activeMenu === '/mrp'"
         />
-        <NavItem
+        <NavItem v-if="auth.hasModule('crp')"
           to="/crp"
           icon="TrendCharts"
           label="CRP 计划"
           :collapse="isCollapse"
           :active="activeMenu === '/crp'"
         />
-        <NavItem
+        <NavItem v-if="auth.hasModule('sales')"
           to="/sales"
           icon="Sell"
           label="销售管理"
           :collapse="isCollapse"
           :active="activeMenu === '/sales'"
         />
-        <NavItem
+        <NavItem v-if="auth.hasModule('purchase')"
           to="/purchase"
           icon="ShoppingCart"
           label="采购管理"
           :collapse="isCollapse"
           :active="activeMenu === '/purchase'"
         />
-        <NavItem
+        <NavItem v-if="auth.hasModule('production')"
           to="/production"
           icon="SetUp"
           label="生产管理"
@@ -125,14 +125,14 @@
           :collapse="isCollapse"
           :active="activeMenu === '/reports'"
         />
-        <NavItem
+        <NavItem v-if="auth.hasModule('exceptions')"
           to="/exceptions"
           icon="WarningFilled"
           label="例外看板"
           :collapse="isCollapse"
           :active="activeMenu === '/exceptions'"
         />
-        <NavItem
+        <NavItem v-if="auth.hasModule('inspection')"
           to="/inspection"
           icon="Stamp"
           label="检验盘点"
@@ -142,14 +142,14 @@
       </NavGroup>
 
       <NavGroup label="财务" :collapse="isCollapse">
-        <NavItem
+        <NavItem v-if="auth.hasModule('finance')"
           to="/finance"
           icon="CreditCard"
           label="财务管理"
           :collapse="isCollapse"
           :active="activeMenu === '/finance'"
         />
-        <NavItem
+        <NavItem v-if="auth.hasModule('cost')"
           to="/cost"
           icon="Money"
           label="费用合计"
@@ -331,8 +331,11 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 import NavGroup from '@/components/navigation/NavGroup.vue'
 import NavItem from '@/components/navigation/NavItem.vue'
+
+const auth = useAuthStore()
 
 const props = defineProps({
   isCollapse: { type: Boolean, default: false },
